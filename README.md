@@ -1,20 +1,24 @@
-# Roblox Game Site
+# Mini Babylon Lab
 
-A polished static landing page for a Roblox sandbox/social-survival game concept.
+A tiny browser-based 3D sandbox created by Hermes, now using Babylon.js.
 
-## Local development
-
-```bash
-npm install
-npm run dev
-```
-
-## Build
+## Run
 
 ```bash
-npm run build
+cd /home/sy/mini-3d-lab
+npm test
+npm start
 ```
 
-## Deploy
+Then open <http://localhost:8080>.
 
-This repo is ready for Vercel. Import the GitHub repository in Vercel or run `vercel` after logging in.
+Controls:
+
+- Drag: rotate camera
+- Mouse wheel: zoom
+- Space: pause/resume animation
+- R: reset camera
+
+## Why Babylon.js
+
+Babylon.js is a better fit when the goal is closer to a small 3D app/game engine rather than a raw rendering demo. It gives camera controls, scene abstractions, input handling, materials, and engine-style structure out of the box.
