@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blockhold Defense</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main id="app">
+      <section class="hud">
+        <p class="eyebrow" id="eyebrow">Day 1 · Build Phase</p>
+        <h1 id="title">Blockhold Defense</h1>
+        <p id="help">starter arena loading...</p>
+        <div class="status" id="status">loading Blockhold scene...</div>
+      </section>
+      <aside class="build-panel" aria-label="Build inventory">
+        <span>Selected Block</span>
+        <strong>Stone Wall</strong>
+        <small>Next: spike trap · lantern · gate</small>
+      </aside>
+      <canvas id="scene" aria-label="Blockhold Defense interactive voxel fortress scene"></canvas>
+    </main>
+    <script type="importmap">
+      {
+        "imports": {
+          "@babylonjs/core": "https://esm.sh/@babylonjs/core@7.54.2"
+        }
+      }
+    </script>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
