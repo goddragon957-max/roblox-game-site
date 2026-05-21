@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Roblox sandbox game concept landing page" />
+    <title>Blockbound Worlds | Roblox Game Site</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Blockbound Worlds home">
+        <span class="brand-mark">▦</span>
+        <span>Blockbound Worlds</span>
+      </a>
+      <nav>
+        <a href="#concept">Concept</a>
+        <a href="#systems">Systems</a>
+        <a href="#roadmap">Roadmap</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell">
+        <div class="hero-copy">
+          <p class="eyebrow">Roblox Sandbox / Social Survival Concept</p>
+          <h1>대화로 문명이 자라는<br />복셀 샌드박스 월드</h1>
+          <p class="lead">
+            마인크래프트처럼 만들고, 로블록스처럼 함께 놀고, 플레이어의 선택과 대화가
+            마을의 규칙·경제·몬스터 생태계까지 바꾸는 게임 사이트 초안입니다.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#concept">게임 기획 보기</a>
+            <a class="button secondary" href="#roadmap">개발 로드맵</a>
+          </div>
+          <div class="hero-stats" aria-label="game pillars">
+            <div><strong>Voxel</strong><span>Build freely</span></div>
+            <div><strong>Social</strong><span>Talk to shape rules</span></div>
+            <div><strong>Systems</strong><span>Living economy</span></div>
+          </div>
+        </div>
+        <div class="hero-card" aria-label="floating voxel world illustration">
+          <div class="sun"></div>
+          <div class="island">
+            <span class="cube grass c1"></span>
+            <span class="cube dirt c2"></span>
+            <span class="cube water c3"></span>
+            <span class="cube grass c4"></span>
+            <span class="cube ore c5"></span>
+            <span class="cube grass c6"></span>
+          </div>
+          <div class="chat-bubble one">“우리 마을 법은 투표로 정하자!”</div>
+          <div class="chat-bubble two">“광산 길드 만들 사람?”</div>
+        </div>
+      </section>
+
+      <section id="concept" class="section-shell split">
+        <div>
+          <p class="eyebrow">Core fantasy</p>
+          <h2>그냥 짓는 게임이 아니라, 같이 정하는 세계</h2>
+        </div>
+        <p>
+          플레이어는 섬에 도착해 자원을 캐고 건물을 올립니다. 차별점은 모든 서버가
+          작은 사회처럼 작동한다는 점입니다. 유저들이 만든 규칙, 상점 가격, 길드 관계,
+          방어 전략이 실제 게임 시스템에 반영됩니다.
+        </p>
+      </section>
+
+      <section id="systems" class="section-shell cards">
+        <article class="feature-card">
+          <span class="icon">🏗️</span>
+          <h3>복셀 건축</h3>
+          <p>블록을 캐고 조합해 집, 길드홀, 상점, 함정을 만드는 샌드박스 플레이.</p>
+        </article>
+        <article class="feature-card">
+          <span class="icon">🗳️</span>
+          <h3>마을 투표</h3>
+          <p>세금, 공용 창고, PvP 허용 구역 같은 규칙을 플레이어 투표로 결정.</p>
+        </article>
+        <article class="feature-card">
+          <span class="icon">🧬</span>
+          <h3>적응형 몬스터</h3>
+          <p>플레이어가 반복하는 전략을 학습한 것처럼 다른 침공 패턴이 등장.</p>
+        </article>
+        <article class="feature-card">
+          <span class="icon">💬</span>
+          <h3>NPC 관계</h3>
+          <p>NPC가 플레이어 평판과 마을 분위기에 따라 퀘스트와 가격을 바꿈.</p>
+        </article>
+      </section>
+
+      <section id="roadmap" class="section-shell roadmap">
+        <p class="eyebrow">Build plan</p>
+        <h2>1차 개발 로드맵</h2>
+        <ol>
+          <li><strong>Prototype</strong><span>맵 로비, 기본 UI, 핵심 루프 정의</span></li>
+          <li><strong>Sandbox Loop</strong><span>자원 채집, 제작, 건축, 저장 시스템</span></li>
+          <li><strong>Social Layer</strong><span>길드, 투표, 상점, 서버 이벤트</span></li>
+          <li><strong>Launch Page</strong><span>트레일러, 업데이트 로그, Roblox 링크 연결</span></li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <p>© 2026 Blockbound Worlds. Prototype landing page for Roblox game planning.</p>
+    </footer>
+    <script type="module" src="./script.js"></script>
+  </body>
+</html>

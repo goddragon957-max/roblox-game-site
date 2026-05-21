@@ -1,0 +1,14 @@
+{
+  "name": "roblox-game-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static landing page for a Roblox sandbox game concept.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}
