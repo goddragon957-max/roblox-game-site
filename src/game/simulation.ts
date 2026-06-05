@@ -57,9 +57,14 @@ export function createInitialState(): GameState {
     coins: 0,
     kills: 0,
     combo: 0,
+    combatLog: ['Build phase: place walls to bend lanes, then stack traps/towers into a kill zone.'],
     dangerLane: 5,
     message: 'Build to Survive + Tower Defense식으로 길목을 막고, 함정/타워 킬존을 만드세요.',
   };
+}
+
+function logEvent(state: GameState, event: string): string[] {
+  return [event, ...state.combatLog].slice(0, 4);
 }
 
 export function placeBlock(state: GameState, cell: Cell, type = state.selected): GameState {
@@ -115,6 +120,7 @@ export function startRaid(state: GameState): GameState {
     totalRaiders: raiders.length,
     dangerLane,
     combo: 0,
+    combatLog: logEvent(state, `Raid started: ${raiders.length} raiders are pushing lane X${dangerLane}.`),
     message: `Night raid: ${raiders.length} enemies · main lane X${dangerLane} · 타워/함정 킬존을 지켜보세요!`,
   };
 }
@@ -130,6 +136,7 @@ export function nextDay(state: GameState): GameState {
     raiders: [],
     totalRaiders: 0,
     selected: 'wall',
+    combatLog: logEvent(state, `Day ${state.day + 1} supplies delivered: +walls/traps/towers/frost and core repaired.`),
     message: `Day ${state.day + 1} 준비 시간 · 보상으로 블록 보급 + 코어 일부 수리.`,
   };
 }
@@ -140,17 +147,21 @@ export function restart(): GameState {
 
 function damageRaider(state: GameState, targetId: string, amount: number, slow = 0): GameState {
   let kills = 0;
+  let bounty = 0;
+  let killedKind: RaiderKind | undefined;
   const raiders = state.raiders.map((r) => {
     if (r.id !== targetId || r.resolved || r.hp <= 0) return r;
     const hp = r.hp - amount;
     if (hp <= 0) {
       kills += 1;
+      bounty += r.bounty;
+      killedKind = r.kind;
       return { ...r, hp: 0, resolved: true };
     }
     return { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow) };
   });
   return kills
-    ? { ...state, raiders, kills: state.kills + kills, coins: state.coins + kills, combo: state.combo + kills }
+    ? { ...state, raiders, kills: state.kills + kills, coins: state.coins + bounty, combo: state.combo + kills, combatLog: logEvent(state, `Bolt tower eliminated ${killedKind ?? 'raider'} · +${bounty} coins · combo x${state.combo + kills}.`) }
     : { ...state, raiders };
 }
 
@@ -180,11 +191,11 @@ function resolveTrap(state: GameState, r: Raider, dest: Cell): { state: GameStat
   const hp = r.hp - damage;
   if (hp <= 0) {
     return {
-      state: { ...state, blocks, kills: state.kills + 1, coins: state.coins + r.bounty, combo: state.combo + 1 },
+      state: { ...state, blocks, kills: state.kills + 1, coins: state.coins + r.bounty, combo: state.combo + 1, combatLog: logEvent(state, `${block.type === 'trap' ? 'Spike trap' : 'Frost rune'} stopped ${r.kind} · +${r.bounty} coins · combo x${state.combo + 1}.`) },
       raider: { ...r, hp: 0, resolved: true, cell: dest },
     };
   }
-  return { state: { ...state, blocks }, raider: { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow), cell: dest } };
+  return { state: block.type === 'frost' ? { ...state, blocks, combatLog: logEvent(state, `Frost rune slowed ${r.kind} in the kill zone.`) } : { ...state, blocks }, raider: { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow), cell: dest } };
 }
 
 export function tick(state: GameState): GameState {
@@ -223,6 +234,7 @@ export function tick(state: GameState): GameState {
           break;
         }
         next.coreHp = Math.max(0, next.coreHp - 5);
+        next.combatLog = logEvent(next, `${r.kind} found a breach path · core -5 HP.`);
         r = { ...r, resolved: true };
         resolvedThisStep = true;
         break;
@@ -238,8 +250,8 @@ export function tick(state: GameState): GameState {
   }
   next.raiders = moved;
 
-  if (next.coreHp <= 0) return { ...next, phase: 'defeat', message: '코어가 파괴되었습니다. Restart로 다시 도전하세요.' };
-  if (next.raiders.every((r) => r.resolved || r.hp <= 0)) return { ...next, phase: 'victory', message: `Raid cleared! ${next.kills} kills · Next Day로 업그레이드하세요.` };
+  if (next.coreHp <= 0) return { ...next, phase: 'defeat', combatLog: logEvent(next, 'Defeat: the core collapsed under the raid.'), message: '코어가 파괴되었습니다. Restart로 다시 도전하세요.' };
+  if (next.raiders.every((r) => r.resolved || r.hp <= 0)) return { ...next, phase: 'victory', combatLog: logEvent(next, `Raid cleared with ${next.kills} total kills. Choose Next Day for supplies.`), message: `Raid cleared! ${next.kills} kills · Next Day로 업그레이드하세요.` };
   const alive = next.raiders.filter((r) => !r.resolved && r.hp > 0).length;
   return { ...next, message: `Raid in progress · ${alive}/${next.totalRaiders} alive · ${next.kills} kills · combo x${Math.max(1, next.combo)}` };
 }

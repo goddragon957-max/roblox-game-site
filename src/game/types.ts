@@ -41,6 +41,7 @@ export type GameState = {
   coins: number;
   kills: number;
   combo: number;
+  combatLog: string[];
   dangerLane: number;
   message: string;
 };

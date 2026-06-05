@@ -30,6 +30,10 @@ export function Hud() {
           <small>Clear 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
         </div>
       )}
+      <div className="combat-log" aria-label="Recent combat feedback">
+        <strong>Combat Feedback</strong>
+        {s.combatLog.map((event, index) => <span key={`${event}-${index}`}>{event}</span>)}
+      </div>
       <div className="actions">
         {s.phase === 'build' && <button onClick={s.start}><Play size={16} />Start Raid</button>}
         {s.phase === 'victory' && <button onClick={s.next}><StepForward size={16} />Next Day</button>}

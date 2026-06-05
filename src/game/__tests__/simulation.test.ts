@@ -31,6 +31,15 @@ describe('Blockhold game logic', () => {
     expect(damagedOrDead).toBe(true);
   });
 
+  it('combat log records readable raid and kill feedback', () => {
+    let s = placeBlock(createInitialState(), { x: 5, z: 1 }, 'trap');
+    s = startRaid(s);
+    expect(s.combatLog[0]).toContain('Raid started');
+    s = tick(s);
+    expect(s.combatLog.some((entry) => entry.includes('Spike trap') || entry.includes('Frost rune') || entry.includes('Bolt tower'))).toBe(true);
+    expect(s.combatLog.length).toBeLessThanOrEqual(4);
+  });
+
   it('no-path case breaches a wall instead of freezing', () => {
     let s = createInitialState();
     [{ x: 5, z: 7 }, { x: 5, z: 9 }, { x: 4, z: 8 }, { x: 6, z: 8 }].forEach((c) => {
