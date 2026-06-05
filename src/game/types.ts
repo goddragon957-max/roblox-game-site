@@ -2,6 +2,13 @@ export type Phase = 'build' | 'raid' | 'victory' | 'defeat';
 export type BlockType = 'wall' | 'trap' | 'turret' | 'frost';
 export type RaiderKind = 'grunt' | 'runner' | 'brute';
 export type Cell = { x: number; z: number };
+export type RaidPlan = {
+  day: number;
+  total: number;
+  dangerLane: number;
+  mix: Record<RaiderKind, number>;
+  rewardPreview: Resources;
+};
 export type Block = { type: BlockType; hp: number; cooldown?: number };
 export type Raider = {
   id: string;

@@ -1,4 +1,4 @@
-import type { BlockType, Cell, GameState, Raider, RaiderKind } from './types';
+import type { BlockType, Cell, GameState, Raider, RaiderKind, RaidPlan, Resources } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -13,6 +13,32 @@ const RAIDER_STATS: Record<RaiderKind, { hp: number; speed: number; bounty: numb
   runner: { hp: 2, speed: 2, bounty: 1 },
   brute: { hp: 8, speed: 1, bounty: 3 },
 };
+const LANES = [1, 3, 5, 7, 9];
+
+function resourcesForDay(day: number): Resources {
+  return {
+    wall: 8 + (day - 1) * 2,
+    trap: 5 + Math.floor((day - 1) * 1.5),
+    turret: 2 + Math.floor((day - 1) / 2),
+    frost: 2 + Math.floor((day - 1) / 2),
+  };
+}
+
+export function getRaidPlan(day: number): RaidPlan {
+  const total = 4 + day * 4;
+  const mix: Record<RaiderKind, number> = { grunt: 0, runner: 0, brute: 0 };
+  for (let i = 0; i < total; i += 1) {
+    const kind: RaiderKind = i % 7 === 6 ? 'brute' : i % 3 === 2 ? 'runner' : 'grunt';
+    mix[kind] += 1;
+  }
+  return {
+    day,
+    total,
+    dangerLane: LANES[day % LANES.length],
+    mix,
+    rewardPreview: resourcesForDay(day + 1),
+  };
+}
 
 export function createInitialState(): GameState {
   return {
@@ -58,13 +84,11 @@ export function removeBlock(state: GameState, cell: Cell): GameState {
 }
 
 function spawnRaiders(state: GameState): Raider[] {
-  const lanes = [1, 3, 5, 7, 9];
-  const count = 4 + state.day * 4;
-  const dangerLane = lanes[state.day % lanes.length];
-  return Array.from({ length: count }, (_, i) => {
+  const { total, dangerLane } = getRaidPlan(state.day);
+  return Array.from({ length: total }, (_, i) => {
     const kind: RaiderKind = i % 7 === 6 ? 'brute' : i % 3 === 2 ? 'runner' : 'grunt';
     const stats = RAIDER_STATS[kind];
-    const lane = i % 2 === 0 ? dangerLane : lanes[(i + state.day) % lanes.length];
+    const lane = i % 2 === 0 ? dangerLane : LANES[(i + state.day) % LANES.length];
     return {
       id: `d${state.day}-${i}`,
       kind,
@@ -96,16 +120,12 @@ export function startRaid(state: GameState): GameState {
 }
 
 export function nextDay(state: GameState): GameState {
+  const resources = resourcesForDay(state.day + 1);
   return {
     ...state,
     day: state.day + 1,
     phase: 'build',
-    resources: {
-      wall: 8 + state.day * 2,
-      trap: 5 + Math.floor(state.day * 1.5),
-      turret: 2 + Math.floor(state.day / 2),
-      frost: 2 + Math.floor(state.day / 2),
-    },
+    resources,
     coreHp: Math.min(state.maxCoreHp, state.coreHp + 12),
     raiders: [],
     totalRaiders: 0,

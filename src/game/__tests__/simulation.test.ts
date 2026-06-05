@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialState, nextDay, placeBlock, startRaid, tick } from '../simulation';
+import { createInitialState, getRaidPlan, nextDay, placeBlock, startRaid, tick } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -68,5 +68,18 @@ describe('Blockhold game logic', () => {
     expect(s.day).toBe(2);
     expect(s.resources.wall).toBeGreaterThan(8);
     expect(startRaid(s).totalRaiders).toBeGreaterThan(8);
+  });
+
+  it('raid forecast matches spawned wave and next-day rewards', () => {
+    const plan = getRaidPlan(2);
+    const s = startRaid({ ...createInitialState(), day: 2 });
+    const spawnedMix = s.raiders.reduce(
+      (mix, r) => ({ ...mix, [r.kind]: mix[r.kind] + 1 }),
+      { grunt: 0, runner: 0, brute: 0 },
+    );
+    expect(s.totalRaiders).toBe(plan.total);
+    expect(s.dangerLane).toBe(plan.dangerLane);
+    expect(spawnedMix).toEqual(plan.mix);
+    expect(plan.rewardPreview).toEqual(nextDay({ ...createInitialState(), day: 2, phase: 'victory' }).resources);
   });
 });
