@@ -48,6 +48,7 @@ export type GameState = {
   totalRaiders: number;
   coins: number;
   kills: number;
+  coreHits: number;
   combo: number;
   combatLog: string[];
   dangerLane: number;

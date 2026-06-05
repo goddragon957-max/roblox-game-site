@@ -80,6 +80,7 @@ export function createInitialState(): GameState {
     totalRaiders: 0,
     coins: 0,
     kills: 0,
+    coreHits: 0,
     combo: 0,
     combatLog: ['Build phase: place walls to bend lanes, then stack traps/towers into a kill zone.'],
     dangerLane: 5,
@@ -165,6 +166,7 @@ export function nextDay(state: GameState, rewardId: RewardChoice = 'repair'): Ga
     raiders: [],
     totalRaiders: 0,
     selected: 'wall',
+    coreHits: 0,
     combatLog: logEvent(state, `Reward chosen: ${reward.title} · bonus supplies delivered for Day ${state.day + 1}.`),
     message: `Day ${state.day + 1} 준비 시간 · ${reward.title} 보상 적용 완료.`,
   };
@@ -245,7 +247,11 @@ export function tick(state: GameState): GameState {
       continue;
     }
     if (same(r.cell, next.core)) {
-      next.coreHp = Math.max(0, next.coreHp - (r.kind === 'brute' ? 18 : 10));
+      const damage = r.kind === 'brute' ? 18 : 10;
+      next.coreHp = Math.max(0, next.coreHp - damage);
+      next.coreHits += 1;
+      next.combo = 0;
+      next.combatLog = logEvent(next, `${r.kind} breached the core · -${damage} HP · combo reset.`);
       moved.push({ ...r, resolved: true });
       continue;
     }
@@ -263,6 +269,8 @@ export function tick(state: GameState): GameState {
           break;
         }
         next.coreHp = Math.max(0, next.coreHp - 5);
+        next.coreHits += 1;
+        next.combo = 0;
         next.combatLog = logEvent(next, `${r.kind} found a breach path · core -5 HP.`);
         r = { ...r, resolved: true };
         resolvedThisStep = true;
@@ -282,5 +290,6 @@ export function tick(state: GameState): GameState {
   if (next.coreHp <= 0) return { ...next, phase: 'defeat', combatLog: logEvent(next, 'Defeat: the core collapsed under the raid.'), message: '코어가 파괴되었습니다. Restart로 다시 도전하세요.' };
   if (next.raiders.every((r) => r.resolved || r.hp <= 0)) return { ...next, phase: 'victory', combatLog: logEvent(next, `Raid cleared with ${next.kills} total kills. Choose Next Day for supplies.`), message: `Raid cleared! ${next.kills} kills · Next Day로 업그레이드하세요.` };
   const alive = next.raiders.filter((r) => !r.resolved && r.hp > 0).length;
-  return { ...next, message: `Raid in progress · ${alive}/${next.totalRaiders} alive · ${next.kills} kills · combo x${Math.max(1, next.combo)}` };
+  const cleared = next.totalRaiders - alive;
+  return { ...next, message: `Raid in progress · ${cleared}/${next.totalRaiders} cleared · ${next.kills} kills · ${next.coreHits} core hits · combo x${Math.max(1, next.combo)}` };
 }

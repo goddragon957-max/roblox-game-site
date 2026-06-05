@@ -72,6 +72,15 @@ describe('Blockhold game logic', () => {
     expect(tick(s).phase).toBe('defeat');
   });
 
+  it('tracks core breaches and resets combo for raid clarity', () => {
+    let s = startRaid(createInitialState());
+    s = { ...s, combo: 3, raiders: [{ ...s.raiders[0], cell: s.core, resolved: false }] };
+    s = tick(s);
+    expect(s.coreHits).toBe(1);
+    expect(s.combo).toBe(0);
+    expect(s.combatLog.some((entry) => entry.includes('breached the core'))).toBe(true);
+  });
+
   it('next day grants resources and increases raid pressure', () => {
     const s = nextDay({ ...createInitialState(), phase: 'victory' });
     expect(s.day).toBe(2);

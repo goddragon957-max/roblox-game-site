@@ -5,6 +5,8 @@ import { getRaidPlan, REWARD_OPTIONS } from '../game/simulation';
 export function Hud() {
   const s = useGameStore();
   const alive = s.raiders.filter((r) => !r.resolved && r.hp > 0).length;
+  const cleared = Math.max(0, s.totalRaiders - alive);
+  const progressPct = s.totalRaiders ? Math.round((cleared / s.totalRaiders) * 100) : 0;
   const hpPct = Math.max(0, Math.round((s.coreHp / s.maxCoreHp) * 100));
   const plan = getRaidPlan(s.day);
   const nextReward = plan.rewardPreview;
@@ -22,6 +24,15 @@ export function Hud() {
         <b><Coins size={15} /> Kills {s.kills}</b>
         <b>Day {s.day} · {s.phase.toUpperCase()}</b>
       </div>
+      {s.phase === 'raid' && (
+        <div className="wave-progress" aria-label={`Raid progress ${cleared} of ${s.totalRaiders} raiders cleared, ${s.coreHits} core hits`}>
+          <div>
+            <strong>Raid Progress</strong>
+            <span>{cleared}/{s.totalRaiders} cleared · Core hits {s.coreHits}</span>
+          </div>
+          <div className="wave-meter"><span style={{ width: `${progressPct}%` }} /></div>
+        </div>
+      )}
       {s.phase === 'build' && (
         <div className="raid-preview" aria-label={`Next raid forecast: ${plan.total} raiders, danger lane ${plan.dangerLane}`}>
           <strong>Next Raid Forecast</strong>
