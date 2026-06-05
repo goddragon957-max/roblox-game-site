@@ -1,19 +1,225 @@
-import type { BlockType, Cell, GameState, Raider } from './types';
+import type { BlockType, Cell, GameState, Raider, RaiderKind } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
-export function createInitialState(): GameState { return { day:1, phase:'build', paused:false, size:9, core:{x:4,z:4}, coreHp:100, maxCoreHp:100, resources:{wall:6, trap:3}, selected:'wall', blocks:{}, raiders:[], totalRaiders:0, message:'벽과 함정을 배치한 뒤 Start Raid를 누르세요.' }; }
-export function placeBlock(state: GameState, cell: Cell, type = state.selected): GameState { if(state.phase!=='build'||!inside(state,cell)||same(cell,state.core)||state.blocks[key(cell)]||state.resources[type]<=0) return state; return {...state, resources:{...state.resources,[type]:state.resources[type]-1}, blocks:{...state.blocks,[key(cell)]:{type, hp:type==='wall'?3:1}}, message:`${type==='wall'?'Wall':'Trap'} placed`}; }
-export function removeBlock(state: GameState, cell: Cell): GameState { if(state.phase!=='build') return state; const k=key(cell); const b=state.blocks[k]; if(!b) return state; const blocks={...state.blocks}; delete blocks[k]; return {...state, blocks, resources:{...state.resources,[b.type]:state.resources[b.type]+1}, message:'Block removed'}; }
-function spawnRaiders(state: GameState): Raider[] { const count=2+state.day*3; return Array.from({length:count},(_,i)=>({id:`r${state.day}-${i}`, cell:{x:Math.max(0,Math.min(state.size-1,state.core.x+(i%3)-1)),z:0}, hp: i%4===0?3:2, speed:1, path:[], pathIndex:0, attackCooldown:0})); }
-export function startRaid(state: GameState): GameState { if(state.phase!=='build') return state; const raiders=spawnRaiders(state).map(r=>({...r,path:findPath(state,r.cell)??[]})); return {...state, phase:'raid', raiders, totalRaiders:raiders.length, message:`Night raid: ${raiders.length} raiders incoming!`}; }
-export function nextDay(state: GameState): GameState { return {...state, day:state.day+1, phase:'build', resources:{wall:6+state.day*2, trap:3+Math.floor(state.day/2)}, raiders:[], totalRaiders:0, selected:'wall', message:'승리! 다음 날 방어를 보강하세요.'}; }
-export function restart(): GameState { return createInitialState(); }
-export function tick(state: GameState): GameState { if(state.phase!=='raid'||state.paused) return state; let next: GameState={...state, blocks:{...state.blocks}, raiders:state.raiders.map(r=>({...r, cell:{...r.cell}, path:[...r.path]}))};
-  next.raiders=next.raiders.map(r=>{ if(r.resolved||r.hp<=0) return {...r,resolved:true}; if(same(r.cell,next.core)){ next.coreHp=Math.max(0,next.coreHp-12); return {...r,resolved:true}; }
-    let path=findPath(next,r.cell); if(!path){ const wallKey=nearestWallTowardCore(next,r.cell); if(wallKey&&next.blocks[wallKey]){ next.blocks[wallKey]={...next.blocks[wallKey], hp:next.blocks[wallKey].hp-1}; if(next.blocks[wallKey].hp<=0) delete next.blocks[wallKey]; return {...r, attackCooldown:1}; } next.coreHp=Math.max(0,next.coreHp-5); return {...r,resolved:true}; }
-    const dest=path[1]??path[0]; const k=key(dest); let hp=r.hp; if(next.blocks[k]?.type==='trap'){ hp-=2; delete next.blocks[k]; }
-    return hp<=0 ? {...r, hp:0, resolved:true, cell:dest, path} : {...r, hp, cell:dest, path}; });
-  if(next.coreHp<=0) return {...next, phase:'defeat', message:'코어가 파괴되었습니다. Restart로 다시 도전하세요.'};
-  if(next.raiders.every(r=>r.resolved||r.hp<=0)) return {...next, phase:'victory', message:'Raid cleared! Next Day로 진행하세요.'};
-  const alive=next.raiders.filter(r=>!r.resolved&&r.hp>0).length; return {...next, message:`Raid in progress · ${alive}/${next.totalRaiders} raiders active`}; }
+const BLOCKS: Record<BlockType, { hp: number; label: string }> = {
+  wall: { hp: 5, label: 'Stone Wall' },
+  trap: { hp: 1, label: 'Spike Trap' },
+  turret: { hp: 2, label: 'Bolt Tower' },
+  frost: { hp: 1, label: 'Frost Rune' },
+};
+const RAIDER_STATS: Record<RaiderKind, { hp: number; speed: number; bounty: number }> = {
+  grunt: { hp: 3, speed: 1, bounty: 1 },
+  runner: { hp: 2, speed: 2, bounty: 1 },
+  brute: { hp: 8, speed: 1, bounty: 3 },
+};
+
+export function createInitialState(): GameState {
+  return {
+    day: 1,
+    phase: 'build',
+    paused: false,
+    size: 11,
+    core: { x: 5, z: 8 },
+    coreHp: 100,
+    maxCoreHp: 100,
+    resources: { wall: 8, trap: 5, turret: 2, frost: 2 },
+    selected: 'wall',
+    blocks: {},
+    raiders: [],
+    totalRaiders: 0,
+    coins: 0,
+    kills: 0,
+    combo: 0,
+    dangerLane: 5,
+    message: 'Build to Survive + Tower Defense식으로 길목을 막고, 함정/타워 킬존을 만드세요.',
+  };
+}
+
+export function placeBlock(state: GameState, cell: Cell, type = state.selected): GameState {
+  if (state.phase !== 'build' || !inside(state, cell) || same(cell, state.core) || state.blocks[key(cell)] || state.resources[type] <= 0) return state;
+  if (cell.z === 0) return { ...state, message: '스폰 줄에는 설치할 수 없습니다.' };
+  return {
+    ...state,
+    resources: { ...state.resources, [type]: state.resources[type] - 1 },
+    blocks: { ...state.blocks, [key(cell)]: { type, hp: BLOCKS[type].hp, cooldown: 0 } },
+    message: `${BLOCKS[type].label} 배치 완료 · Kill zone을 만들어보세요.`,
+  };
+}
+
+export function removeBlock(state: GameState, cell: Cell): GameState {
+  if (state.phase !== 'build') return state;
+  const k = key(cell);
+  const b = state.blocks[k];
+  if (!b) return state;
+  const blocks = { ...state.blocks };
+  delete blocks[k];
+  return { ...state, blocks, resources: { ...state.resources, [b.type]: state.resources[b.type] + 1 }, message: 'Block removed' };
+}
+
+function spawnRaiders(state: GameState): Raider[] {
+  const lanes = [1, 3, 5, 7, 9];
+  const count = 4 + state.day * 4;
+  const dangerLane = lanes[state.day % lanes.length];
+  return Array.from({ length: count }, (_, i) => {
+    const kind: RaiderKind = i % 7 === 6 ? 'brute' : i % 3 === 2 ? 'runner' : 'grunt';
+    const stats = RAIDER_STATS[kind];
+    const lane = i % 2 === 0 ? dangerLane : lanes[(i + state.day) % lanes.length];
+    return {
+      id: `d${state.day}-${i}`,
+      kind,
+      cell: { x: lane, z: 0 },
+      hp: stats.hp + Math.floor(state.day / 3),
+      maxHp: stats.hp + Math.floor(state.day / 3),
+      speed: stats.speed,
+      bounty: stats.bounty,
+      path: [],
+      pathIndex: 0,
+      attackCooldown: 0,
+    };
+  });
+}
+
+export function startRaid(state: GameState): GameState {
+  if (state.phase !== 'build') return state;
+  const raiders = spawnRaiders(state).map((r) => ({ ...r, path: findPath(state, r.cell) ?? [] }));
+  const dangerLane = raiders[0]?.cell.x ?? state.dangerLane;
+  return {
+    ...state,
+    phase: 'raid',
+    raiders,
+    totalRaiders: raiders.length,
+    dangerLane,
+    combo: 0,
+    message: `Night raid: ${raiders.length} enemies · main lane X${dangerLane} · 타워/함정 킬존을 지켜보세요!`,
+  };
+}
+
+export function nextDay(state: GameState): GameState {
+  return {
+    ...state,
+    day: state.day + 1,
+    phase: 'build',
+    resources: {
+      wall: 8 + state.day * 2,
+      trap: 5 + Math.floor(state.day * 1.5),
+      turret: 2 + Math.floor(state.day / 2),
+      frost: 2 + Math.floor(state.day / 2),
+    },
+    coreHp: Math.min(state.maxCoreHp, state.coreHp + 12),
+    raiders: [],
+    totalRaiders: 0,
+    selected: 'wall',
+    message: `Day ${state.day + 1} 준비 시간 · 보상으로 블록 보급 + 코어 일부 수리.`,
+  };
+}
+
+export function restart(): GameState {
+  return createInitialState();
+}
+
+function damageRaider(state: GameState, targetId: string, amount: number, slow = 0): GameState {
+  let kills = 0;
+  const raiders = state.raiders.map((r) => {
+    if (r.id !== targetId || r.resolved || r.hp <= 0) return r;
+    const hp = r.hp - amount;
+    if (hp <= 0) {
+      kills += 1;
+      return { ...r, hp: 0, resolved: true };
+    }
+    return { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow) };
+  });
+  return kills
+    ? { ...state, raiders, kills: state.kills + kills, coins: state.coins + kills, combo: state.combo + kills }
+    : { ...state, raiders };
+}
+
+function runTowers(state: GameState): GameState {
+  let next = { ...state, blocks: { ...state.blocks } };
+  for (const [blockKey, block] of Object.entries(state.blocks)) {
+    if (block.type !== 'turret') continue;
+    const [x, z] = blockKey.split(',').map(Number);
+    const target = next.raiders
+      .filter((r) => !r.resolved && r.hp > 0)
+      .map((r) => ({ r, d: Math.abs(r.cell.x - x) + Math.abs(r.cell.z - z) }))
+      .filter(({ d }) => d <= 3)
+      .sort((a, b) => a.d - b.d || b.r.cell.z - a.r.cell.z)[0]?.r;
+    if (target) next = damageRaider(next, target.id, 1);
+  }
+  return next;
+}
+
+function resolveTrap(state: GameState, r: Raider, dest: Cell): { state: GameState; raider: Raider } {
+  const k = key(dest);
+  const block = state.blocks[k];
+  if (!block || block.type === 'wall' || block.type === 'turret') return { state, raider: r };
+  const blocks = { ...state.blocks };
+  delete blocks[k];
+  const damage = block.type === 'trap' ? 3 : 1;
+  const slow = block.type === 'frost' ? 2 : 0;
+  const hp = r.hp - damage;
+  if (hp <= 0) {
+    return {
+      state: { ...state, blocks, kills: state.kills + 1, coins: state.coins + r.bounty, combo: state.combo + 1 },
+      raider: { ...r, hp: 0, resolved: true, cell: dest },
+    };
+  }
+  return { state: { ...state, blocks }, raider: { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow), cell: dest } };
+}
+
+export function tick(state: GameState): GameState {
+  if (state.phase !== 'raid' || state.paused) return state;
+  let next: GameState = {
+    ...state,
+    blocks: { ...state.blocks },
+    raiders: state.raiders.map((r) => ({ ...r, cell: { ...r.cell }, path: [...r.path] })),
+  };
+
+  next = runTowers(next);
+
+  const moved: Raider[] = [];
+  for (const original of next.raiders) {
+    let r = { ...original, cell: { ...original.cell } };
+    if (r.resolved || r.hp <= 0) {
+      moved.push({ ...r, resolved: true });
+      continue;
+    }
+    if (same(r.cell, next.core)) {
+      next.coreHp = Math.max(0, next.coreHp - (r.kind === 'brute' ? 18 : 10));
+      moved.push({ ...r, resolved: true });
+      continue;
+    }
+
+    const steps = r.slowed && r.slowed > 0 ? 1 : r.speed;
+    let resolvedThisStep = false;
+    for (let step = 0; step < steps && !resolvedThisStep; step += 1) {
+      const path = findPath(next, r.cell);
+      if (!path) {
+        const wallKey = nearestWallTowardCore(next, r.cell);
+        if (wallKey && next.blocks[wallKey]) {
+          next.blocks[wallKey] = { ...next.blocks[wallKey], hp: next.blocks[wallKey].hp - (r.kind === 'brute' ? 2 : 1) };
+          if (next.blocks[wallKey].hp <= 0) delete next.blocks[wallKey];
+          resolvedThisStep = true;
+          break;
+        }
+        next.coreHp = Math.max(0, next.coreHp - 5);
+        r = { ...r, resolved: true };
+        resolvedThisStep = true;
+        break;
+      }
+      const dest = path[1] ?? path[0];
+      const trapResult = resolveTrap(next, r, dest);
+      next = trapResult.state;
+      r = { ...trapResult.raider, path };
+      if (r.resolved || same(r.cell, next.core)) resolvedThisStep = true;
+    }
+    r.slowed = Math.max(0, (r.slowed ?? 0) - 1);
+    moved.push(r);
+  }
+  next.raiders = moved;
+
+  if (next.coreHp <= 0) return { ...next, phase: 'defeat', message: '코어가 파괴되었습니다. Restart로 다시 도전하세요.' };
+  if (next.raiders.every((r) => r.resolved || r.hp <= 0)) return { ...next, phase: 'victory', message: `Raid cleared! ${next.kills} kills · Next Day로 업그레이드하세요.` };
+  const alive = next.raiders.filter((r) => !r.resolved && r.hp > 0).length;
+  return { ...next, message: `Raid in progress · ${alive}/${next.totalRaiders} alive · ${next.kills} kills · combo x${Math.max(1, next.combo)}` };
+}
