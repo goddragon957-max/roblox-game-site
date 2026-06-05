@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialState, getRaidPlan, nextDay, placeBlock, startRaid, tick } from '../simulation';
+import { createInitialState, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, tick } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -79,6 +79,18 @@ describe('Blockhold game logic', () => {
     expect(startRaid(s).totalRaiders).toBeGreaterThan(8);
   });
 
+  it('clear reward choices apply distinct next-day bonuses', () => {
+    const damaged = { ...createInitialState(), phase: 'victory' as const, coreHp: 50 };
+    const repairReward = nextDay(damaged, 'repair');
+    const turretReward = nextDay(damaged, 'turret');
+    const frostReward = nextDay(damaged, 'frost');
+    expect(REWARD_OPTIONS).toHaveLength(3);
+    expect(turretReward.resources.turret).toBeGreaterThan(repairReward.resources.turret);
+    expect(frostReward.resources.frost).toBeGreaterThan(turretReward.resources.frost);
+    expect(repairReward.coreHp).toBeGreaterThan(turretReward.coreHp);
+    expect(turretReward.combatLog[0]).toContain('Tower Crate');
+  });
+
   it('raid forecast matches spawned wave and next-day rewards', () => {
     const plan = getRaidPlan(2);
     const s = startRaid({ ...createInitialState(), day: 2 });
@@ -89,6 +101,7 @@ describe('Blockhold game logic', () => {
     expect(s.totalRaiders).toBe(plan.total);
     expect(s.dangerLane).toBe(plan.dangerLane);
     expect(spawnedMix).toEqual(plan.mix);
-    expect(plan.rewardPreview).toEqual(nextDay({ ...createInitialState(), day: 2, phase: 'victory' }).resources);
+    expect(plan.rewardPreview).toEqual({ wall: 12, trap: 8, turret: 3, frost: 3 });
+    expect(nextDay({ ...createInitialState(), day: 2, phase: 'victory' }).resources.wall).toBeGreaterThan(plan.rewardPreview.wall);
   });
 });

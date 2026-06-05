@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getRaidPlan } from '../game/simulation';
+import { getRaidPlan, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -27,16 +27,30 @@ export function Hud() {
           <strong>Next Raid Forecast</strong>
           <span>Lane X{plan.dangerLane} 집중 · {plan.total}명</span>
           <em>Grunt {plan.mix.grunt} · Runner {plan.mix.runner} · Brute {plan.mix.brute}</em>
-          <small>Clear 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
+          <small>Base 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
         </div>
       )}
       <div className="combat-log" aria-label="Recent combat feedback">
         <strong>Combat Feedback</strong>
         {s.combatLog.map((event, index) => <span key={`${event}-${index}`}>{event}</span>)}
       </div>
+      {s.phase === 'victory' && (
+        <div className="reward-choices" aria-label="Choose next day reward">
+          <strong>Choose Clear Reward</strong>
+          <span>다음 Day 보급 방향을 하나 고르세요.</span>
+          <div>
+            {REWARD_OPTIONS.map((reward) => (
+              <button key={reward.id} onClick={() => s.next(reward.id)}>
+                <b>{reward.title}</b>
+                <small>{reward.description}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="actions">
         {s.phase === 'build' && <button onClick={s.start}><Play size={16} />Start Raid</button>}
-        {s.phase === 'victory' && <button onClick={s.next}><StepForward size={16} />Next Day</button>}
+        {s.phase === 'victory' && <button onClick={() => s.next()}><StepForward size={16} />Next Day: Core Patch</button>}
         {s.phase === 'defeat' && <button onClick={s.restartGame}><RotateCcw size={16} />Restart</button>}
         {s.phase === 'raid' && <button onClick={s.togglePause}><Pause size={16} />{s.paused ? 'Resume' : 'Pause'}</button>}
       </div>

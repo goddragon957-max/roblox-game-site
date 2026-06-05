@@ -1,6 +1,7 @@
 export type Phase = 'build' | 'raid' | 'victory' | 'defeat';
 export type BlockType = 'wall' | 'trap' | 'turret' | 'frost';
 export type RaiderKind = 'grunt' | 'runner' | 'brute';
+export type RewardChoice = 'repair' | 'turret' | 'frost';
 export type Cell = { x: number; z: number };
 export type RaidPlan = {
   day: number;
@@ -25,6 +26,13 @@ export type Raider = {
   attackCooldown: number;
 };
 export type Resources = Record<BlockType, number>;
+export type RewardOption = {
+  id: RewardChoice;
+  title: string;
+  description: string;
+  resources: Partial<Resources>;
+  coreRepair: number;
+};
 export type GameState = {
   day: number;
   phase: Phase;

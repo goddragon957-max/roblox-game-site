@@ -1,4 +1,4 @@
-import type { BlockType, Cell, GameState, Raider, RaiderKind, RaidPlan, Resources } from './types';
+import type { BlockType, Cell, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -14,6 +14,30 @@ const RAIDER_STATS: Record<RaiderKind, { hp: number; speed: number; bounty: numb
   brute: { hp: 8, speed: 1, bounty: 3 },
 };
 const LANES = [1, 3, 5, 7, 9];
+
+export const REWARD_OPTIONS: RewardOption[] = [
+  {
+    id: 'repair',
+    title: 'Core Patch',
+    description: '안전하게 코어를 더 수리하고 벽을 보강합니다.',
+    resources: { wall: 3, trap: 1 },
+    coreRepair: 18,
+  },
+  {
+    id: 'turret',
+    title: 'Tower Crate',
+    description: '다음 웨이브용 Bolt Tower와 스파이크를 추가합니다.',
+    resources: { turret: 1, trap: 2 },
+    coreRepair: 8,
+  },
+  {
+    id: 'frost',
+    title: 'Frost Cache',
+    description: '킬존 유지용 Frost Rune과 방벽 재료를 받습니다.',
+    resources: { frost: 2, wall: 1 },
+    coreRepair: 10,
+  },
+];
 
 function resourcesForDay(day: number): Resources {
   return {
@@ -125,19 +149,24 @@ export function startRaid(state: GameState): GameState {
   };
 }
 
-export function nextDay(state: GameState): GameState {
-  const resources = resourcesForDay(state.day + 1);
+export function nextDay(state: GameState, rewardId: RewardChoice = 'repair'): GameState {
+  const baseResources = resourcesForDay(state.day + 1);
+  const reward = REWARD_OPTIONS.find((option) => option.id === rewardId) ?? REWARD_OPTIONS[0];
+  const resources = { ...baseResources };
+  Object.entries(reward.resources).forEach(([type, amount]) => {
+    resources[type as BlockType] += amount ?? 0;
+  });
   return {
     ...state,
     day: state.day + 1,
     phase: 'build',
     resources,
-    coreHp: Math.min(state.maxCoreHp, state.coreHp + 12),
+    coreHp: Math.min(state.maxCoreHp, state.coreHp + 12 + reward.coreRepair),
     raiders: [],
     totalRaiders: 0,
     selected: 'wall',
-    combatLog: logEvent(state, `Day ${state.day + 1} supplies delivered: +walls/traps/towers/frost and core repaired.`),
-    message: `Day ${state.day + 1} 준비 시간 · 보상으로 블록 보급 + 코어 일부 수리.`,
+    combatLog: logEvent(state, `Reward chosen: ${reward.title} · bonus supplies delivered for Day ${state.day + 1}.`),
+    message: `Day ${state.day + 1} 준비 시간 · ${reward.title} 보상 적용 완료.`,
   };
 }
 
