@@ -1,0 +1,2 @@
+import { useGameStore } from '../store/gameStore';
+export function BuildPalette(){ const s=useGameStore(); return <aside className="build-panel"><span>Selected Block</span><div className="palette"><button className={s.selected==='wall'?'active':''} onClick={()=>s.select('wall')}>1 Stone Wall <b>{s.resources.wall}</b></button><button className={s.selected==='trap'?'active':''} onClick={()=>s.select('trap')}>2 Spike Trap <b>{s.resources.trap}</b></button></div><small>Real raid loop: enemies path, traps hit, walls breach.</small></aside> }

@@ -1,24 +1,26 @@
-# Mini Babylon Lab
+# Blockhold Defense
 
-A tiny browser-based 3D sandbox created by Hermes, now using Babylon.js.
+Playable browser 3D voxel tower-defense vertical slice.
 
 ## Run
 
 ```bash
-cd /home/sy/mini-3d-lab
-npm test
-npm start
+npm install
+npm run dev
+npm run test
+npm run build
 ```
 
-Then open <http://localhost:8080>.
+## Controls
 
-Controls:
-
-- Drag: rotate camera
-- Mouse wheel: zoom
-- Space: pause/resume animation
+- Left click: place selected block
+- Right click: remove block in build phase
+- 1: select wall
+- 2: select spike trap
+- Start Raid: begin enemy wave
+- Space: pause during raid
 - R: reset camera
 
-## Why Babylon.js
+## MVP Mechanics
 
-Babylon.js is a better fit when the goal is closer to a small 3D app/game engine rather than a raw rendering demo. It gives camera controls, scene abstractions, input handling, materials, and engine-style structure out of the box.
+Build during the day, start the night raid, watch raiders path to the core, use walls to redirect/breach and traps to damage. Survive to advance to the next day; lose if core HP reaches zero.

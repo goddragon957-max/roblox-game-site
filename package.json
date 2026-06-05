@@ -1,12 +1,1 @@
-{
-  "name": "mini-3d-lab",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test",
-    "start": "python3 -m http.server 8080",
-    "build": "rm -rf dist && mkdir -p dist && cp -r index.html src dist/"
-  },
-  "devDependencies": {}
-}
+{"type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"tsc --noEmit && vite build","test":"vitest run","lint":"tsc --noEmit"},"dependencies":{"@babylonjs/core":"^7.54.2","@vitejs/plugin-react":"latest","vite":"latest","typescript":"latest","react":"latest","react-dom":"latest","zustand":"latest","lucide-react":"latest","tailwindcss":"^3.4.17","postcss":"latest","autoprefixer":"latest","clsx":"latest","tailwind-merge":"latest"},"devDependencies":{"vitest":"latest","jsdom":"latest","@types/react":"latest","@types/react-dom":"latest"}}
