@@ -13,12 +13,18 @@ import {
 } from '@babylonjs/core';
 import { useGameStore } from '../store/gameStore';
 import { getRaidPlan } from '../game/simulation';
-import type { RaiderKind } from '../game/types';
+import type { BlockType, Cell, RaiderKind } from '../game/types';
 
 const mat = (scene: Scene, name: string, color: string, emissive = '#020617') => {
   const m = new StandardMaterial(name, scene);
   m.diffuseColor = Color3.FromHexString(color);
   m.emissiveColor = Color3.FromHexString(emissive);
+  return m;
+};
+
+const ghostMat = (scene: Scene, name: string, color: string, emissive = '#020617') => {
+  const m = mat(scene, name, color, emissive);
+  m.alpha = 0.58;
   return m;
 };
 
@@ -54,8 +60,16 @@ export function BlockholdScene() {
       runner: mat(scene, 'runner', '#facc15', '#422006'),
       brute: mat(scene, 'brute', '#fb7185', '#4c0519'),
       hp: mat(scene, 'hp', '#22c55e', '#052e16'),
+      blocked: ghostMat(scene, 'blockedPreview', '#ef4444', '#450a0a'),
+    };
+    const previewMaterials: Record<BlockType, StandardMaterial> = {
+      wall: ghostMat(scene, 'wallPreview', '#cbd5e1', '#334155'),
+      trap: ghostMat(scene, 'trapPreview', '#fb923c', '#7c2d12'),
+      turret: ghostMat(scene, 'turretPreview', '#c4b5fd', '#4c1d95'),
+      frost: ghostMat(scene, 'frostPreview', '#a5f3fc', '#155e75'),
     };
     const meshes = new Map<string, Mesh>();
+    let hoverCell: Cell | undefined;
     const center = () => (api().size - 1) / 2;
     const cellToVec = (x: number, z: number, y = 0.06) => new Vector3(x - center(), y, z - center());
     function box(id: string, w: number, h: number, d: number, pos: Vector3, material: StandardMaterial) {
@@ -89,6 +103,16 @@ export function BlockholdScene() {
         live.add(id);
         box(id, 0.72, 0.3, 0.72, cellToVec(lane, 0, 0.22), materials.spawn);
       });
+
+      if (s.phase === 'build' && hoverCell) {
+        const occupied = Boolean(s.blocks[`${hoverCell.x},${hoverCell.z}`]);
+        const valid = hoverCell.x >= 0 && hoverCell.x < s.size && hoverCell.z >= 0 && hoverCell.z < s.size && hoverCell.z !== 0 && !(hoverCell.x === s.core.x && hoverCell.z === s.core.z) && !occupied && s.resources[s.selected] > 0;
+        const id = 'build-preview';
+        live.add(id);
+        const dims = s.selected === 'wall' ? [0.9, 0.88, 0.9] : s.selected === 'turret' ? [0.68, 1, 0.68] : [0.82, 0.14, 0.82];
+        box(id, dims[0], dims[1], dims[2], cellToVec(hoverCell.x, hoverCell.z, valid ? dims[1] / 2 + 0.08 : 0.1), valid ? previewMaterials[s.selected] : materials.blocked);
+      }
+
       live.add('core');
       box('core', 1.15, 1.5, 1.15, cellToVec(s.core.x, s.core.z, 0.78), materials.core);
 
@@ -124,6 +148,17 @@ export function BlockholdScene() {
       if (e.key.toLowerCase() === 'r') { camera.alpha = -0.72; camera.beta = 1.02; camera.radius = 13.5; }
       if (e.code === 'Space') api().togglePause();
     };
+    const hover = () => {
+      const picked = scene.pick(scene.pointerX, scene.pointerY);
+      if (!picked?.pickedPoint) {
+        hoverCell = undefined;
+        return;
+      }
+      hoverCell = {
+        x: Math.round(picked.pickedPoint.x + center()),
+        z: Math.round(picked.pickedPoint.z + center()),
+      };
+    };
     const pick = (ev: PointerEvent) => {
       ev.preventDefault();
       const picked = scene.pick(scene.pointerX, scene.pointerY);
@@ -133,14 +168,21 @@ export function BlockholdScene() {
       if (ev.button === 2) api().remove({ x, z });
       else api().place({ x, z });
     };
+    const clearHover = () => { hoverCell = undefined; };
+    const blockContextMenu = (e: Event) => e.preventDefault();
     window.addEventListener('resize', onResize);
     window.addEventListener('keydown', onKey);
+    canvas.addEventListener('pointermove', hover);
+    canvas.addEventListener('pointerleave', clearHover);
     canvas.addEventListener('pointerdown', pick);
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('contextmenu', blockContextMenu);
     return () => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('keydown', onKey);
+      canvas.removeEventListener('pointermove', hover);
+      canvas.removeEventListener('pointerleave', clearHover);
       canvas.removeEventListener('pointerdown', pick);
+      canvas.removeEventListener('contextmenu', blockContextMenu);
       engine.dispose();
     };
   }, []);

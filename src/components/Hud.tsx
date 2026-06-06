@@ -77,7 +77,7 @@ export function Hud() {
         {s.phase === 'defeat' && <button onClick={s.restartGame}><RotateCcw size={16} />Restart</button>}
         {s.phase === 'raid' && <button onClick={s.togglePause}><Pause size={16} />{s.paused ? 'Resume' : 'Pause'}</button>}
       </div>
-      <p className="hint"><Shield size={14} /> 좌클릭 배치 · 우클릭 회수 · 1 벽 · 2 스파이크 · 3 타워 · 4 얼음 · Space 일시정지</p>
+      <p className="hint"><Shield size={14} /> 마우스 위치에 선택 블록 고스트 미리보기 · 좌클릭 배치 · 우클릭 회수 · 1 벽 · 2 스파이크 · 3 타워 · 4 얼음 · Space 일시정지</p>
     </section>
   );
 }
