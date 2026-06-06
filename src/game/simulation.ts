@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, KillZoneCoverage, Raider, RaiderKind, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -242,6 +242,44 @@ export function getBuildReadiness(state: GameState): BuildReadiness {
     advice: `Priority: ${tips[topMissing]}`,
     recommended,
     missing,
+  };
+}
+
+export function getKillZoneCoverage(state: GameState): KillZoneCoverage {
+  const lane = state.phase === 'raid' ? state.dangerLane : getRaidPlan(state.day).dangerLane;
+  const counts: Resources = { wall: 0, trap: 0, turret: 0, frost: 0 };
+  Object.entries(state.blocks).forEach(([blockKey, block]) => {
+    const cell = cellFromKey(blockKey);
+    const inLanePocket = Math.abs(cell.x - lane) <= 1 && cell.z > 0 && cell.z <= state.core.z;
+    const protectsCoreBend = Math.abs(cell.x - state.core.x) <= 2 && Math.abs(cell.z - state.core.z) <= 2;
+    if (inLanePocket || protectsCoreBend) counts[block.type] += 1;
+  });
+  const score = counts.wall + counts.trap * 2 + counts.turret * 3 + counts.frost * 2;
+  if (score >= 12 && counts.turret >= 1 && counts.trap >= 2 && counts.wall >= 3) {
+    return {
+      lane,
+      score,
+      label: 'Kill Zone Ready',
+      advice: `Lane X${lane} has walls to bend, traps to burst, and tower fire to finish the wave.`,
+      counts,
+    };
+  }
+  if (score >= 7) {
+    const missing = counts.turret === 0 ? 'add one Bolt Tower behind the choke' : counts.trap < 2 ? 'add Spike Traps on the bend' : 'add more walls to slow the path';
+    return {
+      lane,
+      score,
+      label: 'Partial Choke',
+      advice: `Lane X${lane} is started; ${missing} before pressing Start Raid.`,
+      counts,
+    };
+  }
+  return {
+    lane,
+    score,
+    label: 'Open Lane',
+    advice: `Lane X${lane} is mostly open: place 3+ walls, 2 traps, and a tower/frost pocket near the orange route.`,
+    counts,
   };
 }
 

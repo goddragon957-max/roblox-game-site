@@ -33,6 +33,13 @@ export type BuildReadiness = {
   recommended: Resources;
   missing: Partial<Resources>;
 };
+export type KillZoneCoverage = {
+  lane: number;
+  score: number;
+  label: string;
+  advice: string;
+  counts: Resources;
+};
 export type RaidPressure = {
   level: 'safe' | 'warning' | 'critical';
   label: string;

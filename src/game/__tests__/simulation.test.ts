@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getKillZoneCoverage, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -273,6 +273,27 @@ describe('Blockhold game logic', () => {
     expect(ready.ready).toBe(true);
     expect(ready.label).toBe('Ready Hold');
     expect(ready.missing).toEqual({});
+  });
+
+  it('summarizes kill-zone coverage around the forecast danger lane', () => {
+    let open = createInitialState();
+    expect(getKillZoneCoverage(open).label).toBe('Open Lane');
+    [{ x: 3, z: 4 }, { x: 3, z: 5 }, { x: 4, z: 5 }].forEach((cell) => {
+      open = { ...open, resources: { ...open.resources, wall: 99 } };
+      open = placeBlock(open, cell, 'wall');
+    });
+    let covered = open;
+    [{ x: 3, z: 6 }, { x: 4, z: 6 }].forEach((cell) => {
+      covered = { ...covered, resources: { ...covered.resources, trap: 99 } };
+      covered = placeBlock(covered, cell, 'trap');
+    });
+    covered = { ...covered, resources: { ...covered.resources, turret: 99, frost: 99 } };
+    covered = placeBlock(covered, { x: 2, z: 5 }, 'turret');
+    covered = placeBlock(covered, { x: 3, z: 7 }, 'frost');
+    const coverage = getKillZoneCoverage(covered);
+    expect(coverage.lane).toBe(getRaidPlan(1).dangerLane);
+    expect(coverage.label).toBe('Kill Zone Ready');
+    expect(coverage.counts).toMatchObject({ wall: 3, trap: 2, turret: 1, frost: 1 });
   });
 
   it('summarizes live raid mix for HUD focus calls', () => {

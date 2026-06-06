@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
+import { getBuildReadiness, getKillZoneCoverage, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -15,6 +15,7 @@ export function Hud() {
   const readiness = getBuildReadiness(s);
   const raidPressure = getRaidPressure(s);
   const rewardRecommendation = getRewardRecommendation(s);
+  const killZoneCoverage = getKillZoneCoverage(s);
   return (
     <section className="hud">
       <p className="eyebrow">Reference: Build to Survive × Tower Defense Simulator × Orcs Must Die</p>
@@ -87,6 +88,13 @@ export function Hud() {
               부족: {Object.entries(readiness.missing).map(([type, amount]) => `${type} +${amount}`).join(' · ')}
             </em>
           )}
+        </div>
+      )}
+      {s.phase === 'build' && (
+        <div className={`kill-zone-coach ${killZoneCoverage.label === 'Kill Zone Ready' ? 'ready' : killZoneCoverage.label === 'Partial Choke' ? 'partial' : 'open'}`} aria-label={`Kill zone coverage: ${killZoneCoverage.label}`}>
+          <strong>Kill Zone Coverage · {killZoneCoverage.label}</strong>
+          <span>Lane X{killZoneCoverage.lane} score {killZoneCoverage.score} · Wall {killZoneCoverage.counts.wall} · Trap {killZoneCoverage.counts.trap} · Tower {killZoneCoverage.counts.turret} · Frost {killZoneCoverage.counts.frost}</span>
+          <em>{killZoneCoverage.advice}</em>
         </div>
       )}
       <div className="combat-log" aria-label="Recent combat feedback">
