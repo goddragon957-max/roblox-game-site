@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getKillZoneCoverage, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -273,6 +273,21 @@ describe('Blockhold game logic', () => {
     expect(ready.ready).toBe(true);
     expect(ready.label).toBe('Ready Hold');
     expect(ready.missing).toEqual({});
+  });
+
+  it('summarizes phase objectives so the HUD explains the current goal and bonus', () => {
+    const buildObjective = getPhaseObjective(createInitialState());
+    expect(buildObjective.label).toContain('Build Objective');
+    expect(buildObjective.primary).toContain('lane X3');
+    expect(buildObjective.checklist).toHaveLength(4);
+
+    const raidObjective = getPhaseObjective(startRaid(createInitialState()));
+    expect(raidObjective.label).toBe('Raid Objective');
+    expect(raidObjective.bonus).toContain('3★ bonus');
+
+    const victoryObjective = getPhaseObjective({ ...createInitialState(), phase: 'victory', coins: 3, lastClearGrade: { stars: 3, label: 'Flawless Hold', bonusCoins: 3 } });
+    expect(victoryObjective.primary).toContain('choose a reward');
+    expect(victoryObjective.checklist.some((item) => item.includes('Recommended'))).toBe(true);
   });
 
   it('summarizes kill-zone coverage around the forecast danger lane', () => {

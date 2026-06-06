@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getBuildReadiness, getKillZoneCoverage, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
+import { getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -16,6 +16,7 @@ export function Hud() {
   const raidPressure = getRaidPressure(s);
   const rewardRecommendation = getRewardRecommendation(s);
   const killZoneCoverage = getKillZoneCoverage(s);
+  const objective = getPhaseObjective(s);
   return (
     <section className="hud">
       <p className="eyebrow">Reference: Build to Survive × Tower Defense Simulator × Orcs Must Die</p>
@@ -29,6 +30,14 @@ export function Hud() {
         <b><Skull size={15} /> Raiders {alive}/{s.totalRaiders || '-'}</b>
         <b><Coins size={15} /> Coins {s.coins} · Kills {s.kills}</b>
         <b>Day {s.day} · {s.phase.toUpperCase()}</b>
+      </div>
+      <div className="objective-card" aria-label={`Current objective: ${objective.label}`}>
+        <strong>{objective.label}</strong>
+        <span>{objective.primary}</span>
+        <em>{objective.bonus}</em>
+        <div>
+          {objective.checklist.map((item) => <small key={item}>{item}</small>)}
+        </div>
       </div>
       <div className="actions primary-actions">
         {s.phase === 'build' && <button onClick={s.start}><Play size={16} />Start Raid</button>}

@@ -47,6 +47,12 @@ export type RaidPressure = {
   nearestKind?: RaiderKind;
   advice: string;
 };
+export type PhaseObjective = {
+  label: string;
+  primary: string;
+  bonus: string;
+  checklist: string[];
+};
 export type Block = { type: BlockType; hp: number; cooldown?: number };
 export type Raider = {
   id: string;

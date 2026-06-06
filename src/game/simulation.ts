@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, KillZoneCoverage, Raider, RaiderKind, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, KillZoneCoverage, PhaseObjective, Raider, RaiderKind, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -201,6 +201,60 @@ export function getRaidPressure(state: GameState): RaidPressure {
     nearestDistance: nearest.distance,
     nearestKind: nearest.raider.kind,
     advice: `Nearest ${nearest.raider.kind} is ${nearest.distance} tiles away; tower fire still has time to thin the wave.`,
+  };
+}
+
+export function getPhaseObjective(state: GameState): PhaseObjective {
+  if (state.phase === 'build') {
+    const plan = getRaidPlan(state.day);
+    const readiness = getBuildReadiness(state);
+    const coverage = getKillZoneCoverage(state);
+    return {
+      label: `Day ${state.day} Build Objective`,
+      primary: `Fortify lane X${plan.dangerLane} before ${plan.total} raiders arrive.`,
+      bonus: readiness.ready && coverage.label === 'Kill Zone Ready'
+        ? 'Bonus ready: press Start Raid and aim for a 3★ Flawless Hold.'
+        : 'Bonus target: meet Build Coach minimums and raise Kill Zone Coverage to Ready.',
+      checklist: [
+        `Wall bend: ${coverage.counts.wall}/${readiness.recommended.wall}`,
+        `Spike burst: ${coverage.counts.trap}/${readiness.recommended.trap}`,
+        `Tower DPS: ${coverage.counts.turret}/${readiness.recommended.turret}`,
+        `Frost hold: ${coverage.counts.frost}/${readiness.recommended.frost}`,
+      ],
+    };
+  }
+  if (state.phase === 'raid') {
+    const breakdown = getRaidBreakdown(state);
+    const pressure = getRaidPressure(state);
+    return {
+      label: 'Raid Objective',
+      primary: `Clear ${state.totalRaiders} raiders before the core falls.`,
+      bonus: state.coreHits === 0 ? '3★ bonus still alive: no core breaches yet.' : `${state.coreHits} core breach${state.coreHits === 1 ? '' : 'es'} recorded: stabilize for a 2★/1★ clear.`,
+      checklist: [
+        `${breakdown.cleared}/${state.totalRaiders} cleared`,
+        `${breakdown.alive} active raiders`,
+        pressure.nearestDistance === null ? 'No current core pressure' : `${pressure.nearestKind?.toUpperCase()} ${pressure.nearestDistance} tiles from core`,
+      ],
+    };
+  }
+  if (state.phase === 'victory') {
+    const recommendation = getRewardRecommendation(state);
+    return {
+      label: 'Clear Objective Complete',
+      primary: `${state.lastClearGrade?.label ?? 'Raid cleared'} · choose a reward for Day ${state.day + 1}.`,
+      bonus: recommendation.label,
+      checklist: [
+        `${state.kills} kills banked`,
+        `${state.coins} coins available`,
+        `Recommended: ${recommendation.id}`,
+      ],
+    };
+  }
+  return {
+    label: 'Defeat Recovery Objective',
+    primary: 'Restart and rebuild the first choke with walls before traps.',
+    bonus: 'Tip: keep at least one tower behind the lane bend before starting the raid.',
+    checklist: ['Restart', 'Place walls', 'Add traps/tower/frost'],
   };
 }
 
