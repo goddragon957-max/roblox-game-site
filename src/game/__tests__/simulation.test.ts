@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, createInitialState, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -127,6 +127,36 @@ describe('Blockhold game logic', () => {
     expect(build.resources.wall).toBe(8);
     expect(build.message).toContain('requires 2 coins');
     expect(raid.resources.wall).toBe(8);
+  });
+
+  it('upgrade bench spends coins on persistent kill-zone levels and enforces caps', () => {
+    const upgraded = buyUpgrade({ ...createInitialState(), coins: 8 }, 'tower-damage');
+    expect(UPGRADE_OPTIONS).toHaveLength(3);
+    expect(upgraded.coins).toBe(4);
+    expect(upgraded.upgrades.towerDamage).toBe(1);
+    expect(upgraded.combatLog[0]).toContain('Upgraded Tower Bolts');
+
+    const capped = buyUpgrade({ ...upgraded, upgrades: { ...upgraded.upgrades, towerDamage: 3 } }, 'tower-damage');
+    expect(capped.upgrades.towerDamage).toBe(3);
+    expect(capped.message).toContain('max level');
+
+    const raid = buyUpgrade({ ...createInitialState(), phase: 'raid', coins: 8 }, 'trap-damage');
+    expect(raid.upgrades.trapDamage).toBe(0);
+  });
+
+  it('upgrades improve tower damage and trap burst values', () => {
+    const towerBase = startRaid(placeBlock(createInitialState(), { x: 3, z: 2 }, 'turret'));
+    const towerUpgraded = startRaid(placeBlock({ ...createInitialState(), upgrades: { towerDamage: 2, trapDamage: 0, frostDuration: 0 } }, { x: 3, z: 2 }, 'turret'));
+    const baseAfter = tick(towerBase);
+    const upgradedAfter = tick(towerUpgraded);
+    const baseTarget = baseAfter.raiders.find((r) => r.id === 'd1-0');
+    const upgradedTarget = upgradedAfter.raiders.find((r) => r.id === 'd1-0');
+    expect(upgradedTarget?.hp).toBeLessThan(baseTarget?.hp ?? 99);
+
+    let trapState = placeBlock({ ...createInitialState(), upgrades: { towerDamage: 0, trapDamage: 1, frostDuration: 0 } }, { x: 5, z: 1 }, 'trap');
+    trapState = startRaid(trapState);
+    trapState = tick(trapState);
+    expect(trapState.raiders.some((r) => r.resolved)).toBe(true);
   });
 
   it('raid forecast matches spawned wave and next-day rewards', () => {

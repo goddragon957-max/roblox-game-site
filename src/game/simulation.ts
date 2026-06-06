@@ -1,4 +1,4 @@
-import type { BlockType, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption } from './types';
+import type { BlockType, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -70,6 +70,30 @@ export const SUPPLY_OPTIONS: SupplyOption[] = [
   },
 ];
 
+export const UPGRADE_OPTIONS: UpgradeOption[] = [
+  {
+    id: 'tower-damage',
+    title: 'Tower Bolts I-III',
+    description: 'Bolt Towers deal +1 damage per level, making kill zones finish brutes faster.',
+    cost: 4,
+    maxLevel: 3,
+  },
+  {
+    id: 'trap-damage',
+    title: 'Sharper Spikes I-III',
+    description: 'Spike Traps deal +1 burst damage per level for clearer one-shot feedback.',
+    cost: 3,
+    maxLevel: 3,
+  },
+  {
+    id: 'frost-duration',
+    title: 'Deep Freeze I-II',
+    description: 'Frost Runes slow for +1 tick per level so towers have longer to fire.',
+    cost: 3,
+    maxLevel: 2,
+  },
+];
+
 function resourcesForDay(day: number): Resources {
   return {
     wall: 8 + (day - 1) * 2,
@@ -118,6 +142,7 @@ export function createInitialState(): GameState {
     raiders: [],
     totalRaiders: 0,
     coins: 0,
+    upgrades: { towerDamage: 0, trapDamage: 0, frostDuration: 0 },
     kills: 0,
     coreHits: 0,
     combo: 0,
@@ -234,6 +259,34 @@ export function buySupply(state: GameState, supplyId: SupplyChoice): GameState {
   };
 }
 
+const upgradeKey: Record<UpgradeChoice, keyof GameState['upgrades']> = {
+  'tower-damage': 'towerDamage',
+  'trap-damage': 'trapDamage',
+  'frost-duration': 'frostDuration',
+};
+
+export function buyUpgrade(state: GameState, upgradeId: UpgradeChoice): GameState {
+  if (state.phase !== 'build') return state;
+  const upgrade = UPGRADE_OPTIONS.find((option) => option.id === upgradeId);
+  if (!upgrade) return state;
+  const keyName = upgradeKey[upgradeId];
+  const currentLevel = state.upgrades[keyName];
+  if (currentLevel >= upgrade.maxLevel) {
+    return { ...state, message: `${upgrade.title} is already max level.` };
+  }
+  if (state.coins < upgrade.cost) {
+    return { ...state, message: `${upgrade.title} requires ${upgrade.cost} coins · earn kills or clear bonuses first.` };
+  }
+  const nextLevel = currentLevel + 1;
+  return {
+    ...state,
+    coins: state.coins - upgrade.cost,
+    upgrades: { ...state.upgrades, [keyName]: nextLevel },
+    combatLog: logEvent(state, `Upgraded ${upgrade.title} to Lv ${nextLevel}/${upgrade.maxLevel}.`),
+    message: `${upgrade.title} Lv ${nextLevel} unlocked · permanent kill-zone power increased.`,
+  };
+}
+
 export function restart(): GameState {
   return createInitialState();
 }
@@ -268,7 +321,7 @@ function runTowers(state: GameState): GameState {
       .map((r) => ({ r, d: Math.abs(r.cell.x - x) + Math.abs(r.cell.z - z) }))
       .filter(({ d }) => d <= 3)
       .sort((a, b) => a.d - b.d || b.r.cell.z - a.r.cell.z)[0]?.r;
-    if (target) next = damageRaider(next, target.id, 1);
+    if (target) next = damageRaider(next, target.id, 1 + next.upgrades.towerDamage);
   }
   return next;
 }
@@ -289,8 +342,8 @@ function resolveTrap(state: GameState, r: Raider, dest: Cell): { state: GameStat
   if (!block || block.type === 'wall' || block.type === 'turret') return { state, raider: r };
   const blocks = { ...state.blocks };
   delete blocks[k];
-  const damage = block.type === 'trap' ? 3 : 1;
-  const slow = block.type === 'frost' ? 2 : 0;
+  const damage = block.type === 'trap' ? 3 + state.upgrades.trapDamage : 1;
+  const slow = block.type === 'frost' ? 2 + state.upgrades.frostDuration : 0;
   const hp = r.hp - damage;
   if (hp <= 0) {
     return {

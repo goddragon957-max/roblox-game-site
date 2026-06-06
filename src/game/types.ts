@@ -3,6 +3,7 @@ export type BlockType = 'wall' | 'trap' | 'turret' | 'frost';
 export type RaiderKind = 'grunt' | 'runner' | 'brute';
 export type RewardChoice = 'repair' | 'turret' | 'frost';
 export type SupplyChoice = 'wall-pack' | 'trap-bundle' | 'tower-kit' | 'frost-kit';
+export type UpgradeChoice = 'tower-damage' | 'trap-damage' | 'frost-duration';
 export type ClearGrade = { stars: 1 | 2 | 3; label: string; bonusCoins: number };
 export type Cell = { x: number; z: number };
 export type RaidPlan = {
@@ -47,6 +48,18 @@ export type SupplyOption = {
   cost: number;
   resources: Partial<Resources>;
 };
+export type Upgrades = {
+  towerDamage: number;
+  trapDamage: number;
+  frostDuration: number;
+};
+export type UpgradeOption = {
+  id: UpgradeChoice;
+  title: string;
+  description: string;
+  cost: number;
+  maxLevel: number;
+};
 export type GameState = {
   day: number;
   phase: Phase;
@@ -61,6 +74,7 @@ export type GameState = {
   raiders: Raider[];
   totalRaiders: number;
   coins: number;
+  upgrades: Upgrades;
   kills: number;
   coreHits: number;
   combo: number;

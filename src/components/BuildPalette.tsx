@@ -1,6 +1,6 @@
 import { useGameStore } from '../store/gameStore';
-import { SUPPLY_OPTIONS } from '../game/simulation';
-import type { BlockType } from '../game/types';
+import { SUPPLY_OPTIONS, UPGRADE_OPTIONS } from '../game/simulation';
+import type { BlockType, UpgradeChoice } from '../game/types';
 
 const blocks: Array<{ type: BlockType; hotkey: string; name: string; desc: string }> = [
   { type: 'wall', hotkey: '1', name: 'Stone Wall', desc: '길을 꺾고 시간을 버는 방벽' },
@@ -8,6 +8,12 @@ const blocks: Array<{ type: BlockType; hotkey: string; name: string; desc: strin
   { type: 'turret', hotkey: '3', name: 'Bolt Tower', desc: '주변 적을 자동 사격' },
   { type: 'frost', hotkey: '4', name: 'Frost Rune', desc: '피해 + 둔화로 킬존 고정' },
 ];
+
+const upgradeLevelKey: Record<UpgradeChoice, 'towerDamage' | 'trapDamage' | 'frostDuration'> = {
+  'tower-damage': 'towerDamage',
+  'trap-damage': 'trapDamage',
+  'frost-duration': 'frostDuration',
+};
 
 export function BuildPalette() {
   const s = useGameStore();
@@ -33,6 +39,21 @@ export function BuildPalette() {
             <small>{supply.cost} coins</small>
           </button>
         ))}
+      </div>
+      <div className="upgrade-shop" aria-label="Permanent kill zone upgrades">
+        <strong>Upgrade Bench</strong>
+        <span>코인을 즉시 소모해 타워/함정/빙결 성능을 영구 강화합니다.</span>
+        {UPGRADE_OPTIONS.map((upgrade) => {
+          const level = s.upgrades[upgradeLevelKey[upgrade.id]];
+          const maxed = level >= upgrade.maxLevel;
+          return (
+            <button key={upgrade.id} disabled={s.phase !== 'build' || maxed || s.coins < upgrade.cost} onClick={() => s.upgrade(upgrade.id)}>
+              <b>{upgrade.title}</b>
+              <small>Lv {level}/{upgrade.maxLevel} · {maxed ? 'MAX' : `${upgrade.cost} coins`}</small>
+              <em>{upgrade.description}</em>
+            </button>
+          );
+        })}
       </div>
       <small>참조 방향: Roblox Build to Survive처럼 짓고, Bloons/Orcs Must Die처럼 킬존으로 막는 구조.</small>
     </aside>
