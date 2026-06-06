@@ -26,6 +26,16 @@ export type RaidQueuePreview = {
   runnerCountEarly: number;
   callout: string;
 };
+export type RaiderScout = {
+  kind: RaiderKind;
+  label: string;
+  hp: number;
+  speed: number;
+  bounty: number;
+  count: number;
+  role: string;
+  counter: string;
+};
 export type BuildReadiness = {
   ready: boolean;
   label: string;

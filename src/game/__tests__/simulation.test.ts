@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaiderScout, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -260,6 +260,14 @@ describe('Blockhold game logic', () => {
     expect(preview.firstBruteAt).toBe(7);
     expect(preview.runnerCountEarly).toBe(2);
     expect(preview.callout).toContain('Brute arrives #7');
+  });
+
+  it('summarizes enemy scouting counters for the next raid forecast', () => {
+    const scout = getRaiderScout(1);
+    expect(scout.map((enemy) => enemy.kind)).toEqual(['grunt', 'runner', 'brute']);
+    expect(scout.find((enemy) => enemy.kind === 'runner')).toMatchObject({ count: 2, speed: 2, bounty: 1 });
+    expect(scout.find((enemy) => enemy.kind === 'runner')?.counter).toContain('Frost');
+    expect(scout.find((enemy) => enemy.kind === 'brute')?.counter).toContain('Bolt Towers');
   });
 
   it('build readiness coach summarizes missing prep against the next raid forecast', () => {

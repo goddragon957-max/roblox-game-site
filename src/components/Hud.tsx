@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
+import { getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaiderScout, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -11,6 +11,7 @@ export function Hud() {
   const hpPct = Math.max(0, Math.round((s.coreHp / s.maxCoreHp) * 100));
   const plan = getRaidPlan(s.day);
   const queuePreview = getRaidQueuePreview(s.day);
+  const scout = getRaiderScout(s.day);
   const nextReward = plan.rewardPreview;
   const readiness = getBuildReadiness(s);
   const raidPressure = getRaidPressure(s);
@@ -80,6 +81,16 @@ export function Hud() {
           <div className="raid-queue" aria-label={`Raid queue preview: ${queuePreview.firstSix.join(', ')}`}>
             <b>Spawn Queue</b>
             {queuePreview.firstSix.map((kind, index) => <span key={`${kind}-${index}`} className={kind}>{index + 1}. {kind}</span>)}
+          </div>
+          <div className="enemy-scout" aria-label="Enemy scouting report">
+            <b>Enemy Scout</b>
+            {scout.map((enemy) => (
+              <span key={enemy.kind} className={enemy.kind}>
+                <strong>{enemy.label} ×{enemy.count}</strong>
+                <small>HP {enemy.hp} · Speed {enemy.speed} · +{enemy.bounty}c</small>
+                <em>{enemy.counter}</em>
+              </span>
+            ))}
           </div>
           <small>{queuePreview.callout}</small>
           <small>Base 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>

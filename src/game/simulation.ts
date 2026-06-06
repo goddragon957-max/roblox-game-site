@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, KillZoneCoverage, PhaseObjective, Raider, RaiderKind, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, KillZoneCoverage, PhaseObjective, Raider, RaiderKind, RaiderScout, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -143,6 +143,39 @@ export function getRaidQueuePreview(day: number): RaidQueuePreview {
       ? 'Early runners: place Frost before spikes so the first rush stays in the kill zone.'
       : 'Opening wave is mostly grunts: use them to test the lane bend and trap timing.';
   return { firstSix, firstBruteAt: firstBruteIndex >= 0 ? firstBruteIndex + 1 : null, runnerCountEarly, callout };
+}
+
+export function getRaiderScout(day: number): RaiderScout[] {
+  const plan = getRaidPlan(day);
+  const roles: Record<RaiderKind, { label: string; role: string; counter: string }> = {
+    grunt: {
+      label: 'Grunt',
+      role: 'Baseline lane pressure that tests whether the path bends through your kill zone.',
+      counter: 'Walls + Spike Trap burst clear them efficiently.',
+    },
+    runner: {
+      label: 'Runner',
+      role: 'Fast leaks that punish straight lanes and unprotected final bends.',
+      counter: 'Place Frost before traps so runners stay inside tower range.',
+    },
+    brute: {
+      label: 'Brute',
+      role: 'High-HP wall breaker that reaches the core if tower DPS is missing.',
+      counter: 'Stack Bolt Towers behind walls and keep a backup wall on lane bends.',
+    },
+  };
+  return (Object.keys(plan.mix) as RaiderKind[])
+    .filter((kind) => plan.mix[kind] > 0)
+    .map((kind) => ({
+      kind,
+      label: roles[kind].label,
+      hp: RAIDER_STATS[kind].hp + Math.floor(day / 3),
+      speed: RAIDER_STATS[kind].speed,
+      bounty: RAIDER_STATS[kind].bounty,
+      count: plan.mix[kind],
+      role: roles[kind].role,
+      counter: roles[kind].counter,
+    }));
 }
 
 export function getRaidBreakdown(state: GameState): { alive: number; cleared: number; mix: Record<RaiderKind, number>; mostThreatening?: RaiderKind } {
