@@ -86,11 +86,19 @@ export function getRaidPlan(day: number): RaidPlan {
     const kind: RaiderKind = i % 7 === 6 ? 'brute' : i % 3 === 2 ? 'runner' : 'grunt';
     mix[kind] += 1;
   }
+  const score = mix.grunt + mix.runner * 2 + mix.brute * 4;
+  const label = score >= 26 ? 'Severe' : score >= 18 ? 'High' : score >= 12 ? 'Rising' : 'Low';
+  const advice = mix.brute >= 2
+    ? 'Brutes incoming: double-wall the lane bend and keep a tower behind it.'
+    : mix.runner >= mix.grunt
+      ? 'Runner-heavy raid: add frost runes before traps to hold them in the kill zone.'
+      : 'Balanced raid: bend the danger lane through traps and one Bolt Tower.';
   return {
     day,
     total,
     dangerLane: LANES[day % LANES.length],
     mix,
+    threat: { score, label, advice },
     rewardPreview: resourcesForDay(day + 1),
   };
 }
@@ -179,7 +187,7 @@ export function startRaid(state: GameState): GameState {
     combo: 0,
     lastClearGrade: undefined,
     combatLog: logEvent(state, `Raid started: ${raiders.length} raiders are pushing lane X${dangerLane}.`),
-    message: `Night raid: ${raiders.length} enemies · main lane X${dangerLane} · 타워/함정 킬존을 지켜보세요!`,
+    message: `Night raid: ${raiders.length} enemies · ${getRaidPlan(state.day).threat.label} threat · main lane X${dangerLane} · 타워/함정 킬존을 지켜보세요!`,
   };
 }
 

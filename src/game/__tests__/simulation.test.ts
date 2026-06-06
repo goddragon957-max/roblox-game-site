@@ -139,6 +139,9 @@ describe('Blockhold game logic', () => {
     expect(s.totalRaiders).toBe(plan.total);
     expect(s.dangerLane).toBe(plan.dangerLane);
     expect(spawnedMix).toEqual(plan.mix);
+    expect(plan.threat.label).toBe('High');
+    expect(plan.threat.advice).toContain('Balanced raid');
+    expect(s.message).toContain('High threat');
     expect(plan.rewardPreview).toEqual({ wall: 12, trap: 8, turret: 3, frost: 3 });
     expect(nextDay({ ...createInitialState(), day: 2, phase: 'victory' }).resources.wall).toBeGreaterThan(plan.rewardPreview.wall);
   });

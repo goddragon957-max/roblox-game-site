@@ -10,6 +10,11 @@ export type RaidPlan = {
   total: number;
   dangerLane: number;
   mix: Record<RaiderKind, number>;
+  threat: {
+    score: number;
+    label: string;
+    advice: string;
+  };
   rewardPreview: Resources;
 };
 export type Block = { type: BlockType; hp: number; cooldown?: number };
