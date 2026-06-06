@@ -40,7 +40,7 @@ describe('Blockhold game logic', () => {
     expect(s.combatLog.length).toBeLessThanOrEqual(4);
   });
 
-  it('no-path case breaches a wall instead of freezing', () => {
+  it('no-path case breaches a wall instead of freezing and logs wall damage', () => {
     let s = createInitialState();
     [{ x: 5, z: 7 }, { x: 5, z: 9 }, { x: 4, z: 8 }, { x: 6, z: 8 }].forEach((c) => {
       s = { ...s, resources: { ...s.resources, wall: 99 } };
@@ -51,6 +51,7 @@ describe('Blockhold game logic', () => {
     s = tick(s);
     const after = Object.values(s.blocks).reduce((a, b) => a + b.hp, 0);
     expect(after).toBeLessThan(before);
+    expect(s.combatLog.some((entry) => entry.includes('is battering wall') || entry.includes('smashed wall'))).toBe(true);
   });
 
   it('turrets can kill raiders inside their range', () => {

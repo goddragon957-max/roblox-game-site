@@ -406,8 +406,15 @@ export function tick(state: GameState): GameState {
       if (!path) {
         const wallKey = nearestWallTowardCore(next, r.cell);
         if (wallKey && next.blocks[wallKey]) {
-          next.blocks[wallKey] = { ...next.blocks[wallKey], hp: next.blocks[wallKey].hp - (r.kind === 'brute' ? 2 : 1) };
-          if (next.blocks[wallKey].hp <= 0) delete next.blocks[wallKey];
+          const wallDamage = r.kind === 'brute' ? 2 : 1;
+          const remainingHp = next.blocks[wallKey].hp - wallDamage;
+          if (remainingHp <= 0) {
+            delete next.blocks[wallKey];
+            next.combatLog = logEvent(next, `${r.kind} smashed wall ${wallKey} open · rebuild the choke before the next raid.`);
+          } else {
+            next.blocks[wallKey] = { ...next.blocks[wallKey], hp: remainingHp };
+            next.combatLog = logEvent(next, `${r.kind} is battering wall ${wallKey} · wall HP ${remainingHp}.`);
+          }
           resolvedThisStep = true;
           break;
         }
