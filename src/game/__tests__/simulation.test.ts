@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialState, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, tick } from '../simulation';
+import { buySupply, createInitialState, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -111,6 +111,22 @@ describe('Blockhold game logic', () => {
     expect(frostReward.resources.frost).toBeGreaterThan(turretReward.resources.frost);
     expect(repairReward.coreHp).toBeGreaterThan(turretReward.coreHp);
     expect(turretReward.combatLog[0]).toContain('Tower Crate');
+  });
+
+  it('build-phase coin shop converts earned coins into targeted supplies', () => {
+    const s = buySupply({ ...createInitialState(), coins: 5 }, 'tower-kit');
+    expect(SUPPLY_OPTIONS).toHaveLength(4);
+    expect(s.coins).toBe(0);
+    expect(s.resources.turret).toBe(3);
+    expect(s.combatLog[0]).toContain('Purchased Tower Kit');
+  });
+
+  it('coin shop blocks purchases outside build phase or without enough coins', () => {
+    const build = buySupply({ ...createInitialState(), coins: 1 }, 'wall-pack');
+    const raid = buySupply({ ...createInitialState(), phase: 'raid', coins: 10 }, 'wall-pack');
+    expect(build.resources.wall).toBe(8);
+    expect(build.message).toContain('requires 2 coins');
+    expect(raid.resources.wall).toBe(8);
   });
 
   it('raid forecast matches spawned wave and next-day rewards', () => {

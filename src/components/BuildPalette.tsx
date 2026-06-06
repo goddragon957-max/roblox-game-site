@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/gameStore';
+import { SUPPLY_OPTIONS } from '../game/simulation';
 import type { BlockType } from '../game/types';
 
 const blocks: Array<{ type: BlockType; hotkey: string; name: string; desc: string }> = [
@@ -19,6 +20,17 @@ export function BuildPalette() {
             <strong>{block.hotkey} {block.name}</strong>
             <em>{block.desc}</em>
             <b>{s.resources[block.type]}</b>
+          </button>
+        ))}
+      </div>
+      <div className="coin-shop" aria-label="Build phase coin shop">
+        <strong>Coin Shop</strong>
+        <span>승리 보너스/킬 코인을 다음 웨이브 보급으로 즉시 전환하세요.</span>
+        {SUPPLY_OPTIONS.map((supply) => (
+          <button key={supply.id} disabled={s.phase !== 'build' || s.coins < supply.cost} onClick={() => s.buy(supply.id)}>
+            <b>{supply.title}</b>
+            <em>{supply.description}</em>
+            <small>{supply.cost} coins</small>
           </button>
         ))}
       </div>

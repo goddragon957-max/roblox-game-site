@@ -1,4 +1,4 @@
-import type { BlockType, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption } from './types';
+import type { BlockType, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -36,6 +36,37 @@ export const REWARD_OPTIONS: RewardOption[] = [
     description: '킬존 유지용 Frost Rune과 방벽 재료를 받습니다.',
     resources: { frost: 2, wall: 1 },
     coreRepair: 10,
+  },
+];
+
+export const SUPPLY_OPTIONS: SupplyOption[] = [
+  {
+    id: 'wall-pack',
+    title: 'Wall Pack',
+    description: 'Coins → extra stone walls for maze bends.',
+    cost: 2,
+    resources: { wall: 3 },
+  },
+  {
+    id: 'trap-bundle',
+    title: 'Trap Bundle',
+    description: 'Restock a compact spike kill-zone.',
+    cost: 3,
+    resources: { trap: 2 },
+  },
+  {
+    id: 'tower-kit',
+    title: 'Tower Kit',
+    description: 'Buy one Bolt Tower for late-wave pressure.',
+    cost: 5,
+    resources: { turret: 1 },
+  },
+  {
+    id: 'frost-kit',
+    title: 'Frost Kit',
+    description: 'Add two slows to hold enemies in range.',
+    cost: 4,
+    resources: { frost: 2 },
   },
 ];
 
@@ -172,6 +203,26 @@ export function nextDay(state: GameState, rewardId: RewardChoice = 'repair'): Ga
     lastClearGrade: undefined,
     combatLog: logEvent(state, `Reward chosen: ${reward.title} · bonus supplies delivered for Day ${state.day + 1}.`),
     message: `Day ${state.day + 1} 준비 시간 · ${reward.title} 보상 적용 완료.`,
+  };
+}
+
+export function buySupply(state: GameState, supplyId: SupplyChoice): GameState {
+  if (state.phase !== 'build') return state;
+  const supply = SUPPLY_OPTIONS.find((option) => option.id === supplyId);
+  if (!supply) return state;
+  if (state.coins < supply.cost) {
+    return { ...state, message: `${supply.title} requires ${supply.cost} coins · clear raids to earn more.` };
+  }
+  const resources = { ...state.resources };
+  Object.entries(supply.resources).forEach(([type, amount]) => {
+    resources[type as BlockType] += amount ?? 0;
+  });
+  return {
+    ...state,
+    coins: state.coins - supply.cost,
+    resources,
+    combatLog: logEvent(state, `Purchased ${supply.title} for ${supply.cost} coins.`),
+    message: `${supply.title} purchased · reinforce your kill zone before Start Raid.`,
   };
 }
 
