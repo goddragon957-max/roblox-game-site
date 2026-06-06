@@ -40,6 +40,16 @@ describe('Blockhold game logic', () => {
     expect(s.combatLog.length).toBeLessThanOrEqual(4);
   });
 
+  it('emits short-lived combat markers for visible hit and kill feedback', () => {
+    let s = placeBlock(createInitialState(), { x: 5, z: 1 }, 'trap');
+    s = startRaid(s);
+    s = tick(s);
+    expect(s.combatMarkers.some((effect) => effect.kind === 'kill' || effect.kind === 'hit')).toBe(true);
+    const firstMarker = s.combatMarkers[0];
+    s = tick(s);
+    expect(s.combatMarkers.find((effect) => effect.id === firstMarker.id)?.ticks).toBeLessThan(firstMarker.ticks);
+  });
+
   it('no-path case breaches a wall instead of freezing and logs wall damage', () => {
     let s = createInitialState();
     [{ x: 5, z: 7 }, { x: 5, z: 9 }, { x: 4, z: 8 }, { x: 6, z: 8 }].forEach((c) => {

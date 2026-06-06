@@ -6,6 +6,8 @@ export type SupplyChoice = 'wall-pack' | 'trap-bundle' | 'tower-kit' | 'frost-ki
 export type UpgradeChoice = 'tower-damage' | 'trap-damage' | 'frost-duration';
 export type ClearGrade = { stars: 1 | 2 | 3; label: string; bonusCoins: number };
 export type Cell = { x: number; z: number };
+export type CombatMarkerKind = 'hit' | 'kill' | 'core';
+export type CombatMarker = { id: string; kind: CombatMarkerKind; cell: Cell; ticks: number; label: string };
 export type RaidPlan = {
   day: number;
   total: number;
@@ -86,6 +88,7 @@ export type GameState = {
   coreHits: number;
   combo: number;
   lastClearGrade?: ClearGrade;
+  combatMarkers: CombatMarker[];
   combatLog: string[];
   dangerLane: number;
   message: string;

@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -204,6 +204,7 @@ export function createInitialState(): GameState {
     coreHits: 0,
     combo: 0,
     lastClearGrade: undefined,
+    combatMarkers: [],
     combatLog: ['Build phase: place walls to bend lanes, then stack traps/towers into a kill zone.'],
     dangerLane: 5,
     message: 'Build to Survive + Tower Defense식으로 길목을 막고, 함정/타워 킬존을 만드세요.',
@@ -212,6 +213,20 @@ export function createInitialState(): GameState {
 
 function logEvent(state: GameState, event: string): string[] {
   return [event, ...state.combatLog].slice(0, 4);
+}
+
+function marker(state: GameState, kind: CombatMarkerKind, cell: Cell, label: string): GameState {
+  return {
+    ...state,
+    combatMarkers: [
+      { id: `${kind}-${state.day}-${state.kills}-${state.coreHits}-${cell.x}-${cell.z}-${state.combatMarkers.length}`, kind, cell, label, ticks: 3 },
+      ...state.combatMarkers,
+    ].slice(0, 8),
+  };
+}
+
+function decayMarkers(markers: GameState['combatMarkers']): GameState['combatMarkers'] {
+  return markers.map((m) => ({ ...m, ticks: m.ticks - 1 })).filter((m) => m.ticks > 0);
 }
 
 function comboBonus(nextCombo: number): number {
@@ -271,6 +286,7 @@ export function startRaid(state: GameState): GameState {
     totalRaiders: raiders.length,
     dangerLane,
     combo: 0,
+    combatMarkers: [],
     lastClearGrade: undefined,
     combatLog: logEvent(state, `Raid started: ${raiders.length} raiders are pushing lane X${dangerLane}.`),
     message: `Night raid: ${raiders.length} enemies · ${getRaidPlan(state.day).threat.label} threat · main lane X${dangerLane} · 타워/함정 킬존을 지켜보세요!`,
@@ -294,6 +310,7 @@ export function nextDay(state: GameState, rewardId: RewardChoice = 'repair'): Ga
     totalRaiders: 0,
     selected: 'wall',
     coreHits: 0,
+    combatMarkers: [],
     lastClearGrade: undefined,
     combatLog: logEvent(state, `Reward chosen: ${reward.title} · bonus supplies delivered for Day ${state.day + 1}.`),
     message: `Day ${state.day + 1} 준비 시간 · ${reward.title} 보상 적용 완료.`,
@@ -367,20 +384,21 @@ function damageRaider(state: GameState, targetId: string, amount: number, slow =
     }
     return { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow) };
   });
+  const targetCell = state.raiders.find((r) => r.id === targetId)?.cell ?? { x: 0, z: 0 };
   if (kills) {
     const nextCombo = state.combo + kills;
     const streakBonus = comboBonus(nextCombo);
     const bonusText = streakBonus ? ` · streak bonus +${streakBonus}` : '';
-    return {
+    return marker({
       ...state,
       raiders,
       kills: state.kills + kills,
       coins: state.coins + bounty + streakBonus,
       combo: nextCombo,
       combatLog: logEvent(state, `Bolt tower eliminated ${killedKind ?? 'raider'} · +${bounty} coins${bonusText} · combo x${nextCombo}.`),
-    };
+    }, 'kill', targetCell, `+${bounty + streakBonus}`);
   }
-  return { ...state, raiders };
+  return marker({ ...state, raiders }, 'hit', targetCell, `-${amount}`);
 }
 
 function runTowers(state: GameState): GameState {
@@ -422,11 +440,12 @@ function resolveTrap(state: GameState, r: Raider, dest: Cell): { state: GameStat
     const streakBonus = comboBonus(nextCombo);
     const bonusText = streakBonus ? ` · streak bonus +${streakBonus}` : '';
     return {
-      state: { ...state, blocks, kills: state.kills + 1, coins: state.coins + r.bounty + streakBonus, combo: nextCombo, combatLog: logEvent(state, `${block.type === 'trap' ? 'Spike trap' : 'Frost rune'} stopped ${r.kind} · +${r.bounty} coins${bonusText} · combo x${nextCombo}.`) },
+      state: marker({ ...state, blocks, kills: state.kills + 1, coins: state.coins + r.bounty + streakBonus, combo: nextCombo, combatLog: logEvent(state, `${block.type === 'trap' ? 'Spike trap' : 'Frost rune'} stopped ${r.kind} · +${r.bounty} coins${bonusText} · combo x${nextCombo}.`) }, 'kill', dest, `+${r.bounty + streakBonus}`),
       raider: { ...r, hp: 0, resolved: true, cell: dest },
     };
   }
-  return { state: block.type === 'frost' ? { ...state, blocks, combatLog: logEvent(state, `Frost rune slowed ${r.kind} in the kill zone.`) } : { ...state, blocks }, raider: { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow), cell: dest } };
+  const hitState = block.type === 'frost' ? { ...state, blocks, combatLog: logEvent(state, `Frost rune slowed ${r.kind} in the kill zone.`) } : { ...state, blocks };
+  return { state: marker(hitState, 'hit', dest, `-${damage}`), raider: { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow), cell: dest } };
 }
 
 export function tick(state: GameState): GameState {
@@ -435,6 +454,7 @@ export function tick(state: GameState): GameState {
     ...state,
     blocks: { ...state.blocks },
     raiders: state.raiders.map((r) => ({ ...r, cell: { ...r.cell }, path: [...r.path] })),
+    combatMarkers: decayMarkers(state.combatMarkers),
   };
 
   next = runTowers(next);
@@ -452,6 +472,7 @@ export function tick(state: GameState): GameState {
       next.coreHits += 1;
       next.combo = 0;
       next.combatLog = logEvent(next, `${r.kind} breached the core · -${damage} HP · combo reset.`);
+      next = marker(next, 'core', next.core, `-${damage}`);
       moved.push({ ...r, resolved: true });
       continue;
     }
@@ -479,6 +500,7 @@ export function tick(state: GameState): GameState {
         next.coreHits += 1;
         next.combo = 0;
         next.combatLog = logEvent(next, `${r.kind} found a breach path · core -5 HP.`);
+        next = marker(next, 'core', next.core, '-5');
         r = { ...r, resolved: true };
         resolvedThisStep = true;
         break;

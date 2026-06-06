@@ -60,6 +60,9 @@ export function BlockholdScene() {
       runner: mat(scene, 'runner', '#facc15', '#422006'),
       brute: mat(scene, 'brute', '#fb7185', '#4c0519'),
       hp: mat(scene, 'hp', '#22c55e', '#052e16'),
+      hit: mat(scene, 'hitMarker', '#facc15', '#713f12'),
+      kill: mat(scene, 'killMarker', '#22c55e', '#052e16'),
+      coreHit: mat(scene, 'coreHitMarker', '#ef4444', '#7f1d1d'),
       blocked: ghostMat(scene, 'blockedPreview', '#ef4444', '#450a0a'),
     };
     const previewMaterials: Record<BlockType, StandardMaterial> = {
@@ -133,6 +136,13 @@ export function BlockholdScene() {
         const hpId = `hp-${r.id}`;
         live.add(hpId);
         box(hpId, Math.max(0.08, 0.5 * (r.hp / r.maxHp)), 0.05, 0.08, cellToVec(r.cell.x, r.cell.z, 0.88), materials.hp);
+      });
+      s.combatMarkers.forEach((effect) => {
+        const id = `fx-${effect.id}`;
+        live.add(id);
+        const size = effect.kind === 'kill' ? 0.42 : 0.28;
+        const material = effect.kind === 'kill' ? materials.kill : effect.kind === 'core' ? materials.coreHit : materials.hit;
+        box(id, size, size, size, cellToVec(effect.cell.x, effect.cell.z, 1.1 + effect.ticks * 0.14), material);
       });
       for (const [id, m] of meshes) if (!live.has(id)) { m.dispose(); meshes.delete(id); }
       scene.render();
