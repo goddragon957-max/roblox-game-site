@@ -157,6 +157,10 @@ function logEvent(state: GameState, event: string): string[] {
   return [event, ...state.combatLog].slice(0, 4);
 }
 
+function comboBonus(nextCombo: number): number {
+  return nextCombo > 0 && nextCombo % 3 === 0 ? 1 : 0;
+}
+
 export function placeBlock(state: GameState, cell: Cell, type = state.selected): GameState {
   if (state.phase !== 'build' || !inside(state, cell) || same(cell, state.core) || state.blocks[key(cell)] || state.resources[type] <= 0) return state;
   if (cell.z === 0) return { ...state, message: '스폰 줄에는 설치할 수 없습니다.' };
@@ -306,9 +310,20 @@ function damageRaider(state: GameState, targetId: string, amount: number, slow =
     }
     return { ...r, hp, slowed: Math.max(r.slowed ?? 0, slow) };
   });
-  return kills
-    ? { ...state, raiders, kills: state.kills + kills, coins: state.coins + bounty, combo: state.combo + kills, combatLog: logEvent(state, `Bolt tower eliminated ${killedKind ?? 'raider'} · +${bounty} coins · combo x${state.combo + kills}.`) }
-    : { ...state, raiders };
+  if (kills) {
+    const nextCombo = state.combo + kills;
+    const streakBonus = comboBonus(nextCombo);
+    const bonusText = streakBonus ? ` · streak bonus +${streakBonus}` : '';
+    return {
+      ...state,
+      raiders,
+      kills: state.kills + kills,
+      coins: state.coins + bounty + streakBonus,
+      combo: nextCombo,
+      combatLog: logEvent(state, `Bolt tower eliminated ${killedKind ?? 'raider'} · +${bounty} coins${bonusText} · combo x${nextCombo}.`),
+    };
+  }
+  return { ...state, raiders };
 }
 
 function runTowers(state: GameState): GameState {
@@ -346,8 +361,11 @@ function resolveTrap(state: GameState, r: Raider, dest: Cell): { state: GameStat
   const slow = block.type === 'frost' ? 2 + state.upgrades.frostDuration : 0;
   const hp = r.hp - damage;
   if (hp <= 0) {
+    const nextCombo = state.combo + 1;
+    const streakBonus = comboBonus(nextCombo);
+    const bonusText = streakBonus ? ` · streak bonus +${streakBonus}` : '';
     return {
-      state: { ...state, blocks, kills: state.kills + 1, coins: state.coins + r.bounty, combo: state.combo + 1, combatLog: logEvent(state, `${block.type === 'trap' ? 'Spike trap' : 'Frost rune'} stopped ${r.kind} · +${r.bounty} coins · combo x${state.combo + 1}.`) },
+      state: { ...state, blocks, kills: state.kills + 1, coins: state.coins + r.bounty + streakBonus, combo: nextCombo, combatLog: logEvent(state, `${block.type === 'trap' ? 'Spike trap' : 'Frost rune'} stopped ${r.kind} · +${r.bounty} coins${bonusText} · combo x${nextCombo}.`) },
       raider: { ...r, hp: 0, resolved: true, cell: dest },
     };
   }

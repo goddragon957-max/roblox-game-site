@@ -31,6 +31,7 @@ export function Hud() {
             <span>{cleared}/{s.totalRaiders} cleared · Core hits {s.coreHits}</span>
           </div>
           <div className="wave-meter"><span style={{ width: `${progressPct}%` }} /></div>
+          <small>Combo x{Math.max(1, s.combo)} · every 3-kill streak pays +1 bonus coin</small>
         </div>
       )}
       {s.phase === 'build' && (

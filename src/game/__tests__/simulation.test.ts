@@ -60,6 +60,33 @@ describe('Blockhold game logic', () => {
     expect(s.kills).toBeGreaterThan(0);
   });
 
+  it('awards a visible bonus coin on every third uninterrupted kill combo', () => {
+    const raid = startRaid(createInitialState());
+    const s = tick({
+      ...raid,
+      coins: 0,
+      kills: 0,
+      combo: 0,
+      totalRaiders: 4,
+      blocks: {
+        '4,1': { type: 'turret', hp: 2, cooldown: 0 },
+        '5,2': { type: 'turret', hp: 2, cooldown: 0 },
+        '6,1': { type: 'turret', hp: 2, cooldown: 0 },
+      },
+      raiders: [
+        { ...raid.raiders[0], id: 'combo-1', cell: { x: 5, z: 1 }, hp: 1, maxHp: 1, bounty: 1, speed: 0, resolved: false },
+        { ...raid.raiders[1], id: 'combo-2', cell: { x: 5, z: 1 }, hp: 1, maxHp: 1, bounty: 1, speed: 0, resolved: false },
+        { ...raid.raiders[2], id: 'combo-3', cell: { x: 5, z: 1 }, hp: 1, maxHp: 1, bounty: 1, speed: 0, resolved: false },
+        { ...raid.raiders[3], id: 'combo-anchor', cell: { x: 1, z: 0 }, hp: 20, maxHp: 20, bounty: 1, speed: 0, resolved: false },
+      ],
+    });
+    expect(s.phase).toBe('raid');
+    expect(s.kills).toBe(3);
+    expect(s.combo).toBe(3);
+    expect(s.coins).toBe(4);
+    expect(s.combatLog.some((entry) => entry.includes('streak bonus +1'))).toBe(true);
+  });
+
   it('victory when all raiders are resolved and core survives', () => {
     let s = startRaid(createInitialState());
     s = { ...s, raiders: s.raiders.map((r) => ({ ...r, resolved: true })) };
