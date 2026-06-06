@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getRaidBreakdown, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -202,6 +202,19 @@ describe('Blockhold game logic', () => {
     expect(s.message).toContain('High threat');
     expect(plan.rewardPreview).toEqual({ wall: 12, trap: 8, turret: 3, frost: 3 });
     expect(nextDay({ ...createInitialState(), day: 2, phase: 'victory' }).resources.wall).toBeGreaterThan(plan.rewardPreview.wall);
+  });
+
+  it('build readiness coach summarizes missing prep against the next raid forecast', () => {
+    const empty = getBuildReadiness({ ...createInitialState(), resources: { wall: 0, trap: 0, turret: 0, frost: 0 } });
+    expect(empty.ready).toBe(false);
+    expect(empty.label).toBe('Needs Prep');
+    expect(empty.missing.wall).toBeGreaterThan(0);
+    expect(empty.advice).toContain('Priority');
+
+    const ready = getBuildReadiness({ ...createInitialState(), resources: { wall: 99, trap: 99, turret: 99, frost: 99 } });
+    expect(ready.ready).toBe(true);
+    expect(ready.label).toBe('Ready Hold');
+    expect(ready.missing).toEqual({});
   });
 
   it('summarizes live raid mix for HUD focus calls', () => {

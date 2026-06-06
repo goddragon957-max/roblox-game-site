@@ -1,4 +1,4 @@
-import type { BlockType, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -140,6 +140,47 @@ export function getRaidBreakdown(state: GameState): { alive: number; cleared: nu
     cleared: Math.max(0, state.totalRaiders - alive),
     mix,
     mostThreatening: priority.find((kind) => mix[kind] > 0),
+  };
+}
+
+export function getBuildReadiness(state: GameState): BuildReadiness {
+  const plan = getRaidPlan(state.day);
+  const recommended: Resources = {
+    wall: Math.min(12, 4 + Math.ceil(plan.threat.score / 5)),
+    trap: 2 + plan.mix.runner + Math.ceil(plan.mix.brute / 2),
+    turret: 1 + Math.floor(plan.threat.score / 14),
+    frost: plan.mix.runner > 0 || plan.mix.brute > 0 ? 1 + Math.floor(plan.mix.runner / 3) : 1,
+  };
+  const missing: Partial<Resources> = {};
+  (Object.keys(recommended) as BlockType[]).forEach((type) => {
+    const placed = Object.values(state.blocks).filter((block) => block.type === type).length;
+    const available = placed + state.resources[type];
+    if (available < recommended[type]) missing[type] = recommended[type] - available;
+  });
+  const missingEntries = Object.entries(missing).filter(([, amount]) => (amount ?? 0) > 0);
+  if (missingEntries.length === 0) {
+    return {
+      ready: true,
+      label: 'Ready Hold',
+      advice: `Lane X${plan.dangerLane} has enough walls, slows, traps, and tower pressure for this forecast.`,
+      recommended,
+      missing,
+    };
+  }
+  const topMissing = missingEntries
+    .sort(([, a], [, b]) => (b ?? 0) - (a ?? 0))[0][0] as BlockType;
+  const tips: Record<BlockType, string> = {
+    wall: 'buy/keep more Stone Walls so the danger lane bends before the core.',
+    trap: 'add Spike Traps on the lane bend for visible burst kills.',
+    turret: 'save for at least one Bolt Tower behind the choke.',
+    frost: 'place Frost Runes before traps to hold runners and brutes in the kill zone.',
+  };
+  return {
+    ready: false,
+    label: 'Needs Prep',
+    advice: `Priority: ${tips[topMissing]}`,
+    recommended,
+    missing,
   };
 }
 

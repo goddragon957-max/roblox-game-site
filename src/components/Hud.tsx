@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getRaidBreakdown, getRaidPlan, REWARD_OPTIONS } from '../game/simulation';
+import { getBuildReadiness, getRaidBreakdown, getRaidPlan, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -11,6 +11,7 @@ export function Hud() {
   const hpPct = Math.max(0, Math.round((s.coreHp / s.maxCoreHp) * 100));
   const plan = getRaidPlan(s.day);
   const nextReward = plan.rewardPreview;
+  const readiness = getBuildReadiness(s);
   return (
     <section className="hud">
       <p className="eyebrow">Reference: Build to Survive × Tower Defense Simulator × Orcs Must Die</p>
@@ -59,6 +60,20 @@ export function Hud() {
           <em>{plan.threat.advice}</em>
           <em>Grunt {plan.mix.grunt} · Runner {plan.mix.runner} · Brute {plan.mix.brute}</em>
           <small>Base 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
+        </div>
+      )}
+      {s.phase === 'build' && (
+        <div className={`build-readiness ${readiness.ready ? 'ready' : 'warning'}`} aria-label={`Build coach: ${readiness.label}`}>
+          <strong>Build Coach · {readiness.label}</strong>
+          <span>{readiness.advice}</span>
+          <small>
+            추천 최소치 Wall {readiness.recommended.wall} · Trap {readiness.recommended.trap} · Tower {readiness.recommended.turret} · Frost {readiness.recommended.frost}
+          </small>
+          {Object.keys(readiness.missing).length > 0 && (
+            <em>
+              부족: {Object.entries(readiness.missing).map(([type, amount]) => `${type} +${amount}`).join(' · ')}
+            </em>
+          )}
         </div>
       )}
       <div className="combat-log" aria-label="Recent combat feedback">

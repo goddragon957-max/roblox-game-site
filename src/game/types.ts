@@ -18,6 +18,13 @@ export type RaidPlan = {
   };
   rewardPreview: Resources;
 };
+export type BuildReadiness = {
+  ready: boolean;
+  label: string;
+  advice: string;
+  recommended: Resources;
+  missing: Partial<Resources>;
+};
 export type Block = { type: BlockType; hp: number; cooldown?: number };
 export type Raider = {
   id: string;
