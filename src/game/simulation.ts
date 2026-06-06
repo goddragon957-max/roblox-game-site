@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, Resources, RewardChoice, RewardOption, RewardRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -224,6 +224,37 @@ export function getBuildReadiness(state: GameState): BuildReadiness {
     advice: `Priority: ${tips[topMissing]}`,
     recommended,
     missing,
+  };
+}
+
+export function getRewardRecommendation(state: GameState): RewardRecommendation {
+  const nextPlan = getRaidPlan(state.day + 1);
+  const corePct = state.coreHp / state.maxCoreHp;
+  if (corePct <= 0.45 || state.coreHits >= 3 || state.lastClearGrade?.stars === 1) {
+    return {
+      id: 'repair',
+      label: 'Best Pick: stabilize core',
+      reason: `Core ${Math.round(corePct * 100)}% · ${state.coreHits} breaches means safer walls/repair before Day ${state.day + 1}.`,
+    };
+  }
+  if (nextPlan.mix.brute >= 2 || nextPlan.threat.score >= 26) {
+    return {
+      id: 'turret',
+      label: 'Best Pick: brute DPS',
+      reason: `Day ${state.day + 1} forecast has ${nextPlan.mix.brute} brutes / ${nextPlan.threat.label} threat, so extra tower fire matters most.`,
+    };
+  }
+  if (nextPlan.mix.runner >= nextPlan.mix.grunt || nextPlan.mix.runner >= 4) {
+    return {
+      id: 'frost',
+      label: 'Best Pick: runner control',
+      reason: `Day ${state.day + 1} brings ${nextPlan.mix.runner} runners; Frost keeps them inside trap and tower range.`,
+    };
+  }
+  return {
+    id: 'turret',
+    label: 'Best Pick: more kill-zone damage',
+    reason: `Core is stable and Day ${state.day + 1} is balanced, so one more Bolt Tower converts the lane bend into kills.`,
   };
 }
 

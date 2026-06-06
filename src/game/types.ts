@@ -57,6 +57,11 @@ export type RewardOption = {
   resources: Partial<Resources>;
   coreRepair: number;
 };
+export type RewardRecommendation = {
+  id: RewardChoice;
+  label: string;
+  reason: string;
+};
 export type SupplyOption = {
   id: SupplyChoice;
   title: string;

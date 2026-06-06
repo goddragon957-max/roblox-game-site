@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, REWARD_OPTIONS } from '../game/simulation';
+import { getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -13,6 +13,7 @@ export function Hud() {
   const nextReward = plan.rewardPreview;
   const readiness = getBuildReadiness(s);
   const raidPressure = getRaidPressure(s);
+  const rewardRecommendation = getRewardRecommendation(s);
   return (
     <section className="hud">
       <p className="eyebrow">Reference: Build to Survive × Tower Defense Simulator × Orcs Must Die</p>
@@ -96,10 +97,14 @@ export function Hud() {
           )}
           <strong>Choose Clear Reward</strong>
           <span>다음 Day 보급 방향을 하나 고르세요.</span>
+          <div className="reward-coach" aria-label={`Recommended reward: ${rewardRecommendation.label}`}>
+            <b>{rewardRecommendation.label}</b>
+            <em>{rewardRecommendation.reason}</em>
+          </div>
           <div>
             {REWARD_OPTIONS.map((reward) => (
-              <button key={reward.id} onClick={() => s.next(reward.id)}>
-                <b>{reward.title}</b>
+              <button key={reward.id} className={reward.id === rewardRecommendation.id ? 'recommended' : ''} onClick={() => s.next(reward.id)}>
+                <b>{reward.title}{reward.id === rewardRecommendation.id ? ' · Recommended' : ''}</b>
                 <small>{reward.description}</small>
               </button>
             ))}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRewardRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -150,6 +150,30 @@ describe('Blockhold game logic', () => {
     expect(frostReward.resources.frost).toBeGreaterThan(turretReward.resources.frost);
     expect(repairReward.coreHp).toBeGreaterThan(turretReward.coreHp);
     expect(turretReward.combatLog[0]).toContain('Tower Crate');
+  });
+
+  it('recommends clear rewards from core safety and next wave pressure', () => {
+    const damaged = getRewardRecommendation({
+      ...createInitialState(),
+      phase: 'victory',
+      day: 1,
+      coreHp: 35,
+      coreHits: 4,
+      lastClearGrade: { stars: 1, label: 'Last Stand', bonusCoins: 1 },
+    });
+    expect(damaged.id).toBe('repair');
+    expect(damaged.reason).toContain('Core 35%');
+
+    const brutePressure = getRewardRecommendation({
+      ...createInitialState(),
+      phase: 'victory',
+      day: 4,
+      coreHp: 100,
+      coreHits: 0,
+      lastClearGrade: { stars: 3, label: 'Flawless Hold', bonusCoins: 3 },
+    });
+    expect(brutePressure.id).toBe('turret');
+    expect(brutePressure.label).toContain('brute DPS');
   });
 
   it('build-phase coin shop converts earned coins into targeted supplies', () => {
