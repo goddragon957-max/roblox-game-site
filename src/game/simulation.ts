@@ -1,4 +1,4 @@
-import type { BlockType, Cell, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption } from './types';
+import type { BlockType, Cell, ClearGrade, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -82,6 +82,7 @@ export function createInitialState(): GameState {
     kills: 0,
     coreHits: 0,
     combo: 0,
+    lastClearGrade: undefined,
     combatLog: ['Build phase: place walls to bend lanes, then stack traps/towers into a kill zone.'],
     dangerLane: 5,
     message: 'Build to Survive + Tower Defense식으로 길목을 막고, 함정/타워 킬존을 만드세요.',
@@ -145,6 +146,7 @@ export function startRaid(state: GameState): GameState {
     totalRaiders: raiders.length,
     dangerLane,
     combo: 0,
+    lastClearGrade: undefined,
     combatLog: logEvent(state, `Raid started: ${raiders.length} raiders are pushing lane X${dangerLane}.`),
     message: `Night raid: ${raiders.length} enemies · main lane X${dangerLane} · 타워/함정 킬존을 지켜보세요!`,
   };
@@ -167,6 +169,7 @@ export function nextDay(state: GameState, rewardId: RewardChoice = 'repair'): Ga
     totalRaiders: 0,
     selected: 'wall',
     coreHits: 0,
+    lastClearGrade: undefined,
     combatLog: logEvent(state, `Reward chosen: ${reward.title} · bonus supplies delivered for Day ${state.day + 1}.`),
     message: `Day ${state.day + 1} 준비 시간 · ${reward.title} 보상 적용 완료.`,
   };
@@ -209,6 +212,16 @@ function runTowers(state: GameState): GameState {
     if (target) next = damageRaider(next, target.id, 1);
   }
   return next;
+}
+
+function gradeClear(state: GameState): ClearGrade {
+  if (state.coreHits === 0 && state.coreHp >= Math.ceil(state.maxCoreHp * 0.75)) {
+    return { stars: 3, label: 'Flawless Hold', bonusCoins: 3 };
+  }
+  if (state.coreHits <= 2 && state.coreHp >= Math.ceil(state.maxCoreHp * 0.4)) {
+    return { stars: 2, label: 'Solid Hold', bonusCoins: 2 };
+  }
+  return { stars: 1, label: 'Last Stand', bonusCoins: 1 };
 }
 
 function resolveTrap(state: GameState, r: Raider, dest: Cell): { state: GameState; raider: Raider } {
@@ -288,7 +301,17 @@ export function tick(state: GameState): GameState {
   next.raiders = moved;
 
   if (next.coreHp <= 0) return { ...next, phase: 'defeat', combatLog: logEvent(next, 'Defeat: the core collapsed under the raid.'), message: '코어가 파괴되었습니다. Restart로 다시 도전하세요.' };
-  if (next.raiders.every((r) => r.resolved || r.hp <= 0)) return { ...next, phase: 'victory', combatLog: logEvent(next, `Raid cleared with ${next.kills} total kills. Choose Next Day for supplies.`), message: `Raid cleared! ${next.kills} kills · Next Day로 업그레이드하세요.` };
+  if (next.raiders.every((r) => r.resolved || r.hp <= 0)) {
+    const grade = gradeClear(next);
+    return {
+      ...next,
+      phase: 'victory',
+      coins: next.coins + grade.bonusCoins,
+      lastClearGrade: grade,
+      combatLog: logEvent(next, `${grade.label}: ${grade.stars}★ clear · +${grade.bonusCoins} bonus coins · choose a reward.`),
+      message: `Raid cleared! ${grade.stars}★ ${grade.label} · ${next.kills} kills · +${grade.bonusCoins} bonus coins.`,
+    };
+  }
   const alive = next.raiders.filter((r) => !r.resolved && r.hp > 0).length;
   const cleared = next.totalRaiders - alive;
   return { ...next, message: `Raid in progress · ${cleared}/${next.totalRaiders} cleared · ${next.kills} kills · ${next.coreHits} core hits · combo x${Math.max(1, next.combo)}` };

@@ -63,7 +63,20 @@ describe('Blockhold game logic', () => {
   it('victory when all raiders are resolved and core survives', () => {
     let s = startRaid(createInitialState());
     s = { ...s, raiders: s.raiders.map((r) => ({ ...r, resolved: true })) };
-    expect(tick(s).phase).toBe('victory');
+    const won = tick(s);
+    expect(won.phase).toBe('victory');
+    expect(won.lastClearGrade?.stars).toBe(3);
+    expect(won.coins).toBe(3);
+    expect(won.combatLog[0]).toContain('Flawless Hold');
+  });
+
+  it('grades messy clears lower and grants a smaller bonus', () => {
+    let s = startRaid(createInitialState());
+    s = { ...s, coreHp: 35, coreHits: 4, raiders: s.raiders.map((r) => ({ ...r, resolved: true })) };
+    const won = tick(s);
+    expect(won.phase).toBe('victory');
+    expect(won.lastClearGrade).toEqual({ stars: 1, label: 'Last Stand', bonusCoins: 1 });
+    expect(won.coins).toBe(1);
   });
 
   it('defeat when core HP reaches 0', () => {

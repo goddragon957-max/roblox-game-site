@@ -2,6 +2,7 @@ export type Phase = 'build' | 'raid' | 'victory' | 'defeat';
 export type BlockType = 'wall' | 'trap' | 'turret' | 'frost';
 export type RaiderKind = 'grunt' | 'runner' | 'brute';
 export type RewardChoice = 'repair' | 'turret' | 'frost';
+export type ClearGrade = { stars: 1 | 2 | 3; label: string; bonusCoins: number };
 export type Cell = { x: number; z: number };
 export type RaidPlan = {
   day: number;
@@ -50,6 +51,7 @@ export type GameState = {
   kills: number;
   coreHits: number;
   combo: number;
+  lastClearGrade?: ClearGrade;
   combatLog: string[];
   dangerLane: number;
   message: string;

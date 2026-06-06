@@ -21,7 +21,7 @@ export function Hud() {
       <div className="status-grid">
         <b><HeartPulse size={15} /> Core {s.coreHp}/{s.maxCoreHp}</b>
         <b><Skull size={15} /> Raiders {alive}/{s.totalRaiders || '-'}</b>
-        <b><Coins size={15} /> Kills {s.kills}</b>
+        <b><Coins size={15} /> Coins {s.coins} · Kills {s.kills}</b>
         <b>Day {s.day} · {s.phase.toUpperCase()}</b>
       </div>
       {s.phase === 'raid' && (
@@ -47,6 +47,12 @@ export function Hud() {
       </div>
       {s.phase === 'victory' && (
         <div className="reward-choices" aria-label="Choose next day reward">
+          {s.lastClearGrade && (
+            <div className="clear-grade" aria-label={`${s.lastClearGrade.stars} star clear rating`}>
+              <strong>{'★'.repeat(s.lastClearGrade.stars)}{'☆'.repeat(3 - s.lastClearGrade.stars)} {s.lastClearGrade.label}</strong>
+              <span>Core hits {s.coreHits} · Bonus +{s.lastClearGrade.bonusCoins} coins</span>
+            </div>
+          )}
           <strong>Choose Clear Reward</strong>
           <span>다음 Day 보급 방향을 하나 고르세요.</span>
           <div>
