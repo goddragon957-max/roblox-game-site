@@ -20,6 +20,12 @@ export type RaidPlan = {
   };
   rewardPreview: Resources;
 };
+export type RaidQueuePreview = {
+  firstSix: RaiderKind[];
+  firstBruteAt: number | null;
+  runnerCountEarly: number;
+  callout: string;
+};
 export type BuildReadiness = {
   ready: boolean;
   label: string;

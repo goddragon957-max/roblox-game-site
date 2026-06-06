@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -252,6 +252,14 @@ describe('Blockhold game logic', () => {
     expect(s.message).toContain('High threat');
     expect(plan.rewardPreview).toEqual({ wall: 12, trap: 8, turret: 3, frost: 3 });
     expect(nextDay({ ...createInitialState(), day: 2, phase: 'victory' }).resources.wall).toBeGreaterThan(plan.rewardPreview.wall);
+  });
+
+  it('previews the opening spawn queue so players can prep for runners and brutes', () => {
+    const preview = getRaidQueuePreview(1);
+    expect(preview.firstSix).toEqual(['grunt', 'grunt', 'runner', 'grunt', 'grunt', 'runner']);
+    expect(preview.firstBruteAt).toBe(7);
+    expect(preview.runnerCountEarly).toBe(2);
+    expect(preview.callout).toContain('Brute arrives #7');
   });
 
   it('build readiness coach summarizes missing prep against the next raid forecast', () => {

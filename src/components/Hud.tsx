@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
+import { getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -10,6 +10,7 @@ export function Hud() {
   const progressPct = s.totalRaiders ? Math.round((cleared / s.totalRaiders) * 100) : 0;
   const hpPct = Math.max(0, Math.round((s.coreHp / s.maxCoreHp) * 100));
   const plan = getRaidPlan(s.day);
+  const queuePreview = getRaidQueuePreview(s.day);
   const nextReward = plan.rewardPreview;
   const readiness = getBuildReadiness(s);
   const raidPressure = getRaidPressure(s);
@@ -66,6 +67,11 @@ export function Hud() {
           <em>보드의 주황색 줄이 이번 빌드에서 우선 막아야 할 예상 주공 루트입니다.</em>
           <em>{plan.threat.advice}</em>
           <em>Grunt {plan.mix.grunt} · Runner {plan.mix.runner} · Brute {plan.mix.brute}</em>
+          <div className="raid-queue" aria-label={`Raid queue preview: ${queuePreview.firstSix.join(', ')}`}>
+            <b>Spawn Queue</b>
+            {queuePreview.firstSix.map((kind, index) => <span key={`${kind}-${index}`} className={kind}>{index + 1}. {kind}</span>)}
+          </div>
+          <small>{queuePreview.callout}</small>
           <small>Base 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
         </div>
       )}

@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -14,6 +14,10 @@ const RAIDER_STATS: Record<RaiderKind, { hp: number; speed: number; bounty: numb
   brute: { hp: 8, speed: 1, bounty: 3 },
 };
 const LANES = [1, 3, 5, 7, 9];
+
+function raiderKindForIndex(index: number): RaiderKind {
+  return index % 7 === 6 ? 'brute' : index % 3 === 2 ? 'runner' : 'grunt';
+}
 
 export const REWARD_OPTIONS: RewardOption[] = [
   {
@@ -107,7 +111,7 @@ export function getRaidPlan(day: number): RaidPlan {
   const total = 4 + day * 4;
   const mix: Record<RaiderKind, number> = { grunt: 0, runner: 0, brute: 0 };
   for (let i = 0; i < total; i += 1) {
-    const kind: RaiderKind = i % 7 === 6 ? 'brute' : i % 3 === 2 ? 'runner' : 'grunt';
+    const kind = raiderKindForIndex(i);
     mix[kind] += 1;
   }
   const score = mix.grunt + mix.runner * 2 + mix.brute * 4;
@@ -125,6 +129,20 @@ export function getRaidPlan(day: number): RaidPlan {
     threat: { score, label, advice },
     rewardPreview: resourcesForDay(day + 1),
   };
+}
+
+export function getRaidQueuePreview(day: number): RaidQueuePreview {
+  const { total } = getRaidPlan(day);
+  const queue = Array.from({ length: total }, (_, index) => raiderKindForIndex(index));
+  const firstSix = queue.slice(0, 6);
+  const firstBruteIndex = queue.findIndex((kind) => kind === 'brute');
+  const runnerCountEarly = firstSix.filter((kind) => kind === 'runner').length;
+  const callout = firstBruteIndex >= 0 && firstBruteIndex < 8
+    ? `Brute arrives #${firstBruteIndex + 1}: have tower fire ready before the first wall break.`
+    : runnerCountEarly >= 2
+      ? 'Early runners: place Frost before spikes so the first rush stays in the kill zone.'
+      : 'Opening wave is mostly grunts: use them to test the lane bend and trap timing.';
+  return { firstSix, firstBruteAt: firstBruteIndex >= 0 ? firstBruteIndex + 1 : null, runnerCountEarly, callout };
 }
 
 export function getRaidBreakdown(state: GameState): { alive: number; cleared: number; mix: Record<RaiderKind, number>; mostThreatening?: RaiderKind } {
@@ -397,7 +415,7 @@ export function removeBlock(state: GameState, cell: Cell): GameState {
 function spawnRaiders(state: GameState): Raider[] {
   const { total, dangerLane } = getRaidPlan(state.day);
   return Array.from({ length: total }, (_, i) => {
-    const kind: RaiderKind = i % 7 === 6 ? 'brute' : i % 3 === 2 ? 'runner' : 'grunt';
+    const kind = raiderKindForIndex(i);
     const stats = RAIDER_STATS[kind];
     const lane = i % 2 === 0 ? dangerLane : LANES[(i + state.day) % LANES.length];
     return {
