@@ -62,6 +62,7 @@ describe('Blockhold game logic', () => {
     const after = Object.values(s.blocks).reduce((a, b) => a + b.hp, 0);
     expect(after).toBeLessThan(before);
     expect(s.combatLog.some((entry) => entry.includes('is battering wall') || entry.includes('smashed wall'))).toBe(true);
+    expect(s.combatMarkers.some((effect) => effect.kind === 'hit' && effect.label.startsWith('Wall -'))).toBe(true);
   });
 
   it('turrets can kill raiders inside their range', () => {

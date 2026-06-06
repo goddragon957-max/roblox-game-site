@@ -276,6 +276,11 @@ function comboBonus(nextCombo: number): number {
   return nextCombo > 0 && nextCombo % 3 === 0 ? 1 : 0;
 }
 
+function cellFromKey(blockKey: string): Cell {
+  const [x, z] = blockKey.split(',').map(Number);
+  return { x, z };
+}
+
 export function placeBlock(state: GameState, cell: Cell, type = state.selected): GameState {
   if (state.phase !== 'build' || !inside(state, cell) || same(cell, state.core) || state.blocks[key(cell)] || state.resources[type] <= 0) return state;
   if (cell.z === 0) return { ...state, message: '스폰 줄에는 설치할 수 없습니다.' };
@@ -532,9 +537,11 @@ export function tick(state: GameState): GameState {
           if (remainingHp <= 0) {
             delete next.blocks[wallKey];
             next.combatLog = logEvent(next, `${r.kind} smashed wall ${wallKey} open · rebuild the choke before the next raid.`);
+            next = marker(next, 'hit', cellFromKey(wallKey), `Wall -${wallDamage}`);
           } else {
             next.blocks[wallKey] = { ...next.blocks[wallKey], hp: remainingHp };
             next.combatLog = logEvent(next, `${r.kind} is battering wall ${wallKey} · wall HP ${remainingHp}.`);
+            next = marker(next, 'hit', cellFromKey(wallKey), `Wall -${wallDamage}`);
           }
           resolvedThisStep = true;
           break;
