@@ -1,11 +1,12 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getRaidPlan, REWARD_OPTIONS } from '../game/simulation';
+import { getRaidBreakdown, getRaidPlan, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
-  const alive = s.raiders.filter((r) => !r.resolved && r.hp > 0).length;
-  const cleared = Math.max(0, s.totalRaiders - alive);
+  const raidBreakdown = getRaidBreakdown(s);
+  const alive = raidBreakdown.alive;
+  const cleared = raidBreakdown.cleared;
   const progressPct = s.totalRaiders ? Math.round((cleared / s.totalRaiders) * 100) : 0;
   const hpPct = Math.max(0, Math.round((s.coreHp / s.maxCoreHp) * 100));
   const plan = getRaidPlan(s.day);
@@ -24,6 +25,12 @@ export function Hud() {
         <b><Coins size={15} /> Coins {s.coins} · Kills {s.kills}</b>
         <b>Day {s.day} · {s.phase.toUpperCase()}</b>
       </div>
+      <div className="actions primary-actions">
+        {s.phase === 'build' && <button onClick={s.start}><Play size={16} />Start Raid</button>}
+        {s.phase === 'victory' && <button onClick={() => s.next()}><StepForward size={16} />Next Day: Core Patch</button>}
+        {s.phase === 'defeat' && <button onClick={s.restartGame}><RotateCcw size={16} />Restart</button>}
+        {s.phase === 'raid' && <button onClick={s.togglePause}><Pause size={16} />{s.paused ? 'Resume' : 'Pause'}</button>}
+      </div>
       {s.phase === 'raid' && (
         <div className="wave-progress" aria-label={`Raid progress ${cleared} of ${s.totalRaiders} raiders cleared, ${s.coreHits} core hits`}>
           <div>
@@ -31,6 +38,13 @@ export function Hud() {
             <span>{cleared}/{s.totalRaiders} cleared · Core hits {s.coreHits}</span>
           </div>
           <div className="wave-meter"><span style={{ width: `${progressPct}%` }} /></div>
+          <div className="alive-mix" aria-label={`Alive raid mix: ${raidBreakdown.mix.grunt} grunts, ${raidBreakdown.mix.runner} runners, ${raidBreakdown.mix.brute} brutes`}>
+            <b>Alive Mix</b>
+            <span>Grunt {raidBreakdown.mix.grunt}</span>
+            <span>Runner {raidBreakdown.mix.runner}</span>
+            <span>Brute {raidBreakdown.mix.brute}</span>
+          </div>
+          {raidBreakdown.mostThreatening && <small>Focus call: {raidBreakdown.mostThreatening.toUpperCase()} pressure is still on the board.</small>}
           <small>Combo x{Math.max(1, s.combo)} · every 3-kill streak pays +1 bonus coin</small>
         </div>
       )}
@@ -71,12 +85,6 @@ export function Hud() {
           </div>
         </div>
       )}
-      <div className="actions">
-        {s.phase === 'build' && <button onClick={s.start}><Play size={16} />Start Raid</button>}
-        {s.phase === 'victory' && <button onClick={() => s.next()}><StepForward size={16} />Next Day: Core Patch</button>}
-        {s.phase === 'defeat' && <button onClick={s.restartGame}><RotateCcw size={16} />Restart</button>}
-        {s.phase === 'raid' && <button onClick={s.togglePause}><Pause size={16} />{s.paused ? 'Resume' : 'Pause'}</button>}
-      </div>
       <p className="hint"><Shield size={14} /> 마우스 위치에 선택 블록 고스트 미리보기 · 좌클릭 배치 · 우클릭 회수 · 1 벽 · 2 스파이크 · 3 타워 · 4 얼음 · Space 일시정지</p>
     </section>
   );

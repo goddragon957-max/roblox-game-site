@@ -127,6 +127,22 @@ export function getRaidPlan(day: number): RaidPlan {
   };
 }
 
+export function getRaidBreakdown(state: GameState): { alive: number; cleared: number; mix: Record<RaiderKind, number>; mostThreatening?: RaiderKind } {
+  const mix: Record<RaiderKind, number> = { grunt: 0, runner: 0, brute: 0 };
+  state.raiders.forEach((raider) => {
+    if (raider.resolved || raider.hp <= 0) return;
+    mix[raider.kind] += 1;
+  });
+  const alive = mix.grunt + mix.runner + mix.brute;
+  const priority: RaiderKind[] = ['brute', 'runner', 'grunt'];
+  return {
+    alive,
+    cleared: Math.max(0, state.totalRaiders - alive),
+    mix,
+    mostThreatening: priority.find((kind) => mix[kind] > 0),
+  };
+}
+
 export function createInitialState(): GameState {
   return {
     day: 1,

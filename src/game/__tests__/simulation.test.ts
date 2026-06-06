@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getRaidBreakdown, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -202,5 +202,23 @@ describe('Blockhold game logic', () => {
     expect(s.message).toContain('High threat');
     expect(plan.rewardPreview).toEqual({ wall: 12, trap: 8, turret: 3, frost: 3 });
     expect(nextDay({ ...createInitialState(), day: 2, phase: 'victory' }).resources.wall).toBeGreaterThan(plan.rewardPreview.wall);
+  });
+
+  it('summarizes live raid mix for HUD focus calls', () => {
+    const raid = startRaid(createInitialState());
+    const breakdown = getRaidBreakdown({
+      ...raid,
+      totalRaiders: 4,
+      raiders: [
+        { ...raid.raiders[0], kind: 'grunt', resolved: false, hp: 3 },
+        { ...raid.raiders[1], kind: 'runner', resolved: false, hp: 2 },
+        { ...raid.raiders[2], kind: 'brute', resolved: false, hp: 8 },
+        { ...raid.raiders[3], kind: 'grunt', resolved: true, hp: 0 },
+      ],
+    });
+    expect(breakdown.alive).toBe(3);
+    expect(breakdown.cleared).toBe(1);
+    expect(breakdown.mix).toEqual({ grunt: 1, runner: 1, brute: 1 });
+    expect(breakdown.mostThreatening).toBe('brute');
   });
 });
