@@ -37,6 +37,7 @@ export function Hud() {
         <div className="raid-preview" aria-label={`Next raid forecast: ${plan.total} raiders, danger lane ${plan.dangerLane}`}>
           <strong>Next Raid Forecast</strong>
           <span>Lane X{plan.dangerLane} 집중 · {plan.total}명</span>
+          <em>보드의 주황색 줄이 이번 빌드에서 우선 막아야 할 예상 주공 루트입니다.</em>
           <em>Grunt {plan.mix.grunt} · Runner {plan.mix.runner} · Brute {plan.mix.brute}</em>
           <small>Base 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
         </div>

@@ -12,6 +12,7 @@ import {
   Vector3,
 } from '@babylonjs/core';
 import { useGameStore } from '../store/gameStore';
+import { getRaidPlan } from '../game/simulation';
 import type { RaiderKind } from '../game/types';
 
 const mat = (scene: Scene, name: string, color: string, emissive = '#020617') => {
@@ -41,6 +42,7 @@ export function BlockholdScene() {
     const materials = {
       floor: mat(scene, 'floor', '#1e293b'),
       lane: mat(scene, 'lane', '#334155', '#111827'),
+      forecast: mat(scene, 'forecast', '#854d0e', '#3b2608'),
       danger: mat(scene, 'danger', '#7f1d1d', '#3f1111'),
       wall: mat(scene, 'wall', '#94a3b8'),
       trap: mat(scene, 'trap', '#f97316', '#451a03'),
@@ -69,13 +71,16 @@ export function BlockholdScene() {
 
     function draw() {
       const s = api();
+      const forecastLane = getRaidPlan(s.day).dangerLane;
       const live = new Set<string>();
       for (let x = 0; x < s.size; x += 1) {
         for (let z = 0; z < s.size; z += 1) {
           const id = `f-${x}-${z}`;
           live.add(id);
           const isLane = [1, 3, 5, 7, 9].includes(x) && z <= s.core.z;
-          const material = x === s.dangerLane && s.phase === 'raid' ? materials.danger : isLane ? materials.lane : materials.floor;
+          const isRaidDangerLane = s.phase === 'raid' && x === s.dangerLane && z <= s.core.z;
+          const isBuildForecastLane = s.phase === 'build' && x === forecastLane && z <= s.core.z;
+          const material = isRaidDangerLane ? materials.danger : isBuildForecastLane ? materials.forecast : isLane ? materials.lane : materials.floor;
           box(id, 0.96, 0.08, 0.96, cellToVec(x, z, 0.02), material);
         }
       }
