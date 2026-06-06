@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/gameStore';
-import { getSpendRecommendation, SUPPLY_OPTIONS, UPGRADE_OPTIONS } from '../game/simulation';
+import { getPlacementHint, getSpendRecommendation, SUPPLY_OPTIONS, UPGRADE_OPTIONS } from '../game/simulation';
 import type { BlockType, UpgradeChoice } from '../game/types';
 
 const blocks: Array<{ type: BlockType; hotkey: string; name: string; desc: string }> = [
@@ -18,6 +18,7 @@ const upgradeLevelKey: Record<UpgradeChoice, 'towerDamage' | 'trapDamage' | 'fro
 export function BuildPalette() {
   const s = useGameStore();
   const spendCoach = getSpendRecommendation(s);
+  const placementHint = getPlacementHint(s);
   return (
     <aside className="build-panel">
       <span>Build Kit</span>
@@ -30,6 +31,19 @@ export function BuildPalette() {
           </button>
         ))}
       </div>
+      {s.phase === 'build' && (
+        <div className="placement-hint" aria-label={`Placement coach: ${placementHint.title}`}>
+          <strong>Placement Coach · {placementHint.title}</strong>
+          <span>{placementHint.reason}</span>
+          <div>
+            {placementHint.cells.map((cell) => (
+              <small key={`${cell.x}-${cell.z}`} className={cell.occupied ? 'occupied' : 'open'}>
+                X{cell.x} Z{cell.z} · {cell.occupied ? 'blocked' : 'open'}
+              </small>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="coin-shop" aria-label="Build phase coin shop">
         <strong>Coin Shop</strong>
         <span>승리 보너스/킬 코인을 다음 웨이브 보급으로 즉시 전환하세요.</span>

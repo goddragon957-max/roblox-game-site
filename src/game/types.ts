@@ -63,6 +63,12 @@ export type PhaseObjective = {
   bonus: string;
   checklist: string[];
 };
+export type PlacementHint = {
+  type: BlockType;
+  title: string;
+  cells: Array<Cell & { occupied: boolean }>;
+  reason: string;
+};
 export type Block = { type: BlockType; hp: number; cooldown?: number };
 export type Raider = {
   id: string;

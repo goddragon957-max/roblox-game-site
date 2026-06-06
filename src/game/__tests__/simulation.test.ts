@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaiderScout, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getPlacementHint, getRaiderScout, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -317,6 +317,19 @@ describe('Blockhold game logic', () => {
     expect(coverage.lane).toBe(getRaidPlan(1).dangerLane);
     expect(coverage.label).toBe('Kill Zone Ready');
     expect(coverage.counts).toMatchObject({ wall: 3, trap: 2, turret: 1, frost: 1 });
+  });
+
+  it('recommends concrete open placement cells for the selected build block', () => {
+    let s = createInitialState();
+    const trapHint = getPlacementHint({ ...s, selected: 'trap' });
+    expect(trapHint.title).toContain('lane X3');
+    expect(trapHint.reason).toContain('traps');
+    expect(trapHint.cells).toHaveLength(3);
+    expect(trapHint.cells.every((cell) => cell.z > 0 && !cell.occupied)).toBe(true);
+
+    s = placeBlock(s, trapHint.cells[0], 'trap');
+    const updated = getPlacementHint({ ...s, selected: 'trap' });
+    expect(updated.cells[0]).toMatchObject({ x: trapHint.cells[0].x, z: trapHint.cells[0].z, occupied: true });
   });
 
   it('summarizes live raid mix for HUD focus calls', () => {

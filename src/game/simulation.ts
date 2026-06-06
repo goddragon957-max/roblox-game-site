@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, KillZoneCoverage, PhaseObjective, Raider, RaiderKind, RaiderScout, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, KillZoneCoverage, PhaseObjective, PlacementHint, Raider, RaiderKind, RaiderScout, RaidPlan, RaidPressure, RaidQueuePreview, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -368,6 +368,55 @@ export function getKillZoneCoverage(state: GameState): KillZoneCoverage {
     advice: `Lane X${lane} is mostly open: place 3+ walls, 2 traps, and a tower/frost pocket near the orange route.`,
     counts,
   };
+}
+
+export function getPlacementHint(state: GameState, type: BlockType = state.selected): PlacementHint {
+  const lane = state.phase === 'raid' ? state.dangerLane : getRaidPlan(state.day).dangerLane;
+  const clampX = (x: number) => Math.max(0, Math.min(state.size - 1, x));
+  const mark = (cell: Cell) => ({
+    ...cell,
+    occupied: Boolean(state.blocks[key(cell)]) || same(cell, state.core) || cell.z === 0,
+  });
+  const layouts: Record<BlockType, { title: string; reason: string; cells: Cell[] }> = {
+    wall: {
+      title: `Wall Bend · lane X${lane}`,
+      reason: 'Place walls just before the core to bend the orange forecast lane sideways instead of making a straight leak.',
+      cells: [
+        { x: lane, z: state.core.z - 2 },
+        { x: clampX(lane + 1), z: state.core.z - 2 },
+        { x: clampX(lane - 1), z: state.core.z - 1 },
+      ],
+    },
+    trap: {
+      title: `Spike Burst · lane X${lane}`,
+      reason: 'Put traps immediately after the wall bend so grunts/runners take burst damage while pathing around it.',
+      cells: [
+        { x: lane, z: state.core.z - 3 },
+        { x: clampX(lane + 1), z: state.core.z - 3 },
+        { x: clampX(lane - 1), z: state.core.z - 3 },
+      ],
+    },
+    turret: {
+      title: `Tower Perch · lane X${lane}`,
+      reason: 'Set towers beside, not on, the route so they fire over the choke without blocking your trap tiles.',
+      cells: [
+        { x: clampX(lane - 2), z: state.core.z - 3 },
+        { x: clampX(lane + 2), z: state.core.z - 3 },
+        { x: clampX(lane - 2), z: state.core.z - 1 },
+      ],
+    },
+    frost: {
+      title: `Frost Hold · lane X${lane}`,
+      reason: 'Place Frost before spikes so runners and brutes stay slowed inside tower and trap coverage.',
+      cells: [
+        { x: lane, z: state.core.z - 4 },
+        { x: clampX(lane + 1), z: state.core.z - 4 },
+        { x: clampX(lane - 1), z: state.core.z - 4 },
+      ],
+    },
+  };
+  const hint = layouts[type];
+  return { type, title: hint.title, reason: hint.reason, cells: hint.cells.map(mark) };
 }
 
 export function getRewardRecommendation(state: GameState): RewardRecommendation {
