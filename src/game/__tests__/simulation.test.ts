@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -243,5 +243,32 @@ describe('Blockhold game logic', () => {
     expect(breakdown.cleared).toBe(1);
     expect(breakdown.mix).toEqual({ grunt: 1, runner: 1, brute: 1 });
     expect(breakdown.mostThreatening).toBe('brute');
+  });
+
+  it('reports breach pressure from the nearest active raider', () => {
+    const raid = startRaid(createInitialState());
+    const safe = getRaidPressure({
+      ...raid,
+      coreHits: 0,
+      raiders: [{ ...raid.raiders[0], kind: 'grunt', cell: { x: 5, z: 1 }, hp: 3, resolved: false }],
+    });
+    expect(safe.level).toBe('safe');
+    expect(safe.nearestDistance).toBe(7);
+
+    const warning = getRaidPressure({
+      ...raid,
+      coreHits: 0,
+      raiders: [{ ...raid.raiders[0], kind: 'runner', cell: { x: 5, z: 5 }, hp: 2, resolved: false }],
+    });
+    expect(warning.level).toBe('warning');
+    expect(warning.label).toBe('Choke Under Pressure');
+
+    const critical = getRaidPressure({
+      ...raid,
+      coreHits: 0,
+      raiders: [{ ...raid.raiders[0], kind: 'brute', cell: { x: 5, z: 7 }, hp: 8, resolved: false }],
+    });
+    expect(critical.level).toBe('critical');
+    expect(critical.advice).toContain('BRUTE');
   });
 });

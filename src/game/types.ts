@@ -27,6 +27,13 @@ export type BuildReadiness = {
   recommended: Resources;
   missing: Partial<Resources>;
 };
+export type RaidPressure = {
+  level: 'safe' | 'warning' | 'critical';
+  label: string;
+  nearestDistance: number | null;
+  nearestKind?: RaiderKind;
+  advice: string;
+};
 export type Block = { type: BlockType; hp: number; cooldown?: number };
 export type Raider = {
   id: string;

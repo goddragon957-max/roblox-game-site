@@ -1,6 +1,6 @@
 import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getBuildReadiness, getRaidBreakdown, getRaidPlan, REWARD_OPTIONS } from '../game/simulation';
+import { getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, REWARD_OPTIONS } from '../game/simulation';
 
 export function Hud() {
   const s = useGameStore();
@@ -12,6 +12,7 @@ export function Hud() {
   const plan = getRaidPlan(s.day);
   const nextReward = plan.rewardPreview;
   const readiness = getBuildReadiness(s);
+  const raidPressure = getRaidPressure(s);
   return (
     <section className="hud">
       <p className="eyebrow">Reference: Build to Survive × Tower Defense Simulator × Orcs Must Die</p>
@@ -44,6 +45,11 @@ export function Hud() {
             <span>Grunt {raidBreakdown.mix.grunt}</span>
             <span>Runner {raidBreakdown.mix.runner}</span>
             <span>Brute {raidBreakdown.mix.brute}</span>
+          </div>
+          <div className={`breach-alert ${raidPressure.level}`} aria-label={`Breach alert: ${raidPressure.label}`}>
+            <b>{raidPressure.label}</b>
+            <span>{raidPressure.nearestDistance === null ? 'No active raiders' : `${raidPressure.nearestKind?.toUpperCase()} · ${raidPressure.nearestDistance} tiles from core`}</span>
+            <em>{raidPressure.advice}</em>
           </div>
           {raidBreakdown.mostThreatening && <small>Focus call: {raidBreakdown.mostThreatening.toUpperCase()} pressure is still on the board.</small>}
           <small>Combo x{Math.max(1, s.combo)} · every 3-kill streak pays +1 bonus coin</small>

@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, Resources, RewardChoice, RewardOption, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -140,6 +140,49 @@ export function getRaidBreakdown(state: GameState): { alive: number; cleared: nu
     cleared: Math.max(0, state.totalRaiders - alive),
     mix,
     mostThreatening: priority.find((kind) => mix[kind] > 0),
+  };
+}
+
+export function getRaidPressure(state: GameState): RaidPressure {
+  const active = state.raiders.filter((raider) => !raider.resolved && raider.hp > 0);
+  if (active.length === 0) {
+    return {
+      level: 'safe',
+      label: 'Lane Clear',
+      nearestDistance: null,
+      advice: 'No active raiders are threatening the core right now.',
+    };
+  }
+  const nearest = active
+    .map((raider) => ({
+      raider,
+      distance: Math.abs(raider.cell.x - state.core.x) + Math.abs(raider.cell.z - state.core.z),
+    }))
+    .sort((a, b) => a.distance - b.distance || b.raider.bounty - a.raider.bounty)[0];
+  if (nearest.distance <= 2 || state.coreHits > 0) {
+    return {
+      level: 'critical',
+      label: 'Breach Imminent',
+      nearestDistance: nearest.distance,
+      nearestKind: nearest.raider.kind,
+      advice: `${nearest.raider.kind.toUpperCase()} is ${nearest.distance} tiles from the core · pause and reinforce this lane after the raid.`,
+    };
+  }
+  if (nearest.distance <= 4) {
+    return {
+      level: 'warning',
+      label: 'Choke Under Pressure',
+      nearestDistance: nearest.distance,
+      nearestKind: nearest.raider.kind,
+      advice: `${nearest.raider.kind.toUpperCase()} is closing in · watch frost/trap tiles near the final bend.`,
+    };
+  }
+  return {
+    level: 'safe',
+    label: 'Holding Lane',
+    nearestDistance: nearest.distance,
+    nearestKind: nearest.raider.kind,
+    advice: `Nearest ${nearest.raider.kind} is ${nearest.distance} tiles away; tower fire still has time to thin the wave.`,
   };
 }
 
