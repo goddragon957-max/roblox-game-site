@@ -81,6 +81,12 @@ export type UpgradeOption = {
   cost: number;
   maxLevel: number;
 };
+export type SpendRecommendation = {
+  kind: 'supply' | 'upgrade' | 'save';
+  id?: SupplyChoice | UpgradeChoice;
+  label: string;
+  reason: string;
+};
 export type GameState = {
   day: number;
   phase: Phase;

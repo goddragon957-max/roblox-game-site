@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRewardRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
+import { buySupply, buyUpgrade, createInitialState, getBuildReadiness, getRaidBreakdown, getRaidPlan, getRaidPressure, getRewardRecommendation, getSpendRecommendation, nextDay, placeBlock, REWARD_OPTIONS, startRaid, SUPPLY_OPTIONS, tick, UPGRADE_OPTIONS } from '../simulation';
 import { findPath } from '../pathfinding';
 
 describe('Blockhold game logic', () => {
@@ -205,6 +205,21 @@ describe('Blockhold game logic', () => {
 
     const raid = buyUpgrade({ ...createInitialState(), phase: 'raid', coins: 8 }, 'trap-damage');
     expect(raid.upgrades.trapDamage).toBe(0);
+  });
+
+  it('recommends the next coin spend from missing prep or wave pressure', () => {
+    const missingTower = getSpendRecommendation({ ...createInitialState(), coins: 5, resources: { wall: 99, trap: 99, turret: 0, frost: 99 } });
+    expect(missingTower.kind).toBe('supply');
+    expect(missingTower.id).toBe('tower-kit');
+    expect(missingTower.reason).toContain('Bolt Tower DPS');
+
+    const dayTwoUpgrade = getSpendRecommendation({ ...createInitialState(), day: 2, coins: 4, resources: { wall: 99, trap: 99, turret: 99, frost: 99 } });
+    expect(dayTwoUpgrade.kind).toBe('upgrade');
+    expect(dayTwoUpgrade.id).toBe('tower-damage');
+
+    const broke = getSpendRecommendation({ ...createInitialState(), coins: 0 });
+    expect(broke.kind).toBe('save');
+    expect(broke.reason).toContain('Need at least');
   });
 
   it('upgrades improve tower damage and trap burst values', () => {

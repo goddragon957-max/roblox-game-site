@@ -1,4 +1,4 @@
-import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, Resources, RewardChoice, RewardOption, RewardRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
+import type { BlockType, BuildReadiness, Cell, ClearGrade, CombatMarkerKind, GameState, Raider, RaiderKind, RaidPlan, RaidPressure, Resources, RewardChoice, RewardOption, RewardRecommendation, SpendRecommendation, SupplyChoice, SupplyOption, UpgradeChoice, UpgradeOption } from './types';
 import { inside, key, same } from './grid';
 import { findPath, nearestWallTowardCore } from './pathfinding';
 
@@ -255,6 +255,67 @@ export function getRewardRecommendation(state: GameState): RewardRecommendation 
     id: 'turret',
     label: 'Best Pick: more kill-zone damage',
     reason: `Core is stable and Day ${state.day + 1} is balanced, so one more Bolt Tower converts the lane bend into kills.`,
+  };
+}
+
+export function getSpendRecommendation(state: GameState): SpendRecommendation {
+  if (state.phase !== 'build') {
+    return {
+      kind: 'save',
+      label: 'Spend Coach: locked during raid',
+      reason: 'Coin spending reopens in the next build phase after the current raid resolves.',
+    };
+  }
+  const readiness = getBuildReadiness(state);
+  const affordableSupply = (id: SupplyChoice) => {
+    const supply = SUPPLY_OPTIONS.find((option) => option.id === id);
+    return supply && state.coins >= supply.cost ? supply : undefined;
+  };
+  const affordableUpgrade = (id: UpgradeChoice) => {
+    const upgrade = UPGRADE_OPTIONS.find((option) => option.id === id);
+    const keyName = upgrade ? upgradeKey[id] : undefined;
+    return upgrade && keyName && state.upgrades[keyName] < upgrade.maxLevel && state.coins >= upgrade.cost ? upgrade : undefined;
+  };
+  if (!readiness.ready) {
+    const missing = readiness.missing;
+    const supplyPriority: Array<[BlockType, SupplyChoice, string]> = [
+      ['turret', 'tower-kit', 'missing Bolt Tower DPS for the forecast lane'],
+      ['frost', 'frost-kit', 'missing Frost control to hold runners/brutes in the kill zone'],
+      ['trap', 'trap-bundle', 'missing Spike burst for the lane bend'],
+      ['wall', 'wall-pack', 'missing walls to bend the danger lane before the core'],
+    ];
+    const match = supplyPriority.find(([type, id]) => (missing[type] ?? 0) > 0 && affordableSupply(id));
+    if (match) {
+      const supply = affordableSupply(match[1])!;
+      return {
+        kind: 'supply',
+        id: supply.id,
+        label: `Spend Coach: buy ${supply.title}`,
+        reason: `${readiness.label} · ${match[2]}.`,
+      };
+    }
+  }
+  const nextPlan = getRaidPlan(state.day);
+  const upgradePriority: Array<[UpgradeChoice, boolean, string]> = [
+    ['tower-damage', nextPlan.mix.brute >= 1 || nextPlan.threat.score >= 18, 'forecast pressure favors permanent tower DPS'],
+    ['frost-duration', nextPlan.mix.runner >= 3, 'runner count favors longer Frost hold time'],
+    ['trap-damage', nextPlan.mix.grunt + nextPlan.mix.runner >= 8, 'large waves favor sharper trap burst'],
+  ];
+  const upgradeMatch = upgradePriority.find(([id, useful]) => useful && affordableUpgrade(id));
+  if (upgradeMatch) {
+    const upgrade = affordableUpgrade(upgradeMatch[0])!;
+    return {
+      kind: 'upgrade',
+      id: upgrade.id,
+      label: `Spend Coach: upgrade ${upgrade.title}`,
+      reason: `${upgradeMatch[2]} before Day ${state.day} raid.`,
+    };
+  }
+  const cheapest = [...SUPPLY_OPTIONS, ...UPGRADE_OPTIONS].reduce((min, option) => Math.min(min, option.cost), Number.POSITIVE_INFINITY);
+  return {
+    kind: 'save',
+    label: 'Spend Coach: save coins',
+    reason: state.coins < cheapest ? `Need at least ${cheapest} coins for the first shop choice.` : 'Current build already meets the forecast; keep coins for a clearer upgrade timing.',
   };
 }
 

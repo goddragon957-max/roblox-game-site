@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/gameStore';
-import { SUPPLY_OPTIONS, UPGRADE_OPTIONS } from '../game/simulation';
+import { getSpendRecommendation, SUPPLY_OPTIONS, UPGRADE_OPTIONS } from '../game/simulation';
 import type { BlockType, UpgradeChoice } from '../game/types';
 
 const blocks: Array<{ type: BlockType; hotkey: string; name: string; desc: string }> = [
@@ -17,6 +17,7 @@ const upgradeLevelKey: Record<UpgradeChoice, 'towerDamage' | 'trapDamage' | 'fro
 
 export function BuildPalette() {
   const s = useGameStore();
+  const spendCoach = getSpendRecommendation(s);
   return (
     <aside className="build-panel">
       <span>Build Kit</span>
@@ -32,9 +33,13 @@ export function BuildPalette() {
       <div className="coin-shop" aria-label="Build phase coin shop">
         <strong>Coin Shop</strong>
         <span>승리 보너스/킬 코인을 다음 웨이브 보급으로 즉시 전환하세요.</span>
+        <div className={`spend-coach ${spendCoach.kind}`} aria-label={`Coin spend recommendation: ${spendCoach.label}`}>
+          <b>{spendCoach.label}</b>
+          <em>{spendCoach.reason}</em>
+        </div>
         {SUPPLY_OPTIONS.map((supply) => (
-          <button key={supply.id} disabled={s.phase !== 'build' || s.coins < supply.cost} onClick={() => s.buy(supply.id)}>
-            <b>{supply.title}</b>
+          <button key={supply.id} className={spendCoach.kind === 'supply' && spendCoach.id === supply.id ? 'recommended' : ''} disabled={s.phase !== 'build' || s.coins < supply.cost} onClick={() => s.buy(supply.id)}>
+            <b>{supply.title}{spendCoach.kind === 'supply' && spendCoach.id === supply.id ? ' · Recommended' : ''}</b>
             <em>{supply.description}</em>
             <small>{supply.cost} coins</small>
           </button>
@@ -47,8 +52,8 @@ export function BuildPalette() {
           const level = s.upgrades[upgradeLevelKey[upgrade.id]];
           const maxed = level >= upgrade.maxLevel;
           return (
-            <button key={upgrade.id} disabled={s.phase !== 'build' || maxed || s.coins < upgrade.cost} onClick={() => s.upgrade(upgrade.id)}>
-              <b>{upgrade.title}</b>
+            <button key={upgrade.id} className={spendCoach.kind === 'upgrade' && spendCoach.id === upgrade.id ? 'recommended' : ''} disabled={s.phase !== 'build' || maxed || s.coins < upgrade.cost} onClick={() => s.upgrade(upgrade.id)}>
+              <b>{upgrade.title}{spendCoach.kind === 'upgrade' && spendCoach.id === upgrade.id ? ' · Recommended' : ''}</b>
               <small>Lv {level}/{upgrade.maxLevel} · {maxed ? 'MAX' : `${upgrade.cost} coins`}</small>
               <em>{upgrade.description}</em>
             </button>
