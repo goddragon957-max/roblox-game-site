@@ -1,5 +1,19 @@
 # Blockhold Defense
 
+<!-- styleseed-default-ui:start -->
+## StyleSeed UI Standard
+
+This project uses [StyleSeed](https://github.com/bitjaru/styleseed) as the default UI/design-judgment layer for future UI work.
+Agents and contributors should read https://styleseed-demo.vercel.app/llms.txt before changing UI and apply StyleSeed rules to pages, components, dashboards, mobile screens, HUDs, UI states, and motion details.
+
+Core expectations:
+- one coherent accent/radius/shadow/spacing/icon system;
+- semantic tokens instead of random hardcoded colors;
+- content inside cards/surfaces with clear hierarchy;
+- real loading/empty/error/success states and wired interactions;
+- no generic StyleSeed/library showcase left in place of product-specific UI.
+<!-- styleseed-default-ui:end -->
+
 Playable browser 3D voxel tower-defense vertical slice.
 
 ## Run

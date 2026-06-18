@@ -1,6 +1,36 @@
-import { Play, RotateCcw, StepForward, Shield, Pause, Skull, Coins, HeartPulse } from 'lucide-react';
+import {
+  Activity,
+  Coins,
+  HeartPulse,
+  Pause,
+  Play,
+  Radio,
+  RotateCcw,
+  Shield,
+  Skull,
+  StepForward,
+  Target,
+} from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { getBuildReadiness, getKillZoneCoverage, getPhaseObjective, getRaiderScout, getRaidBreakdown, getRaidPlan, getRaidPressure, getRaidQueuePreview, getRewardRecommendation, REWARD_OPTIONS } from '../game/simulation';
+import {
+  getBuildReadiness,
+  getKillZoneCoverage,
+  getPhaseObjective,
+  getRaiderScout,
+  getRaidBreakdown,
+  getRaidPlan,
+  getRaidPressure,
+  getRaidQueuePreview,
+  getRewardRecommendation,
+  REWARD_OPTIONS,
+} from '../game/simulation';
+
+const phaseLabel = {
+  build: 'Build',
+  raid: 'Raid',
+  victory: 'Victory',
+  defeat: 'Defeat',
+} as const;
 
 export function Hud() {
   const s = useGameStore();
@@ -18,109 +48,130 @@ export function Hud() {
   const rewardRecommendation = getRewardRecommendation(s);
   const killZoneCoverage = getKillZoneCoverage(s);
   const objective = getPhaseObjective(s);
+
   return (
-    <section className="hud">
-      <p className="eyebrow">Reference: Build to Survive × Tower Defense Simulator × Orcs Must Die</p>
-      <h1>Blockhold Siege</h1>
-      <p className="message">{s.message}</p>
-      <div className="core-meter" aria-label={`Core health ${hpPct}%`}>
-        <span style={{ width: `${hpPct}%` }} />
-      </div>
-      <div className="status-grid">
-        <b><HeartPulse size={15} /> Core {s.coreHp}/{s.maxCoreHp}</b>
-        <b><Skull size={15} /> Raiders {alive}/{s.totalRaiders || '-'}</b>
-        <b><Coins size={15} /> Coins {s.coins} · Kills {s.kills}</b>
-        <b>Day {s.day} · {s.phase.toUpperCase()}</b>
-      </div>
-      <div className="objective-card" aria-label={`Current objective: ${objective.label}`}>
-        <strong>{objective.label}</strong>
-        <span>{objective.primary}</span>
-        <em>{objective.bonus}</em>
+    <section className="hud" aria-label="Blockhold Siege command HUD">
+      <div className="hud-topline">
         <div>
+          <span className="system-label">StyleSeed Tactical HUD</span>
+          <h1>Blockhold Siege</h1>
+        </div>
+        <span className={`phase-chip ${s.phase}`}>{phaseLabel[s.phase]}</span>
+      </div>
+
+      <div className="hud-message" role="status">
+        <Radio size={15} />
+        <span>{s.message}</span>
+      </div>
+
+      <div className="core-strip" aria-label={`Core health ${hpPct}%`}>
+        <div>
+          <HeartPulse size={16} />
+          <b>Core</b>
+          <span>{s.coreHp}/{s.maxCoreHp}</span>
+        </div>
+        <div className="core-meter"><span style={{ width: `${hpPct}%` }} /></div>
+      </div>
+
+      <div className="status-row">
+        <b><Skull size={15} /> {alive}/{s.totalRaiders || '-'} Raiders</b>
+        <b><Coins size={15} /> {s.coins} Coins</b>
+        <b><Target size={15} /> {s.kills} Kills</b>
+        <b>Day {s.day}</b>
+      </div>
+
+      <div className="objective-card" aria-label={`Current objective: ${objective.label}`}>
+        <div>
+          <strong>{objective.label}</strong>
+          <span>{objective.primary}</span>
+        </div>
+        <em>{objective.bonus}</em>
+        <div className="check-list">
           {objective.checklist.map((item) => <small key={item}>{item}</small>)}
         </div>
       </div>
+
       <div className="actions primary-actions">
-        {s.phase === 'build' && <button onClick={s.start}><Play size={16} />Start Raid</button>}
-        {s.phase === 'victory' && <button onClick={() => s.next()}><StepForward size={16} />Next Day: Core Patch</button>}
-        {s.phase === 'defeat' && <button onClick={s.restartGame}><RotateCcw size={16} />Restart</button>}
-        {s.phase === 'raid' && <button onClick={s.togglePause}><Pause size={16} />{s.paused ? 'Resume' : 'Pause'}</button>}
+        {s.phase === 'build' && <button onClick={s.start}><Play size={17} />Start Raid</button>}
+        {s.phase === 'victory' && <button onClick={() => s.next()}><StepForward size={17} />Next Day</button>}
+        {s.phase === 'defeat' && <button onClick={s.restartGame}><RotateCcw size={17} />Restart</button>}
+        {s.phase === 'raid' && <button onClick={s.togglePause}><Pause size={17} />{s.paused ? 'Resume' : 'Pause'}</button>}
       </div>
+
       {s.phase === 'raid' && (
-        <div className="wave-progress" aria-label={`Raid progress ${cleared} of ${s.totalRaiders} raiders cleared, ${s.coreHits} core hits`}>
-          <div>
-            <strong>Raid Progress</strong>
+        <div className="phase-panel raid-panel" aria-label={`Raid progress ${cleared} of ${s.totalRaiders} raiders cleared, ${s.coreHits} core hits`}>
+          <div className="panel-head">
+            <strong>Raid Pressure</strong>
             <span>{cleared}/{s.totalRaiders} cleared · Core hits {s.coreHits}</span>
           </div>
           <div className="wave-meter"><span style={{ width: `${progressPct}%` }} /></div>
+          <div className={`breach-alert ${raidPressure.level}`} aria-label={`Breach alert: ${raidPressure.label}`}>
+            <b>{raidPressure.label}</b>
+            <span>{raidPressure.nearestDistance === null ? 'No active raiders' : `${raidPressure.nearestKind?.toUpperCase()} · ${raidPressure.nearestDistance} tiles from core`}</span>
+            <em>{raidPressure.advice}</em>
+          </div>
           <div className="alive-mix" aria-label={`Alive raid mix: ${raidBreakdown.mix.grunt} grunts, ${raidBreakdown.mix.runner} runners, ${raidBreakdown.mix.brute} brutes`}>
             <b>Alive Mix</b>
             <span>Grunt {raidBreakdown.mix.grunt}</span>
             <span>Runner {raidBreakdown.mix.runner}</span>
             <span>Brute {raidBreakdown.mix.brute}</span>
           </div>
-          <div className={`breach-alert ${raidPressure.level}`} aria-label={`Breach alert: ${raidPressure.label}`}>
-            <b>{raidPressure.label}</b>
-            <span>{raidPressure.nearestDistance === null ? 'No active raiders' : `${raidPressure.nearestKind?.toUpperCase()} · ${raidPressure.nearestDistance} tiles from core`}</span>
-            <em>{raidPressure.advice}</em>
-          </div>
-          {raidBreakdown.mostThreatening && <small>Focus call: {raidBreakdown.mostThreatening.toUpperCase()} pressure is still on the board.</small>}
+          {raidBreakdown.mostThreatening && <small>Focus: {raidBreakdown.mostThreatening.toUpperCase()} pressure remains.</small>}
           <small>Combo x{Math.max(1, s.combo)} · every 3-kill streak pays +1 bonus coin</small>
         </div>
       )}
+
       {s.phase === 'build' && (
-        <div className="raid-preview" aria-label={`Next raid forecast: ${plan.total} raiders, danger lane ${plan.dangerLane}`}>
-          <strong>Next Raid Forecast</strong>
-          <span>Lane X{plan.dangerLane} 집중 · {plan.total}명 · {plan.threat.label} threat</span>
+        <div className="phase-panel forecast-panel" aria-label={`Next raid forecast: ${plan.total} raiders, danger lane ${plan.dangerLane}`}>
+          <div className="panel-head">
+            <strong>Next Raid</strong>
+            <span>Lane X{plan.dangerLane} · {plan.total} raiders · {plan.threat.label}</span>
+          </div>
           <div className="threat-meter" aria-label={`Threat score ${plan.threat.score}`}>
             <i style={{ width: `${Math.min(100, plan.threat.score * 3)}%` }} />
           </div>
-          <em>보드의 주황색 줄이 이번 빌드에서 우선 막아야 할 예상 주공 루트입니다.</em>
-          <em>{plan.threat.advice}</em>
-          <em>Grunt {plan.mix.grunt} · Runner {plan.mix.runner} · Brute {plan.mix.brute}</em>
+          <p>{plan.threat.advice}</p>
           <div className="raid-queue" aria-label={`Raid queue preview: ${queuePreview.firstSix.join(', ')}`}>
             <b>Spawn Queue</b>
             {queuePreview.firstSix.map((kind, index) => <span key={`${kind}-${index}`} className={kind}>{index + 1}. {kind}</span>)}
           </div>
           <div className="enemy-scout" aria-label="Enemy scouting report">
-            <b>Enemy Scout</b>
             {scout.map((enemy) => (
               <span key={enemy.kind} className={enemy.kind}>
-                <strong>{enemy.label} ×{enemy.count}</strong>
+                <strong>{enemy.label} x{enemy.count}</strong>
                 <small>HP {enemy.hp} · Speed {enemy.speed} · +{enemy.bounty}c</small>
-                <em>{enemy.counter}</em>
               </span>
             ))}
           </div>
           <small>{queuePreview.callout}</small>
-          <small>Base 보급: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
+          <small>Base supply: Wall {nextReward.wall} · Trap {nextReward.trap} · Tower {nextReward.turret} · Frost {nextReward.frost}</small>
         </div>
       )}
+
       {s.phase === 'build' && (
-        <div className={`build-readiness ${readiness.ready ? 'ready' : 'warning'}`} aria-label={`Build coach: ${readiness.label}`}>
-          <strong>Build Coach · {readiness.label}</strong>
-          <span>{readiness.advice}</span>
-          <small>
-            추천 최소치 Wall {readiness.recommended.wall} · Trap {readiness.recommended.trap} · Tower {readiness.recommended.turret} · Frost {readiness.recommended.frost}
-          </small>
-          {Object.keys(readiness.missing).length > 0 && (
-            <em>
-              부족: {Object.entries(readiness.missing).map(([type, amount]) => `${type} +${amount}`).join(' · ')}
-            </em>
-          )}
+        <div className="coach-grid">
+          <div className={`build-readiness ${readiness.ready ? 'ready' : 'warning'}`} aria-label={`Build coach: ${readiness.label}`}>
+            <strong>{readiness.label}</strong>
+            <span>{readiness.advice}</span>
+            {Object.keys(readiness.missing).length > 0 && (
+              <em>
+                Need {Object.entries(readiness.missing).map(([type, amount]) => `${type} +${amount}`).join(' · ')}
+              </em>
+            )}
+          </div>
+          <div className={`kill-zone-coach ${killZoneCoverage.label === 'Kill Zone Ready' ? 'ready' : killZoneCoverage.label === 'Partial Choke' ? 'partial' : 'open'}`} aria-label={`Kill zone coverage: ${killZoneCoverage.label}`}>
+            <strong>{killZoneCoverage.label}</strong>
+            <span>Lane X{killZoneCoverage.lane} score {killZoneCoverage.score}</span>
+            <em>W{killZoneCoverage.counts.wall} · T{killZoneCoverage.counts.trap} · B{killZoneCoverage.counts.turret} · F{killZoneCoverage.counts.frost}</em>
+          </div>
         </div>
       )}
-      {s.phase === 'build' && (
-        <div className={`kill-zone-coach ${killZoneCoverage.label === 'Kill Zone Ready' ? 'ready' : killZoneCoverage.label === 'Partial Choke' ? 'partial' : 'open'}`} aria-label={`Kill zone coverage: ${killZoneCoverage.label}`}>
-          <strong>Kill Zone Coverage · {killZoneCoverage.label}</strong>
-          <span>Lane X{killZoneCoverage.lane} score {killZoneCoverage.score} · Wall {killZoneCoverage.counts.wall} · Trap {killZoneCoverage.counts.trap} · Tower {killZoneCoverage.counts.turret} · Frost {killZoneCoverage.counts.frost}</span>
-          <em>{killZoneCoverage.advice}</em>
-        </div>
-      )}
+
       <div className="combat-log" aria-label="Recent combat feedback">
-        <strong>Combat Feedback</strong>
-        {s.combatLog.map((event, index) => <span key={`${event}-${index}`}>{event}</span>)}
+        <strong><Activity size={14} /> Combat Log</strong>
+        {s.combatLog.slice(0, 4).map((event, index) => <span key={`${event}-${index}`}>{event}</span>)}
       </div>
+
       {s.phase === 'victory' && (
         <div className="reward-choices" aria-label="Choose next day reward">
           {s.lastClearGrade && (
@@ -129,13 +180,12 @@ export function Hud() {
               <span>Core hits {s.coreHits} · Bonus +{s.lastClearGrade.bonusCoins} coins</span>
             </div>
           )}
-          <strong>Choose Clear Reward</strong>
-          <span>다음 Day 보급 방향을 하나 고르세요.</span>
-          <div className="reward-coach" aria-label={`Recommended reward: ${rewardRecommendation.label}`}>
-            <b>{rewardRecommendation.label}</b>
-            <em>{rewardRecommendation.reason}</em>
+          <div className="panel-head">
+            <strong>Choose Clear Reward</strong>
+            <span>{rewardRecommendation.label}</span>
           </div>
-          <div>
+          <em>{rewardRecommendation.reason}</em>
+          <div className="reward-grid">
             {REWARD_OPTIONS.map((reward) => (
               <button key={reward.id} className={reward.id === rewardRecommendation.id ? 'recommended' : ''} onClick={() => s.next(reward.id)}>
                 <b>{reward.title}{reward.id === rewardRecommendation.id ? ' · Recommended' : ''}</b>
@@ -145,7 +195,8 @@ export function Hud() {
           </div>
         </div>
       )}
-      <p className="hint"><Shield size={14} /> 마우스 위치에 선택 블록 고스트 미리보기 · 좌클릭 배치 · 우클릭 회수 · 1 벽 · 2 스파이크 · 3 타워 · 4 얼음 · Space 일시정지</p>
+
+      <p className="hint"><Shield size={14} /> Left click place · right click remove · 1-4 select · Space pause · R camera</p>
     </section>
   );
 }

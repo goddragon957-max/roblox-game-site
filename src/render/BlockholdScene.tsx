@@ -37,9 +37,9 @@ export function BlockholdScene() {
     const canvas = canvasRef.current!;
     const engine = new Engine(canvas, true);
     const scene = new Scene(engine);
-    scene.clearColor.set(0.01, 0.014, 0.026, 1);
+    scene.clearColor.set(0.03, 0.047, 0.078, 1);
 
-    const camera = new ArcRotateCamera('camera', -0.78, 0.96, 12.2, new Vector3(0, 0, 1.5), scene);
+    const camera = new ArcRotateCamera('camera', -0.72, 0.92, 12.8, new Vector3(0, 0, 1.9), scene);
     camera.attachControl(canvas, true);
     camera.lowerBetaLimit = 0.82;
     camera.upperBetaLimit = 1.16;
@@ -53,19 +53,19 @@ export function BlockholdScene() {
     coreLight.intensity = 1.75;
 
     const materials = {
-      floor: mat(scene, 'floor', '#172033'),
+      floor: mat(scene, 'floor', '#172235'),
       boardEdge: mat(scene, 'boardEdge', '#0f172a'),
-      lane: mat(scene, 'lane', '#2d3a55', '#141c2f'),
-      laneMark: mat(scene, 'laneMark', '#475569', '#1e293b'),
+      lane: mat(scene, 'lane', '#29415a', '#102033'),
+      laneMark: mat(scene, 'laneMark', '#6a7e92', '#203447'),
       forecast: mat(scene, 'forecast', '#9a5d12', '#422006'),
       danger: mat(scene, 'danger', '#8f1f1f', '#450a0a'),
       wall: mat(scene, 'wall', '#9aa7b8'),
       wallTop: mat(scene, 'wallTop', '#e2e8f0', '#334155'),
       trap: mat(scene, 'trap', '#f97316', '#451a03'),
       trapSpike: mat(scene, 'trapSpike', '#fed7aa', '#7c2d12'),
-      turret: mat(scene, 'turret', '#8b5cf6', '#312e81'),
-      turretTop: mat(scene, 'turretTop', '#ddd6fe', '#4c1d95'),
-      turretBarrel: mat(scene, 'turretBarrel', '#c4b5fd', '#312e81'),
+      turret: mat(scene, 'turret', '#0891b2', '#083344'),
+      turretTop: mat(scene, 'turretTop', '#a5f3fc', '#155e75'),
+      turretBarrel: mat(scene, 'turretBarrel', '#67e8f9', '#164e63'),
       frost: mat(scene, 'frost', '#67e8f9', '#083344'),
       frostGlow: mat(scene, 'frostGlow', '#cffafe', '#155e75'),
       core: mat(scene, 'core', '#38bdf8', '#075985'),
@@ -91,7 +91,7 @@ export function BlockholdScene() {
     const previewMaterials: Record<BlockType, StandardMaterial> = {
       wall: ghostMat(scene, 'wallPreview', '#cbd5e1', '#334155'),
       trap: ghostMat(scene, 'trapPreview', '#fb923c', '#7c2d12'),
-      turret: ghostMat(scene, 'turretPreview', '#c4b5fd', '#4c1d95'),
+      turret: ghostMat(scene, 'turretPreview', '#67e8f9', '#155e75'),
       frost: ghostMat(scene, 'frostPreview', '#a5f3fc', '#155e75'),
     };
 
@@ -265,7 +265,7 @@ export function BlockholdScene() {
       if (e.key === '2') api().select('trap');
       if (e.key === '3') api().select('turret');
       if (e.key === '4') api().select('frost');
-      if (e.key.toLowerCase() === 'r') { camera.alpha = -0.78; camera.beta = 0.96; camera.radius = 12.2; }
+      if (e.key.toLowerCase() === 'r') { camera.alpha = -0.72; camera.beta = 0.92; camera.radius = 12.8; camera.target = new Vector3(0, 0, 1.9); }
       if (e.code === 'Space') api().togglePause();
     };
     const hover = () => {
