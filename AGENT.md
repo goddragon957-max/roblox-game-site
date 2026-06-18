@@ -1,4 +1,4 @@
-# Blockhold Siege Autonomous Build Brief
+# Puppy Guard: Crystal Siege Autonomous Build Brief
 
 <!-- styleseed-default-ui:start -->
 ## StyleSeed UI Standard
@@ -20,10 +20,12 @@ Golden rules to enforce:
 
 ## Product Direction
 
-Keep the existing tower-defense direction. The game should become a simple, readable Roblox-style voxel tower defense:
+Keep the existing tower-defense mechanics, but the visible game is now **Puppy Guard: Crystal Siege**, a bright Roblox/toy-like floating-island defense game:
 
-- Reference feel: Roblox Tower Defense Simulator + Bloons TD lane pressure + Orcs Must Die trap killzones.
+- Reference feel: cute Roblox toy diorama + Bloons TD lane pressure + Orcs Must Die trap killzones.
+- Visual direction: puppy knight defenders, colorful blob enemies, wooden pup towers, spike traps, frost runes, glowing crystal core, grassy floating island.
 - Core loop: build phase -> place defenses -> raid phase -> survive -> rewards/upgrades -> next day.
+- User strongly rejected dark dashboard/developer HUD visuals. Do not return to that style.
 - User prefers fewer questions and autonomous progress. Make reasonable product decisions and keep shipping verified increments.
 
 ## Current Repo
@@ -46,17 +48,18 @@ Improve the game in small verified slices. Do not ask the user for decisions unl
 
 Prioritized roadmap:
 
-0. Current user critique to address first: "이게 게임이냐, 캐릭터/디자인/화면이 이상하다." Stop adding mechanics until the screen looks intentional and game-like. First improve character readability, camera/composition, HUD, tiles, lane/path visibility, selected/build states, and basic game feel.
-1. Make gameplay easier to understand visually:
-   - replace ugly placeholder cube characters with readable Roblox/voxel-style silhouettes or use a 2D/isometric board if that looks better,
+0. Current visual baseline: bright toy-island scene with puppy guards, colorful blob enemies, glowing crystal core, and minimal game HUD. Preserve this direction.
+1. Improve character/game feel first:
+   - make puppy defenders and blob enemies larger, more animated, and more readable,
+   - add projectiles, hit flashes, trap pops, frost effects, coin pops,
+   - keep the board dominant and avoid panels hiding the action,
    - clear lanes/path preview,
    - build tiles/highlight selected block,
    - enemy HP readability,
-   - obvious win/lose state,
-   - cleaner camera angle and board framing.
+   - obvious win/lose state.
 2. Upgrade the UI/design system before adding complexity:
    - use shadcn/ui-style components and 21st.dev component references for panels, buttons, badges, dialogs, reward/shop panels, tabs, toasts,
-   - consider a Linear/Vercel-style dark tactical HUD: restrained surfaces, crisp typography, not glassy AI slop,
+   - keep the current bright toy-game HUD: compact, rounded, warm, readable, not a SaaS/dashboard surface,
    - keep UI compact and readable like a game overlay, not a SaaS landing page.
 3. Add satisfying tower-defense progression only after the screen is acceptable:
    - per-day reward choices or shop,

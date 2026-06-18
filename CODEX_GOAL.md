@@ -1,49 +1,76 @@
-# CODEX GOAL — StyleSeed Game UI/UX Pass
+# CODEX GOAL — Full Visual Rebuild: Make It Look Like a Real Game
 
 Repo: `/home/sy/projects/roblox-game-site`
 
-User request: apply StyleSeed (`https://github.com/bitjaru/styleseed`, `https://styleseed-demo.vercel.app/llms.txt`) and rework the game UI/UX so Blockhold Siege looks more like an intentional playable Roblox-style voxel tower-defense screen instead of a crowded AI dashboard.
+User feedback to treat as acceptance-critical:
 
-## Must preserve
+> “이게 진짜 게임처럼 보이냐? 존나 기괴해. 다 갈아엎어. 캐릭터 디자인부터 codex image 쓰든 외부 3d 라이브러리 가져오든 해서 다시 만들어.”
 
-- Existing gameplay direction: build phase → place blocks → start raid → survive/reward/progression.
-- Existing Zustand/simulation logic unless a tiny presentational helper is necessary.
-- Existing uncommitted StyleSeed docs in `AGENT.md` and `README.md`; do not revert them.
-- No backend, accounts, multiplayer, or large rewrite.
-- Do not commit or push; Hermes will verify and commit after review.
+This is not a polish pass. The previous dark tactical HUD/dashboard direction failed. Rebuild the visible game from art direction upward so the first screen looks like a charming playable game, not an AI/dashboard prototype.
 
-## StyleSeed interpretation
+## Visual target
 
-Use StyleSeed as design judgment, not a generic demo. Read/apply the `llms.txt` principles manually:
+A generated concept reference was saved here:
 
-- Linear/Vercel-like dark tactical game HUD aesthetic.
-- One main accent system: cyan/teal. Danger/warning/health can be semantic exceptions only.
-- Keep content inside restrained surfaces/cards.
-- Reduce random gradients/glass; use crisp hierarchy, spacing, radius, subtle shadow, clear selected/disabled states.
-- Avoid pure black; use semantic CSS variables for UI colors where feasible.
-- Make touch targets at least 44px.
-- Real game state must remain wired: Start Raid, Pause/Resume, reward choice, build palette, coin shop, upgrades.
+`docs/visual-targets/blockhold-rebuild-reference.png`
 
-## Visible UX goals
+Use it as style direction, not as a mandatory background asset.
 
-1. Board first: central Babylon board should feel framed and playable, not crushed by huge text panels.
-2. Compact command HUD: replace oversized hero title/crowded dashboard feel with a game command panel and stat chips.
-3. Better hierarchy: keep only the most important build objective and primary action above the fold; secondary forecast/coach/log cards can be compact scroll sections.
-4. Build panel polish: keep selected block, resources, shop, and upgrades readable with coherent card/button states.
-5. Phase feedback: build/raid/victory/defeat should have clear surface treatment; raid progress and breach alert should be easy to scan.
-6. Mobile/responsive: panels should not fully hide the game; use compact scrollable regions.
+Concrete art direction:
 
-## Suggested implementation scope
+- Bright Roblox/toy-like isometric voxel tower-defense.
+- Floating grassy island with chunky terrain sides, flowers, trees, stones, path tiles, a glowing crystal core, and warm sky/soft depth.
+- Cute readable defenders: puppy knight/guard silhouettes with helmets, blue scarves, shields, flags, or tower platforms.
+- Cute readable enemies: round slime/goblin blobs with tiny horns/ears, clear color variants for grunt/runner/brute.
+- Towers should look like cozy wooden/stone toy towers, not purple cylinders.
+- Traps/frost runes should be visually iconic and readable.
+- HUD should be minimal game HUD: top-left hearts/wave/coins, bottom build bar, tiny right objective panel only if needed.
+- Board must dominate the screen. Avoid huge scroll panels, dashboards, glass slabs, long text blocks, and developer labels.
 
-- Update `src/App.tsx` if needed to give the canvas-first shell a clearer layout marker.
-- Rework `src/components/Hud.tsx` markup/classes for compact game HUD hierarchy.
-- Rework `src/components/BuildPalette.tsx` markup/classes for StyleSeed card/buttons and resource counts.
-- Rewrite/clean `src/styles.css` with tokens and coherent panel system.
-- Optionally improve `BlockholdScene.tsx` camera/board framing slightly if obvious, but avoid a large render rewrite.
+## Required product changes
 
-## Required verification
+1. Rename/retitle visible product if useful: “Puppy Guard: Crystal Siege” or similar is acceptable, but keep project/repo path unchanged.
+2. Replace dark tactical scene with bright toy-island scene.
+3. Rework `src/render/BlockholdScene.tsx` substantially:
+   - camera framed lower/closer like an isometric toy game;
+   - floating island base with grass top and dirt sides;
+   - winding path tiles, not just repeated dark grid squares;
+   - decorative trees/flowers/stones/fences/torches;
+   - cute puppy defenders and towers built procedurally from Babylon meshes;
+   - cute blob enemies with eyes/horns/color variants;
+   - crystal core shrine with glow;
+   - clear tile hover/build preview and selected cell feedback;
+   - readable combat markers/projectile/trap/frost feedback if feasible.
+4. Rework `src/components/Hud.tsx` and `src/components/BuildPalette.tsx` into minimal game HUD:
+   - no giant dashboard blocks;
+   - top-left compact stats/buttons;
+   - bottom-centered build bar/cards;
+   - action button looks like a game button;
+   - text should be short and game-like.
+5. Rework `src/styles.css` accordingly:
+   - bright sky/soft toy palette;
+   - rounded game UI surfaces;
+   - one cohesive accent system, semantic danger/coin/health exceptions;
+   - mobile layout still playable.
+6. Keep gameplay wired:
+   - Start Raid / Pause / Next Day / Restart;
+   - build palette selects wall/trap/turret/frost;
+   - coin shop/upgrades can be compact/hidden behind small panels but must remain accessible or at least not broken;
+   - keyboard shortcuts continue.
+7. If you choose to add an external runtime library or asset package, it must be MIT/permissive or procedural and must not require paid keys. Prefer procedural Babylon meshes if faster.
 
-Run and pass:
+## Hard no-go list
+
+- Do not leave the existing dark tactical dashboard look.
+- Do not ship text-heavy panels that cover the board.
+- Do not use copyrighted Roblox/Tower Defense Simulator assets/names.
+- Do not make grotesque/horror characters.
+- Do not leave enemies as plain cylinders/cubes.
+- Do not claim “game-like” unless characters, board, and HUD are visibly game-like.
+
+## Verification required before finishing
+
+Run:
 
 ```bash
 npm run test
@@ -51,9 +78,11 @@ npm run lint
 npm run build
 ```
 
-Also run a local browser smoke test if possible:
+Then do/enable browser smoke assumptions:
 
-- page loads with no console errors;
-- StyleSeed pass marker/title/hud visible;
-- Start Raid click changes phase/HUD;
-- core gameplay controls remain clickable.
+- page loads without console errors;
+- first screenshot shows a bright toy/island game scene with cute defenders/enemies/core/path;
+- Start Raid changes visible state to raid;
+- build controls remain clickable.
+
+Do not commit or push. Hermes will verify, adjust, commit, and push.

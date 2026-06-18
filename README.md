@@ -1,4 +1,4 @@
-# Blockhold Defense
+# Puppy Guard: Crystal Siege
 
 <!-- styleseed-default-ui:start -->
 ## StyleSeed UI Standard
@@ -14,7 +14,13 @@ Core expectations:
 - no generic StyleSeed/library showcase left in place of product-specific UI.
 <!-- styleseed-default-ui:end -->
 
-Playable browser 3D voxel tower-defense vertical slice.
+Playable browser 3D toy-island tower-defense vertical slice. The current visual direction is a bright Roblox-inspired floating island with puppy guards, blob enemies, wooden pup towers, traps, frost runes, and a glowing crystal core.
+
+Visual target/reference:
+
+```txt
+docs/visual-targets/blockhold-rebuild-reference.png
+```
 
 ## Run
 
@@ -37,7 +43,7 @@ npm run build
 
 ## MVP Mechanics
 
-Build during the day, start the night raid, watch raiders path to the core, use walls to redirect/breach and traps to damage. Survive to advance to the next day; lose if core HP reaches zero.
+Build during the day, start the raid, watch cute blob enemies path toward the crystal core, use walls to redirect, spikes to burst damage, pup towers to shoot, and frost runes to slow. Survive to advance to the next day; lose if core HP reaches zero.
 
 ## UI Source Reference
 
