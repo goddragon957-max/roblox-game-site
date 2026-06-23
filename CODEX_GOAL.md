@@ -1,95 +1,106 @@
-# CODEX GOAL — Adorable Colorful Diorama Pass
+# CODEX GOAL — 3D Arcade Cute Style Reboot
 
 Repo: `/home/sy/projects/roblox-game-site`
 
-User feedback to treat as acceptance-critical:
+Latest user feedback, acceptance-critical:
 
-> “좀 더 아기자기하게 못만드냐 그리고 이미지 처럼 화려하지도 않은데. 골모드로 진행해.”
+> “전혀 다른데 좀더 아기자기하게 못만드냐 그리고 약간 아케이드 느낌으로 다가 해상도가 너무 큰가 이미지를 보고 따라하지 말고 저런거 못그리냐 3d로?”
 
-Previous rebuild removed the dark dashboard, but it is still too sparse and not cute/colorful enough compared with the generated image reference. This pass must make the first screen feel like a polished, adorable, saturated toy-diorama tower defense game.
+Interpretation:
 
-## Visual references
+The previous pass tried to copy the generated reference by adding props, but the resulting Babylon scene still reads as sparse/high-res/generic WebGL primitives. The user is asking for a **real 3D arcade/toon art direction**, not more literal image-following. The problem is not just missing decorations; it is camera/projection/render resolution/shape language.
 
-Use these as style targets:
+## New art direction
 
-- Existing reference: `docs/visual-targets/blockhold-rebuild-reference.png`
-- New stronger reference: `docs/visual-targets/puppy-guard-cute-diorama-reference.png`
+Make Puppy Guard feel like a cute arcade 3D toy game:
 
-The new reference is the stricter target: bright cyan sky, golden winding paths, dense flowers/mushrooms/fences/balloons/confetti, chubby puppy knights with big heads, colorful slime blobs, glowing pink/blue heart crystal core, chunky toy towers, lots of sparkle/particle accents, and minimal cute HUD.
+- Low-res arcade render: intentionally chunky/pixel-upscaled, not crisp high-resolution WebGL.
+- Orthographic/isometric camera: board reads like a 3D arcade diorama/sprite, not perspective CAD/WebGL.
+- Big chibi 3D characters: puppies and blobs must be the emotional center, not tiny props.
+- Flat saturated toon colors: fewer muddy 3D gradients, more readable color blocks.
+- Simple chunky shapes: rounded/squashed spheres/cylinders/boxes, thick outlines/shadows if feasible.
+- Board fills screen but with tighter camera composition; HUD must stop feeling like a web overlay covering a tiny board.
+- Arcade game feel: pixelated canvas, bounce/wobble animation, coin/star pops, playful path, big Start button/chips.
 
-## Hard acceptance bar
+## Do NOT do this
 
-The screenshot should no longer read as “empty bright island.” It must read as:
+- Do not keep adding tiny flowers/balloons as the main solution.
+- Do not try to literally copy the generated image.
+- Do not use a giant high-resolution crisp canvas look.
+- Do not return to dark tactical dashboard style.
+- Do not leave characters as small dots among too many props.
+- Do not rewrite game mechanics unless needed for visual state.
+- Do not commit or push; Hermes will verify and ship.
 
-> a cute colorful mobile/toy tower-defense diorama with clear characters and rich props.
+## Required implementation plan
 
-Before finishing, visually check the first screen and Start Raid screen against these questions:
+### 1. Low-res arcade render
 
-- Are puppy defenders/towers large and cute enough to identify immediately?
-- Are enemies visibly expressive pastel blob characters, not small colored dots?
-- Does the island feel decorated/dense: flowers, mushrooms, fences, balloons, flags, sparkles, clouds, crystals?
-- Is the path more golden and playful, closer to the reference image?
-- Is the core more magical and eye-catching, ideally heart/crystal-like rather than just a generic shard?
-- Is the HUD still minimal and not covering the board?
+In `src/render/BlockholdScene.tsx` and CSS:
 
-## Required implementation changes
+- Make the Babylon canvas render intentionally lower-res and upscale it:
+  - use `engine.setHardwareScalingLevel(...)` with a value around `2` to `3`, or equivalent;
+  - disable overly smooth antialiasing if appropriate;
+  - add CSS `image-rendering: pixelated` or `crisp-edges` for the canvas/frame;
+  - add `data-ui-pass="puppy-arcade-3d"` in `App.tsx` so smoke tests can identify the pass.
+- Add a subtle arcade frame/vignette that does not hide the board.
 
-### 1. World / scene richness
+### 2. Orthographic arcade camera
 
-In `src/render/BlockholdScene.tsx`, make the Babylon scene richer and more colorful:
+- Change the Babylon camera to orthographic/isometric mode.
+- Keep the whole board playable, but zoom/composition should make characters and core much larger.
+- On resize, update `orthoLeft`, `orthoRight`, `orthoTop`, `orthoBottom` so the board stays centered.
+- The screenshot should feel like a 3D arcade board/sprite, not a perspective miniature.
 
-- More saturated sky and warm sun rays feel.
-- Add many small procedural decorative props: flowers, mushrooms, fences, balloons, puppy flags, coin tokens, clouds, sparkles/confetti, and extra crystals.
-- Add a few floating side islands/clouds in the background if feasible.
-- Make the path golden/yellow, thicker, and more clearly winding/playful.
-- Add more height/layers to the island edges so it feels like a chunky toy diorama.
-- Keep performance reasonable; procedural primitives are fine.
+### 3. Chibi 3D shape language
 
-### 2. Character cuteness / scale
+Rework the core helper shapes, especially `drawPuppy`, `drawTowerPuppy`, and `drawBlob`:
 
-- Puppy defenders/towers must be much more visible and cute:
-  - bigger heads, round eyes, helmet, scarf, shield/sword/flag;
-  - at least several visible puppy guards/towers in first view;
-  - chibi proportions, not tiny props.
-- Blob enemies must be larger and more expressive:
-  - pastel green/pink/blue/purple variants;
-  - eyes, horns/ears, little shine spots;
-  - visible at raid start without zooming.
-- Add at least one decorative puppy near the core or tower so the first screen has a mascot focal point even before building.
+- Puppies:
+  - much bigger head/body ratio;
+  - huge eyes, cheeks, ears, scarf/helmet readable from isometric camera;
+  - squat arcade silhouette;
+  - at least one large mascot puppy near the core in the first screen.
+- Blobs:
+  - larger, rounder, pastel, expressive eyes/mouth/horns;
+  - obvious bounce/wobble during raid using time-based scaling/position;
+  - no tiny HP details if they make blobs visually noisy; use simple colored bars or none.
+- Towers:
+  - read as chunky puppy arcade towers, not detailed miniature structures;
+  - flag/projectile/bolt should be large and colorful.
 
-### 3. Core / effects
+### 4. Simplify scene density into readable arcade composition
 
-- Upgrade core into a strong magical centerpiece:
-  - pink/blue heart-like crystal or clustered crystal shrine;
-  - glow layer/sparkle accents around it;
-  - surrounding fence/flowers/crystals.
-- Add visible sparkle/coin/hit/frost effects using simple mesh markers or small animated props.
-- If no true animation is added, at least use clear static sparkles and combat markers.
+The current scene has many tiny props. Keep some, but prioritize readability:
 
-### 4. HUD / controls
+- Fewer tiny scattered props if they create noise.
+- Larger props at screen edges: oversized mushrooms, stars, clouds, candy fences, toy flags.
+- Make the path a thick playful golden ribbon, not thin tile grid squares.
+- Make the core a huge glowing heart/crystal arcade objective.
+- Use shadows/ground discs under characters so they read as 3D pieces.
 
-- Keep HUD cute and minimal:
-  - top-left hearts/coins/wave like mobile game chips;
-  - bottom build bar with cute rounded cards;
-  - avoid long paragraphs and dashboard slabs.
-- Do not hide the board/action. During raid, the build bar should stay compact or collapsed.
-- Preserve Start Raid, Pause/Resume, Next Day, Restart, build buttons, keyboard shortcuts, and canvas place/remove behavior.
+### 5. HUD should become arcade overlay, not web panel
 
-### 5. Optional CSS fallback
+In `src/components/Hud.tsx`, `src/components/BuildPalette.tsx`, and `src/styles.css`:
 
-If the WebGL fallback exists, make it more colorful too, but prioritize the actual Babylon scene.
+- Shrink the left HUD drastically or transform it into compact arcade chips.
+- Keep critical info only: hearts/core, wave, coins, Start/Pause.
+- Move/resize Start Raid into a colorful arcade button that does not block the board.
+- Make build controls compact, maybe icon-first cards; do not cover the emotional center of the board.
+- Keep all interactions working: Start Raid, Pause/Resume, Next Day, Restart, build selection, canvas place/remove, keyboard shortcuts.
 
-## Hard no-go list
+### 6. Motion/effects
 
-- No return to dark tactical/dashboard style.
-- No giant scroll panels.
-- No tiny unreadable enemies.
-- No sparse empty island.
-- No copyrighted Roblox/TDS assets or names.
-- No grotesque characters.
-- Do not commit or push. Hermes will verify and ship.
+Add simple time-based visual motion inside the render loop:
 
-## Verification required before finishing
+- idle bob for puppy mascots/towers;
+- bounce/wobble for blobs;
+- sparkle/coin pulse around core;
+- visible attack/kill pop markers if available.
+
+This is important: static high-res primitives are why the scene feels wrong.
+
+## Acceptance checklist before finishing
 
 Run:
 
@@ -99,11 +110,14 @@ npm run lint
 npm run build
 ```
 
-Also run/enable browser smoke assumptions:
+Then browser-smoke locally:
 
-- first screen loads without console errors;
-- Start Raid changes state visibly;
-- first screen and raid screen look more colorful/dense/cute than commit `abf2c72`;
-- HUD/build bar does not obscure the main action.
+- first screen loads with `data-ui-pass="puppy-arcade-3d"`;
+- canvas appears intentionally pixel/chunky/arcade, not high-res crisp;
+- orthographic camera makes the board feel like a cute arcade diorama;
+- puppy and blob characters are big/readable/emotional center;
+- Start Raid changes to raid state;
+- raid blobs visibly bounce/wobble and remain readable;
+- console has no JS errors.
 
 Report changed files and command results only after verification.

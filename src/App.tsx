@@ -4,7 +4,7 @@ import { BlockholdScene } from './render/BlockholdScene';
 
 export default function App() {
   return (
-    <main id="app" data-ui-pass="puppy-guard-toy-island">
+    <main id="app" data-ui-pass="puppy-arcade-3d">
       <BlockholdScene />
       <div className="scene-frame" aria-hidden="true" />
       <Hud />

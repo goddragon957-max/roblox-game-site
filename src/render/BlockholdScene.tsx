@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ArcRotateCamera,
+  Camera,
   Color3,
   DirectionalLight,
   Engine,
@@ -36,7 +37,8 @@ export function BlockholdScene() {
     const canvas = canvasRef.current!;
     let engine: Engine;
     try {
-      engine = new Engine(canvas, true);
+      engine = new Engine(canvas, false);
+      engine.setHardwareScalingLevel(2.75);
     } catch {
       setWebglFailed(true);
       return;
@@ -44,14 +46,25 @@ export function BlockholdScene() {
     const scene = new Scene(engine);
     scene.clearColor.set(0.12, 0.78, 1, 1);
 
-    const camera = new ArcRotateCamera('toy-camera', -0.78, 0.84, 11.4, new Vector3(0, 0, 1.2), scene);
+    const camera = new ArcRotateCamera('toy-camera', -0.78, 0.94, 16, new Vector3(0, 0.15, 0.92), scene);
+    camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
     camera.attachControl(canvas, true);
-    camera.lowerBetaLimit = 0.68;
-    camera.upperBetaLimit = 1.08;
-    camera.lowerRadiusLimit = 8.3;
-    camera.upperRadiusLimit = 14.2;
+    camera.lowerBetaLimit = 0.82;
+    camera.upperBetaLimit = 1.02;
+    camera.lowerRadiusLimit = 16;
+    camera.upperRadiusLimit = 16;
     camera.wheelPrecision = 62;
     camera.panningSensibility = 80;
+
+    const updateOrthoCamera = () => {
+      const aspect = Math.max(0.6, engine.getRenderWidth() / Math.max(1, engine.getRenderHeight()));
+      const vertical = 6.25;
+      camera.orthoTop = vertical;
+      camera.orthoBottom = -vertical;
+      camera.orthoLeft = -vertical * aspect;
+      camera.orthoRight = vertical * aspect;
+    };
+    updateOrthoCamera();
 
     new HemisphericLight('warm-sky', new Vector3(-0.4, 1, 0.3), scene).intensity = 1.02;
     const sun = new DirectionalLight('sun', new Vector3(-0.55, -0.85, 0.45), scene);
@@ -63,14 +76,14 @@ export function BlockholdScene() {
     new GlowLayer('friendly-glow', scene).intensity = 0.48;
 
     const materials = {
-      grass: mat(scene, 'blocky-grass', '#58c72e'),
-      grassAlt: mat(scene, 'soft-grass', '#7bdd38'),
+      grass: mat(scene, 'blocky-grass', '#4ed735'),
+      grassAlt: mat(scene, 'soft-grass', '#85ec3c'),
       dirt: mat(scene, 'chunky-dirt', '#ad6b3d'),
       dirtDark: mat(scene, 'dirt-shadow', '#784226'),
       cliffPink: mat(scene, 'candy-cliff', '#d88a77'),
       cliffLight: mat(scene, 'sunny-cliff', '#f2b08a'),
-      sand: mat(scene, 'warm-path', '#ffd04f', '#8a5b00'),
-      sandEdge: mat(scene, 'path-edge', '#f29d32'),
+      sand: mat(scene, 'warm-path', '#ffd84a', '#8a5b00'),
+      sandEdge: mat(scene, 'path-edge', '#ff9f2f'),
       pathPebble: mat(scene, 'path-pebbles', '#fff2a6'),
       forecast: mat(scene, 'sunny-forecast', '#ffb33f', '#9a4f00', 0.86),
       danger: mat(scene, 'candy-danger', '#ff6b5f', '#8b1f17', 0.82),
@@ -157,6 +170,7 @@ export function BlockholdScene() {
       if (!mesh) mesh = MeshBuilder.CreateBox(id, { width: w, height: h, depth: d }, scene);
       mesh.position = pos;
       mesh.rotation.set(0, 0, 0);
+      mesh.scaling.set(1, 1, 1);
       return remember(id, mesh, material, pickable);
     }
 
@@ -165,6 +179,7 @@ export function BlockholdScene() {
       if (!mesh) mesh = MeshBuilder.CreateSphere(id, { diameter, segments }, scene);
       mesh.position = pos;
       mesh.rotation.set(0, 0, 0);
+      mesh.scaling.set(1, 1, 1);
       return remember(id, mesh, material);
     }
 
@@ -173,6 +188,7 @@ export function BlockholdScene() {
       if (!mesh) mesh = MeshBuilder.CreateCylinder(id, { diameter, height, tessellation }, scene);
       mesh.position = pos;
       mesh.rotation.set(0, 0, 0);
+      mesh.scaling.set(1, 1, 1);
       return remember(id, mesh, material);
     }
 
@@ -181,6 +197,7 @@ export function BlockholdScene() {
       if (!mesh) mesh = MeshBuilder.CreateCylinder(id, { diameterTop: 0, diameterBottom: diameter, height, tessellation }, scene);
       mesh.position = pos;
       mesh.rotation.y = Math.PI / 4;
+      mesh.scaling.set(1, 1, 1);
       return remember(id, mesh, material);
     }
 
@@ -201,37 +218,41 @@ export function BlockholdScene() {
       return cone(id, diameter, height, pos, material, tessellation);
     };
 
-    function drawPuppy(live: Set<string>, id: string, x: number, z: number, y = 0.18, scale = 1) {
-      liveCylinder(live, `${id}-shadow`, 0.92 * scale, 0.025, cellToVec(x, z, y + 0.02), materials.shadow, 18);
-      liveSphere(live, `${id}-body`, 0.62 * scale, cellToVec(x, z, y + 0.43 * scale), materials.puppy, 14).scaling.y = 1.02;
-      liveSphere(live, `${id}-head`, 0.62 * scale, cellToVec(x, z - 0.04 * scale, y + 0.82 * scale), materials.puppy, 16).scaling.y = 1.08;
-      liveSphere(live, `${id}-muzzle`, 0.34 * scale, cellToVec(x, z - 0.36 * scale, y + 0.73 * scale), materials.puppyCream, 12);
-      liveBox(live, `${id}-ear-l`, 0.2 * scale, 0.42 * scale, 0.16 * scale, cellToVec(x - 0.32 * scale, z, y + 0.78 * scale), materials.puppyEar);
-      liveBox(live, `${id}-ear-r`, 0.2 * scale, 0.42 * scale, 0.16 * scale, cellToVec(x + 0.32 * scale, z, y + 0.78 * scale), materials.puppyEar);
-      liveBox(live, `${id}-helmet`, 0.62 * scale, 0.18 * scale, 0.54 * scale, cellToVec(x, z - 0.02 * scale, y + 1.14 * scale), materials.metal);
-      liveBox(live, `${id}-helmet-rim`, 0.72 * scale, 0.07 * scale, 0.6 * scale, cellToVec(x, z - 0.05 * scale, y + 1.03 * scale), materials.metalDark);
-      liveSphere(live, `${id}-helmet-gem`, 0.12 * scale, cellToVec(x, z - 0.32 * scale, y + 1.17 * scale), materials.crystalPink, 8);
-      liveBox(live, `${id}-scarf`, 0.78 * scale, 0.12 * scale, 0.56 * scale, cellToVec(x, z, y + 0.58 * scale), materials.blue);
-      liveBox(live, `${id}-scarf-tail`, 0.12 * scale, 0.1 * scale, 0.48 * scale, cellToVec(x - 0.38 * scale, z + 0.2 * scale, y + 0.58 * scale), materials.blueLight);
-      liveSphere(live, `${id}-eye-l`, 0.085 * scale, cellToVec(x - 0.15 * scale, z - 0.42 * scale, y + 0.88 * scale), materials.eye, 8);
-      liveSphere(live, `${id}-eye-r`, 0.085 * scale, cellToVec(x + 0.15 * scale, z - 0.42 * scale, y + 0.88 * scale), materials.eye, 8);
-      liveSphere(live, `${id}-shine-l`, 0.03 * scale, cellToVec(x - 0.17 * scale, z - 0.47 * scale, y + 0.92 * scale), materials.flowerWhite, 6);
-      liveSphere(live, `${id}-shine-r`, 0.03 * scale, cellToVec(x + 0.13 * scale, z - 0.47 * scale, y + 0.92 * scale), materials.flowerWhite, 6);
-      liveSphere(live, `${id}-blush-l`, 0.06 * scale, cellToVec(x - 0.24 * scale, z - 0.41 * scale, y + 0.76 * scale), materials.blush, 8);
-      liveSphere(live, `${id}-blush-r`, 0.06 * scale, cellToVec(x + 0.24 * scale, z - 0.41 * scale, y + 0.76 * scale), materials.blush, 8);
-      liveSphere(live, `${id}-nose`, 0.08 * scale, cellToVec(x, z - 0.51 * scale, y + 0.72 * scale), materials.nose, 8);
-      liveBox(live, `${id}-shield`, 0.42 * scale, 0.52 * scale, 0.08 * scale, cellToVec(x + 0.42 * scale, z - 0.27 * scale, y + 0.48 * scale), materials.blueLight);
-      liveBox(live, `${id}-shield-star`, 0.18 * scale, 0.18 * scale, 0.09 * scale, cellToVec(x + 0.42 * scale, z - 0.33 * scale, y + 0.52 * scale), materials.turretBolt);
-      liveBox(live, `${id}-sword`, 0.08 * scale, 0.62 * scale, 0.08 * scale, cellToVec(x - 0.44 * scale, z - 0.28 * scale, y + 0.62 * scale), materials.metal);
+    function drawPuppy(live: Set<string>, id: string, x: number, z: number, y = 0.18, scale = 1, wobble = 0) {
+      const bob = Math.sin(performance.now() / 250 + x * 1.7 + z) * 0.045 * wobble;
+      const squash = 1 + Math.sin(performance.now() / 220 + x + z) * 0.035 * wobble;
+      liveCylinder(live, `${id}-shadow`, 1.12 * scale, 0.025, cellToVec(x, z, y + 0.02), materials.shadow, 14);
+      const body = liveSphere(live, `${id}-body`, 0.74 * scale, cellToVec(x, z, y + bob + 0.4 * scale), materials.puppy, 10);
+      body.scaling.set(1.08, 0.92 * squash, 1.02);
+      const head = liveSphere(live, `${id}-head`, 0.82 * scale, cellToVec(x, z - 0.05 * scale, y + bob + 0.84 * scale), materials.puppy, 12);
+      head.scaling.set(1.04, 1.04 / squash, 1.02);
+      liveSphere(live, `${id}-muzzle`, 0.42 * scale, cellToVec(x, z - 0.43 * scale, y + bob + 0.74 * scale), materials.puppyCream, 10);
+      liveBox(live, `${id}-ear-l`, 0.24 * scale, 0.52 * scale, 0.18 * scale, cellToVec(x - 0.42 * scale, z, y + bob + 0.82 * scale), materials.puppyEar);
+      liveBox(live, `${id}-ear-r`, 0.24 * scale, 0.52 * scale, 0.18 * scale, cellToVec(x + 0.42 * scale, z, y + bob + 0.82 * scale), materials.puppyEar);
+      liveBox(live, `${id}-helmet`, 0.78 * scale, 0.2 * scale, 0.62 * scale, cellToVec(x, z - 0.02 * scale, y + bob + 1.2 * scale), materials.metal);
+      liveBox(live, `${id}-helmet-rim`, 0.9 * scale, 0.08 * scale, 0.68 * scale, cellToVec(x, z - 0.06 * scale, y + bob + 1.08 * scale), materials.metalDark);
+      liveSphere(live, `${id}-helmet-gem`, 0.16 * scale, cellToVec(x, z - 0.37 * scale, y + bob + 1.23 * scale), materials.crystalPink, 6);
+      liveBox(live, `${id}-scarf`, 0.86 * scale, 0.14 * scale, 0.62 * scale, cellToVec(x, z, y + bob + 0.58 * scale), materials.blue);
+      liveBox(live, `${id}-scarf-tail`, 0.14 * scale, 0.12 * scale, 0.55 * scale, cellToVec(x - 0.45 * scale, z + 0.22 * scale, y + bob + 0.58 * scale), materials.blueLight);
+      liveSphere(live, `${id}-eye-l`, 0.13 * scale, cellToVec(x - 0.2 * scale, z - 0.5 * scale, y + bob + 0.92 * scale), materials.eye, 8);
+      liveSphere(live, `${id}-eye-r`, 0.13 * scale, cellToVec(x + 0.2 * scale, z - 0.5 * scale, y + bob + 0.92 * scale), materials.eye, 8);
+      liveSphere(live, `${id}-shine-l`, 0.045 * scale, cellToVec(x - 0.23 * scale, z - 0.56 * scale, y + bob + 0.97 * scale), materials.flowerWhite, 6);
+      liveSphere(live, `${id}-shine-r`, 0.045 * scale, cellToVec(x + 0.16 * scale, z - 0.56 * scale, y + bob + 0.97 * scale), materials.flowerWhite, 6);
+      liveSphere(live, `${id}-blush-l`, 0.09 * scale, cellToVec(x - 0.32 * scale, z - 0.46 * scale, y + bob + 0.78 * scale), materials.blush, 8);
+      liveSphere(live, `${id}-blush-r`, 0.09 * scale, cellToVec(x + 0.32 * scale, z - 0.46 * scale, y + bob + 0.78 * scale), materials.blush, 8);
+      liveSphere(live, `${id}-nose`, 0.1 * scale, cellToVec(x, z - 0.59 * scale, y + bob + 0.74 * scale), materials.nose, 8);
+      liveBox(live, `${id}-shield`, 0.5 * scale, 0.6 * scale, 0.1 * scale, cellToVec(x + 0.5 * scale, z - 0.32 * scale, y + bob + 0.5 * scale), materials.blueLight);
+      liveBox(live, `${id}-shield-star`, 0.22 * scale, 0.22 * scale, 0.11 * scale, cellToVec(x + 0.5 * scale, z - 0.39 * scale, y + bob + 0.54 * scale), materials.turretBolt);
+      liveBox(live, `${id}-sword`, 0.09 * scale, 0.7 * scale, 0.09 * scale, cellToVec(x - 0.52 * scale, z - 0.32 * scale, y + bob + 0.64 * scale), materials.metal);
     }
 
     function drawTowerPuppy(live: Set<string>, id: string, x: number, z: number) {
-      liveBox(live, `${id}-base`, 0.92, 0.7, 0.92, cellToVec(x, z, 0.47), materials.wood);
-      liveBox(live, `${id}-door`, 0.34, 0.42, 0.08, cellToVec(x, z - 0.48, 0.39), materials.metalDark);
-      liveBox(live, `${id}-rail`, 1.08, 0.14, 1.08, cellToVec(x, z, 0.88), materials.woodLight);
-      liveBox(live, `${id}-band`, 1.04, 0.14, 0.2, cellToVec(x, z - 0.43, 0.62), materials.blue);
-      drawPuppy(live, `${id}-guard`, x, z - 0.02, 0.82, 0.75);
-      liveBox(live, `${id}-bolt`, 0.18, 0.18, 0.78, cellToVec(x, z - 0.54, 1.52), materials.turretBolt);
+      liveBox(live, `${id}-base`, 1.04, 0.72, 1.04, cellToVec(x, z, 0.48), materials.wood);
+      liveBox(live, `${id}-door`, 0.4, 0.44, 0.09, cellToVec(x, z - 0.54, 0.4), materials.metalDark);
+      liveBox(live, `${id}-rail`, 1.24, 0.16, 1.24, cellToVec(x, z, 0.9), materials.woodLight);
+      liveBox(live, `${id}-band`, 1.16, 0.15, 0.22, cellToVec(x, z - 0.48, 0.63), materials.blue);
+      drawPuppy(live, `${id}-guard`, x, z - 0.03, 0.84, 0.86, 1);
+      liveBox(live, `${id}-bolt`, 0.24, 0.24, 0.9, cellToVec(x, z - 0.65, 1.68), materials.turretBolt);
       liveBox(live, `${id}-flag-pole`, 0.05, 0.82, 0.05, cellToVec(x - 0.42, z + 0.32, 1.15), materials.wood);
       liveBox(live, `${id}-flag`, 0.38, 0.22, 0.05, cellToVec(x - 0.25, z + 0.28, 1.38), materials.blueLight);
     }
@@ -265,22 +286,25 @@ export function BlockholdScene() {
 
     function drawBlob(live: Set<string>, id: string, kind: RaiderKind, x: number, z: number, hp: number, maxHp: number) {
       const spec = {
-        grunt: { body: 1, y: 0.66, material: materials.grunt },
-        runner: { body: 0.9, y: 0.61, material: materials.runner },
-        brute: { body: 1.24, y: 0.8, material: materials.brute },
+        grunt: { body: 1.14, y: 0.74, material: materials.grunt },
+        runner: { body: 1.04, y: 0.68, material: materials.runner },
+        brute: { body: 1.42, y: 0.9, material: materials.brute },
       }[kind];
-      liveCylinder(live, `${id}-shadow`, spec.body * 1.2, 0.025, cellToVec(x, z, 0.12), materials.shadow, 18);
-      const body = liveSphere(live, `${id}-body`, spec.body, cellToVec(x, z, spec.y), spec.material, 14);
-      body.scaling.y = kind === 'brute' ? 1.08 : 0.92;
+      const t = performance.now() / 145 + x * 0.7 + z * 1.3;
+      const bounce = Math.abs(Math.sin(t)) * (kind === 'runner' ? 0.2 : 0.13);
+      const wobble = Math.sin(t) * 0.13;
+      liveCylinder(live, `${id}-shadow`, spec.body * (1.15 + bounce * 0.18), 0.025, cellToVec(x, z, 0.12), materials.shadow, 14);
+      const body = liveSphere(live, `${id}-body`, spec.body, cellToVec(x, z, spec.y + bounce), spec.material, 10);
+      body.scaling.set(1 + wobble * 0.28, (kind === 'brute' ? 1.02 : 0.9) - bounce * 0.18, 1 - wobble * 0.2);
       liveSphere(live, `${id}-shine`, 0.18, cellToVec(x - spec.body * 0.18, z - spec.body * 0.3, spec.y + spec.body * 0.23), materials.flowerWhite, 8);
-      liveSphere(live, `${id}-eye-l`, 0.09, cellToVec(x - spec.body * 0.17, z - spec.body * 0.41, spec.y + 0.07), materials.eye, 8);
-      liveSphere(live, `${id}-eye-r`, 0.09, cellToVec(x + spec.body * 0.17, z - spec.body * 0.41, spec.y + 0.07), materials.eye, 8);
-      liveSphere(live, `${id}-smile-l`, 0.035, cellToVec(x - spec.body * 0.08, z - spec.body * 0.47, spec.y - 0.1), materials.eye, 6);
-      liveSphere(live, `${id}-smile-r`, 0.035, cellToVec(x + spec.body * 0.08, z - spec.body * 0.47, spec.y - 0.1), materials.eye, 6);
-      liveCone(live, `${id}-horn-l`, 0.18, 0.27, cellToVec(x - spec.body * 0.23, z - 0.02, spec.y + spec.body * 0.52), materials.horn, 6);
-      liveCone(live, `${id}-horn-r`, 0.18, 0.27, cellToVec(x + spec.body * 0.23, z - 0.02, spec.y + spec.body * 0.52), materials.horn, 6);
-      liveBox(live, `${id}-hp-back`, 0.72, 0.065, 0.09, cellToVec(x, z, 1.18), materials.hpBack);
-      liveBox(live, `${id}-hp`, Math.max(0.08, 0.68 * (hp / maxHp)), 0.075, 0.1, cellToVec(x, z, 1.24), materials.hp);
+      liveSphere(live, `${id}-eye-l`, 0.13, cellToVec(x - spec.body * 0.18, z - spec.body * 0.43, spec.y + bounce + 0.08), materials.eye, 8);
+      liveSphere(live, `${id}-eye-r`, 0.13, cellToVec(x + spec.body * 0.18, z - spec.body * 0.43, spec.y + bounce + 0.08), materials.eye, 8);
+      liveSphere(live, `${id}-smile-l`, 0.05, cellToVec(x - spec.body * 0.08, z - spec.body * 0.49, spec.y + bounce - 0.12), materials.eye, 6);
+      liveSphere(live, `${id}-smile-r`, 0.05, cellToVec(x + spec.body * 0.08, z - spec.body * 0.49, spec.y + bounce - 0.12), materials.eye, 6);
+      liveCone(live, `${id}-horn-l`, 0.24, 0.34, cellToVec(x - spec.body * 0.24, z - 0.02, spec.y + bounce + spec.body * 0.53), materials.horn, 6);
+      liveCone(live, `${id}-horn-r`, 0.24, 0.34, cellToVec(x + spec.body * 0.24, z - 0.02, spec.y + bounce + spec.body * 0.53), materials.horn, 6);
+      liveBox(live, `${id}-hp-back`, 0.76, 0.07, 0.1, cellToVec(x, z, 1.36 + bounce), materials.hpBack);
+      liveBox(live, `${id}-hp`, Math.max(0.1, 0.72 * (hp / maxHp)), 0.08, 0.11, cellToVec(x, z, 1.43 + bounce), materials.hp);
     }
 
     function drawTree(live: Set<string>, id: string, x: number, z: number) {
@@ -347,19 +371,19 @@ export function BlockholdScene() {
     }
 
     function drawDecor(live: Set<string>) {
-      [[0, 8], [1, 6], [2, 9], [3, 1], [7, 1], [9, 4], [10, 8], [8, 10], [0, 3], [10, 2]].forEach(([x, z], index) => drawTree(live, `tree-${index}`, x, z));
+      [[0, 8], [2, 9], [3, 1], [7, 1], [10, 8], [8, 10]].forEach(([x, z], index) => drawTree(live, `tree-${index}`, x, z));
       [[0, 2], [0, 5], [2, 3], [4, 10], [7, 9], [9, 2], [10, 5], [10, 10]].forEach(([x, z], index) => {
         liveBox(live, `stone-${index}`, 0.32, 0.24, 0.32, cellToVec(x, z, 0.28), index % 2 ? materials.stone : materials.stoneLight);
       });
       [
-        [1.2, 9.1], [2.3, 5.35], [3.35, 8.15], [4.15, 2.2], [6.25, 3.3], [7.25, 6.2], [8.3, 8.2], [9.3, 7.25],
-        [0.55, 6.6], [1.6, 1.45], [2.6, 7.5], [3.65, 4.4], [4.8, 9.55], [6.2, 9.4], [7.7, 2.45], [8.6, 5.3],
-        [9.7, 9.1], [5.6, 1.35], [0.8, 9.8], [10.1, 6.4], [3.1, 10.2], [6.7, 0.9],
+        [1.2, 9.1], [3.35, 8.15], [4.15, 2.2], [8.3, 8.2],
+        [0.55, 6.6], [2.6, 7.5], [4.8, 9.55], [7.7, 2.45],
+        [9.7, 9.1], [5.6, 1.35], [10.1, 6.4], [6.7, 0.9],
       ].forEach(([x, z], index) => {
         const flower = [materials.flowerWhite, materials.flowerPink, materials.flowerYellow, materials.flowerBlue][index % 4];
         drawFlower(live, `flower-${index}`, x, z, flower);
       });
-      [[0.9, 4.25], [2.15, 1.75], [2.85, 9.35], [6.95, 7.4], [8.75, 3.1], [9.65, 5.8], [10.2, 8.9]].forEach(([x, z], index) => {
+      [[0.9, 4.25], [2.15, 1.75], [2.85, 9.35], [8.75, 3.1], [10.2, 8.9]].forEach(([x, z], index) => {
         drawMushroom(live, `mushroom-${index}`, x, z, index % 2 ? materials.mushroomBlue : materials.mushroomRed);
       });
       [[1.5, 5.85, true], [2.55, 8.9, false], [4.35, 1.5, true], [6.85, 8.95, true], [7.9, 5.55, false], [9.35, 1.6, true], [9.5, 9.55, false], [0.7, 7.7, false]].forEach(([x, z, horizontal], index) => {
@@ -387,7 +411,7 @@ export function BlockholdScene() {
         liveBox(live, `torch-post-${index}`, 0.13, 0.72, 0.13, cellToVec(x, z, 0.55), materials.wood);
         liveSphere(live, `torch-flame-${index}`, 0.22, cellToVec(x, z, 1), materials.torch, 8);
       });
-      [[2, 7], [4, 6], [7, 4], [8, 6], [4.15, 8.85]].forEach(([x, z], index) => drawPuppy(live, `decor-puppy-${index}`, x, z, 0.18, index === 4 ? 0.82 : 0.74));
+      [[4.25, 7.15], [6.55, 6.85], [4.15, 8.85]].forEach(([x, z], index) => drawPuppy(live, `decor-puppy-${index}`, x, z, 0.18, index === 2 ? 1.18 : 0.94, 1));
       [[1.25, 4.15], [8.8, 6.9], [9.55, 9.1]].forEach(([x, z], index) => drawTowerPuppy(live, `decor-tower-${index}`, x, z));
     }
 
@@ -411,8 +435,10 @@ export function BlockholdScene() {
         drawFlower(live, `core-flower-${index}`, x + dx, z + dz, [materials.flowerPink, materials.flowerBlue, materials.flowerYellow, materials.flowerWhite][index]);
       });
       [[-0.9, 0.1, 1.55], [0.92, -0.22, 1.68], [0.08, -0.92, 1.45], [-0.16, 0.9, 1.78]].forEach(([dx, dz, y], index) => {
-        drawSparkle(live, `core-twinkle-${index}`, x + dx, z + dz, y, index % 2 ? materials.crystal : materials.sparkle);
+        const pulse = Math.sin(performance.now() / 180 + index) * 0.16;
+        drawSparkle(live, `core-twinkle-${index}`, x + dx, z + dz, y + pulse, index % 2 ? materials.crystal : materials.sparkle);
       });
+      drawPuppy(live, 'core-mascot', x - 1.38, z - 0.62, 0.18, 1.26, 1);
     }
 
     function isPathCell(x: number, z: number, dangerLane: number) {
@@ -440,9 +466,9 @@ export function BlockholdScene() {
           const danger = s.phase === 'raid' && x === s.dangerLane && z <= s.core.z;
           const forecast = s.phase === 'build' && x === forecastLane && z <= s.core.z;
           const material = danger ? materials.danger : forecast ? materials.forecast : lane ? materials.sand : (x + z) % 2 ? materials.grass : materials.grassAlt;
-          liveBox(live, `tile-${x}-${z}`, lane ? 1.08 : 0.94, lane ? 0.16 : 0.1, lane ? 1.08 : 0.94, cellToVec(x, z, 0.4), material, true);
+          liveBox(live, `tile-${x}-${z}`, lane ? 1.16 : 0.92, lane ? 0.2 : 0.09, lane ? 1.16 : 0.92, cellToVec(x, z, 0.4), material, true);
           if (lane) {
-            liveBox(live, `tile-edge-${x}-${z}`, 0.92, 0.04, 0.92, cellToVec(x, z, 0.51), materials.sandEdge);
+            liveBox(live, `tile-edge-${x}-${z}`, 1, 0.05, 1, cellToVec(x, z, 0.54), materials.sandEdge);
             if ((x + z) % 3 === 0) liveSphere(live, `path-dot-${x}-${z}`, 0.14, cellToVec(x + 0.24, z - 0.18, 0.57), materials.pathPebble, 8);
           }
         }
@@ -492,7 +518,10 @@ export function BlockholdScene() {
     }
 
     engine.runRenderLoop(draw);
-    const onResize = () => engine.resize();
+    const onResize = () => {
+      engine.resize();
+      updateOrthoCamera();
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === '1') api().select('wall');
       if (e.key === '2') api().select('trap');
@@ -500,9 +529,10 @@ export function BlockholdScene() {
       if (e.key === '4') api().select('frost');
       if (e.key.toLowerCase() === 'r') {
         camera.alpha = -0.78;
-        camera.beta = 0.86;
-        camera.radius = 12.2;
-        camera.target = new Vector3(0, 0, 1.1);
+        camera.beta = 0.94;
+        camera.radius = 16;
+        camera.target = new Vector3(0, 0.15, 0.92);
+        updateOrthoCamera();
       }
       if (e.code === 'Space') api().togglePause();
     };
