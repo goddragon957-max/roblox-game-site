@@ -546,8 +546,9 @@ export function BlockholdScene() {
         const path = curvedLanePoints(lane);
         const id = `curved-path-${lane}`;
         live.add(id);
-        tube(id, path, active ? 0.14 : 0.045, active ? materials.sand : forecast ? materials.forecast : materials.sandEdge, active ? 16 : 8);
-        const stones = active ? 6 : 2;
+        const laneRibbon = tube(id, path, active ? 0.14 : forecast ? 0.075 : 0.03, active ? materials.sand : forecast ? materials.forecast : materials.pathPebble, active ? 16 : 8);
+        laneRibbon.visibility = active ? 1 : forecast ? 0.74 : 0.34;
+        const stones = active ? 6 : forecast ? 3 : 0;
         for (let index = 0; index < stones; index += 1) {
           const point = samplePath(path, (index + 0.4) / stones);
           const stone = liveCylinder(live, `path-stone-${lane}-${index}`, active ? 0.26 : 0.12, 0.045, point.add(new Vector3(0, 0.06, 0)), active ? materials.pathPebble : materials.sand, 12);
@@ -582,35 +583,24 @@ export function BlockholdScene() {
     }
 
     function drawDecor(live: Set<string>) {
-      [[0, 8], [2, 9], [3, 1], [7, 1], [10, 8], [8, 10]].forEach(([x, z], index) => drawTree(live, `tree-${index}`, x, z));
-      [[0, 2], [0, 5], [2, 3], [4, 10], [7, 9], [9, 2], [10, 5], [10, 10]].forEach(([x, z], index) => {
+      [[0, 8], [2, 9], [10, 8], [8, 10]].forEach(([x, z], index) => drawTree(live, `tree-${index}`, x, z));
+      [[0, 2], [4, 10], [7, 9], [10, 5], [10, 10]].forEach(([x, z], index) => {
         drawRocks(live, `stone-${index}`, x, z);
       });
       [
-        [1.2, 9.1], [3.35, 8.15], [4.15, 2.2], [8.3, 8.2],
-        [0.55, 6.6], [2.6, 7.5], [4.8, 9.55], [7.7, 2.45],
-        [9.7, 9.1], [5.6, 1.35], [10.1, 6.4], [6.7, 0.9],
+        [1.2, 9.1], [4.15, 2.2], [8.3, 8.2], [9.7, 9.1],
       ].forEach(([x, z], index) => {
         const flower = [materials.flowerWhite, materials.flowerPink, materials.flowerYellow, materials.flowerBlue][index % 4];
         drawFlower(live, `flower-${index}`, x, z, flower);
       });
-      [[0.9, 4.25], [2.15, 1.75], [2.85, 9.35], [8.75, 3.1], [10.2, 8.9]].forEach(([x, z], index) => {
+      [[0.9, 4.25], [8.75, 3.1]].forEach(([x, z], index) => {
         drawMushroom(live, `mushroom-${index}`, x, z, index % 2 ? materials.mushroomBlue : materials.mushroomRed);
       });
-      [[1.5, 5.85, true], [2.55, 8.9, false], [4.35, 1.5, true], [6.85, 8.95, true], [7.9, 5.55, false], [9.35, 1.6, true], [9.5, 9.55, false], [0.7, 7.7, false]].forEach(([x, z, horizontal], index) => {
+      [[2.55, 8.9, false], [4.35, 1.5, true], [6.85, 8.95, true], [9.5, 9.55, false]].forEach(([x, z, horizontal], index) => {
         drawFence(live, `fence-${index}`, Number(x), Number(z), Boolean(horizontal));
       });
-      [[0.45, 1.15, materials.balloonPink], [0.75, 1.5, materials.balloonPurple], [9.75, 0.8, materials.balloonGold], [10.25, 1.25, materials.balloonPink], [10.2, 6.9, materials.balloonPurple]].forEach(([x, z, material], index) => {
-        drawBalloon(live, `balloon-${index}`, Number(x), Number(z), material as StandardMaterial, 1.35 + (index % 2) * 0.35);
-      });
-      [[1.3, 7.5], [3.45, 2.6], [4.4, 6.7], [6.3, 2.15], [7.4, 9.75], [8.6, 7.25], [9.6, 3.45]].forEach(([x, z], index) => {
-        drawCoin(live, `coin-${index}`, x, z);
-      });
-      [[1.7, 8.1], [2.6, 4.25], [4.4, 7.3], [6.7, 4.25], [7.9, 8.55], [9.15, 6.35], [3.75, 0.95], [5.1, 9.7]].forEach(([x, z], index) => {
+      [[1.7, 8.1], [7.9, 8.55], [9.15, 6.35]].forEach(([x, z], index) => {
         drawCrystalProp(live, `tiny-crystal-${index}`, x, z);
-      });
-      [[2.35, 6.6, 1.32], [4.85, 5.75, 1.72], [6.25, 6.65, 1.35], [8.35, 4.65, 1.45], [5.3, 8.9, 1.82], [1.1, 2.8, 1.25]].forEach(([x, z, y], index) => {
-        drawSparkle(live, `sparkle-${index}`, x, z, y, [materials.sparkle, materials.confettiA, materials.confettiB, materials.confettiC][index % 4]);
       });
       [
         [-5.6, -4.8, 2.6, 0.9], [5.7, -3.9, 3.05, 1.05], [-6.25, 2.35, 2.45, 0.75], [6.1, 4.9, 2.75, 0.9],
@@ -622,7 +612,6 @@ export function BlockholdScene() {
         liveBox(live, `torch-post-${index}`, 0.13, 0.72, 0.13, cellToVec(x, z, 0.55), materials.wood);
         liveSphere(live, `torch-flame-${index}`, 0.22, cellToVec(x, z, 1), materials.torch, 8);
       });
-      [[1.25, 4.15], [9.55, 9.1]].forEach(([x, z], index) => drawTowerPuppy(live, `decor-tower-${index}`, x, z));
     }
 
     function drawHeroFocus(live: Set<string>, x: number, z: number, scale = 2.08) {
