@@ -1,8 +1,75 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import https from 'node:https';
 import { join } from 'node:path';
 
 const outDir = join(process.cwd(), 'public', 'assets', 'models');
 mkdirSync(outDir, { recursive: true });
+
+const kenneyUrl = 'https://kenney.nl/media/pages/assets/tower-defense-kit/a402493eaa-1726471567/kenney_tower-defense-kit.zip';
+const kenneyOutDir = join(outDir, 'kenney');
+const kenneyTempDir = join(process.cwd(), '.tmp', 'kenney');
+const kenneyZip = join(kenneyTempDir, 'kenney_tower-defense-kit.zip');
+const kenneyFiles = [
+  'tile.glb',
+  'tile-spawn.glb',
+  'tile-wide-straight.glb',
+  'tile-wide-corner.glb',
+  'tower-round-base.glb',
+  'tower-round-build-a.glb',
+  'weapon-cannon.glb',
+  'weapon-turret.glb',
+  'enemy-ufo-a.glb',
+  'detail-tree.glb',
+  'detail-rocks.glb',
+  'detail-crystal.glb',
+];
+
+async function downloadFile(url, destination) {
+  await new Promise((resolve, reject) => {
+    const request = https.get(url, (response) => {
+      if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        response.resume();
+        downloadFile(new URL(response.headers.location, url).toString(), destination).then(resolve, reject);
+        return;
+      }
+      if (response.statusCode !== 200) {
+        reject(new Error(`Download failed with HTTP ${response.statusCode}`));
+        response.resume();
+        return;
+      }
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        writeFileSync(destination, Buffer.concat(chunks));
+        resolve();
+      });
+    });
+    request.on('error', reject);
+  });
+}
+
+async function extractKenneyAssets() {
+  mkdirSync(kenneyTempDir, { recursive: true });
+  mkdirSync(kenneyOutDir, { recursive: true });
+  if (!existsSync(kenneyZip)) await downloadFile(kenneyUrl, kenneyZip);
+  for (const file of kenneyFiles) {
+    const source = `Models/GLB format/${file}`;
+    const data = execFileSync('unzip', ['-p', kenneyZip, source]);
+    writeFileSync(join(kenneyOutDir, file), data);
+  }
+  const license = execFileSync('unzip', ['-p', kenneyZip, 'License.txt']);
+  writeFileSync(join(kenneyOutDir, 'License.txt'), license);
+  const zipHash = createHash('sha256').update(readFileSync(kenneyZip)).digest('hex');
+  writeFileSync(join(kenneyOutDir, 'manifest.json'), `${JSON.stringify({
+    source: 'Kenney Tower Defense Kit',
+    url: kenneyUrl,
+    license: 'CC0 1.0 Universal',
+    zipSha256: zipHash,
+    selectedFiles: kenneyFiles,
+  }, null, 2)}\n`);
+}
 
 const colors = {
   ink: [0.07, 0.06, 0.05, 1],
@@ -352,5 +419,7 @@ writeGlb('crystal_core.glb', assetMaterials, core());
 writeGlb('blob_grunt.glb', { ...assetMaterials, grunt: colors.grunt, tint: [0.78, 1, 0.65, 0.42] }, blob('grunt', 'grunt'));
 writeGlb('blob_runner.glb', { ...assetMaterials, runner: colors.runner, tint: [0.67, 0.94, 1, 0.42] }, blob('runner', 'runner'));
 writeGlb('blob_brute.glb', { ...assetMaterials, brute: colors.brute, tint: [1, 0.62, 0.95, 0.42] }, blob('brute', 'brute'));
+await extractKenneyAssets();
 
 console.log(`Generated toon GLB assets in ${outDir}`);
+console.log(`Extracted Kenney Tower Defense Kit GLB subset in ${kenneyOutDir}`);

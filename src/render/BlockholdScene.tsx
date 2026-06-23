@@ -24,14 +24,40 @@ import { getRaidPlan } from '../game/simulation';
 import type { BlockType, Cell, RaiderKind } from '../game/types';
 
 type ToonAssetKey = 'puppy' | 'tower' | 'core' | RaiderKind;
+type KenneyAssetKey =
+  | 'kenneyTile'
+  | 'kenneySpawn'
+  | 'kenneyPathStraight'
+  | 'kenneyPathCorner'
+  | 'kenneyTowerBase'
+  | 'kenneyTowerBuild'
+  | 'kenneyCannon'
+  | 'kenneyTurret'
+  | 'kenneyUfo'
+  | 'kenneyTree'
+  | 'kenneyRocks'
+  | 'kenneyCrystal';
+type SceneAssetKey = ToonAssetKey | KenneyAssetKey;
 
-const assetFiles: Record<ToonAssetKey, string> = {
-  puppy: 'puppy_guard.glb',
-  tower: 'pup_tower.glb',
-  core: 'crystal_core.glb',
-  grunt: 'blob_grunt.glb',
-  runner: 'blob_runner.glb',
-  brute: 'blob_brute.glb',
+const assetFiles: Record<SceneAssetKey, { dir: string; file: string }> = {
+  puppy: { dir: '/assets/models/', file: 'puppy_guard.glb' },
+  tower: { dir: '/assets/models/', file: 'pup_tower.glb' },
+  core: { dir: '/assets/models/', file: 'crystal_core.glb' },
+  grunt: { dir: '/assets/models/', file: 'blob_grunt.glb' },
+  runner: { dir: '/assets/models/', file: 'blob_runner.glb' },
+  brute: { dir: '/assets/models/', file: 'blob_brute.glb' },
+  kenneyTile: { dir: '/assets/models/kenney/', file: 'tile.glb' },
+  kenneySpawn: { dir: '/assets/models/kenney/', file: 'tile-spawn.glb' },
+  kenneyPathStraight: { dir: '/assets/models/kenney/', file: 'tile-wide-straight.glb' },
+  kenneyPathCorner: { dir: '/assets/models/kenney/', file: 'tile-wide-corner.glb' },
+  kenneyTowerBase: { dir: '/assets/models/kenney/', file: 'tower-round-base.glb' },
+  kenneyTowerBuild: { dir: '/assets/models/kenney/', file: 'tower-round-build-a.glb' },
+  kenneyCannon: { dir: '/assets/models/kenney/', file: 'weapon-cannon.glb' },
+  kenneyTurret: { dir: '/assets/models/kenney/', file: 'weapon-turret.glb' },
+  kenneyUfo: { dir: '/assets/models/kenney/', file: 'enemy-ufo-a.glb' },
+  kenneyTree: { dir: '/assets/models/kenney/', file: 'detail-tree.glb' },
+  kenneyRocks: { dir: '/assets/models/kenney/', file: 'detail-rocks.glb' },
+  kenneyCrystal: { dir: '/assets/models/kenney/', file: 'detail-crystal.glb' },
 };
 
 const mat = (scene: Scene, name: string, color: string, emissive = '#000000', alpha = 1) => {
@@ -170,7 +196,7 @@ export function BlockholdScene() {
     };
 
     const meshes = new Map<string, Mesh>();
-    const assetTemplates = new Map<ToonAssetKey, TransformNode>();
+    const assetTemplates = new Map<SceneAssetKey, TransformNode>();
     const assetNodes = new Map<string, TransformNode>();
     let glbAssetsFailed = false;
     let hoverCell: Cell | undefined;
@@ -190,23 +216,27 @@ export function BlockholdScene() {
       if (material && 'metallic' in material) (material as { metallic?: number }).metallic = 0;
     };
 
-    Promise.all((Object.entries(assetFiles) as Array<[ToonAssetKey, string]>).map(async ([asset, file]) => {
-      const result = await SceneLoader.ImportMeshAsync('', '/assets/models/', file, scene);
-      const root = new TransformNode(`toon-template-${asset}`, scene);
-      result.meshes.forEach((mesh) => {
-        if (mesh.name !== '__root__') {
-          mesh.parent = root;
-          polishImportedMesh(mesh);
-        }
-        mesh.setEnabled(false);
-      });
-      root.setEnabled(false);
-      assetTemplates.set(asset, root);
+    Promise.all((Object.entries(assetFiles) as Array<[SceneAssetKey, { dir: string; file: string }]>).map(async ([asset, spec]) => {
+      try {
+        const result = await SceneLoader.ImportMeshAsync('', spec.dir, spec.file, scene);
+        const root = new TransformNode(`toon-template-${asset}`, scene);
+        result.meshes.forEach((mesh) => {
+          if (mesh.name !== '__root__') {
+            mesh.parent = root;
+            polishImportedMesh(mesh);
+          }
+          mesh.setEnabled(false);
+        });
+        root.setEnabled(false);
+        assetTemplates.set(asset, root);
+      } catch {
+        assetTemplates.delete(asset);
+      }
     })).catch(() => {
       glbAssetsFailed = true;
     });
 
-    function drawAsset(live: Set<string>, asset: ToonAssetKey, id: string, pos: Vector3, scale = 1, yaw = 0, bounce = 0) {
+    function drawAsset(live: Set<string>, asset: SceneAssetKey, id: string, pos: Vector3, scale: number | Vector3 = 1, yaw = 0, bounce = 0) {
       const template = assetTemplates.get(asset);
       if (!template || glbAssetsFailed) return false;
       live.add(id);
@@ -222,7 +252,8 @@ export function BlockholdScene() {
       node.position.copyFrom(pos);
       node.position.y += bounce;
       node.rotation.set(0, yaw, 0);
-      node.scaling.setAll(scale);
+      if (typeof scale === 'number') node.scaling.setAll(scale);
+      else node.scaling.copyFrom(scale);
       return true;
     }
 
@@ -328,6 +359,15 @@ export function BlockholdScene() {
 
     function drawTowerPuppy(live: Set<string>, id: string, x: number, z: number) {
       const bob = Math.sin(performance.now() / 300 + x + z) * 0.018;
+      const pos = cellToVec(x, z, 0.38);
+      const base = drawAsset(live, 'kenneyTowerBase', `${id}-kenney-base`, pos, 0.86, Math.PI, bob);
+      const build = drawAsset(live, 'kenneyTowerBuild', `${id}-kenney-build`, pos.add(new Vector3(0, 0.12, 0)), 0.86, Math.PI, bob);
+      const weapon = drawAsset(live, 'kenneyCannon', `${id}-kenney-cannon`, pos.add(new Vector3(0, 0.94, -0.08)), 0.62, Math.PI, bob);
+      if (base || build || weapon) {
+        liveBox(live, `${id}-selected`, 1.08, 0.045, 1.08, cellToVec(x, z, 0.18), materials.selected);
+        drawPuppy(live, `${id}-guard`, x - 0.42, z - 0.32, 0.56, 0.56, 1);
+        return;
+      }
       if (drawAsset(live, 'tower', id, cellToVec(x, z, 0.18), 1, 0, bob)) return;
       liveBox(live, `${id}-base`, 1.04, 0.72, 1.04, cellToVec(x, z, 0.48), materials.wood);
       liveBox(live, `${id}-door`, 0.4, 0.44, 0.09, cellToVec(x, z - 0.54, 0.4), materials.metalDark);
@@ -375,6 +415,15 @@ export function BlockholdScene() {
       const t = performance.now() / 145 + x * 0.7 + z * 1.3;
       const bounce = Math.abs(Math.sin(t)) * (kind === 'runner' ? 0.2 : 0.13);
       const wobble = Math.sin(t) * 0.13;
+      const ufoScale = kind === 'brute' ? 0.68 : kind === 'runner' ? 0.5 : 0.56;
+      if (drawAsset(live, 'kenneyUfo', `${id}-kenney-ufo`, cellToVec(x, z, 0.78), ufoScale, Math.sin(t * 0.35) * 0.18, bounce * 0.55)) {
+        liveCylinder(live, `${id}-shadow`, spec.body * (1.05 + bounce * 0.12), 0.025, cellToVec(x, z, 0.2), materials.shadow, 14);
+        if (kind === 'runner') drawAsset(live, 'kenneyTurret', `${id}-runner-weapon`, cellToVec(x, z - 0.1, 0.92), 0.34, Math.PI, bounce * 0.55);
+        if (kind === 'brute') drawAsset(live, 'kenneyCannon', `${id}-brute-weapon`, cellToVec(x, z - 0.12, 1), 0.42, Math.PI, bounce * 0.55);
+        liveBox(live, `${id}-hp-back`, 0.76, 0.07, 0.1, cellToVec(x, z, 1.62 + bounce * 0.55), materials.hpBack);
+        liveBox(live, `${id}-hp`, Math.max(0.1, 0.72 * (hp / maxHp)), 0.08, 0.11, cellToVec(x, z, 1.69 + bounce * 0.55), materials.hp);
+        return;
+      }
       if (drawAsset(live, kind, id, cellToVec(x, z, 0.18), kind === 'brute' ? 1.05 : 0.95, Math.sin(t * 0.35) * 0.18, bounce * 0.45)) {
         liveBox(live, `${id}-hp-back`, 0.76, 0.07, 0.1, cellToVec(x, z, 1.42 + bounce * 0.45), materials.hpBack);
         liveBox(live, `${id}-hp`, Math.max(0.1, 0.72 * (hp / maxHp)), 0.08, 0.11, cellToVec(x, z, 1.49 + bounce * 0.45), materials.hp);
@@ -395,9 +444,20 @@ export function BlockholdScene() {
     }
 
     function drawTree(live: Set<string>, id: string, x: number, z: number) {
+      if (drawAsset(live, 'kenneyTree', `${id}-kenney`, cellToVec(x, z, 0.38), 0.72, (x + z) * 0.35)) return;
       liveBox(live, `${id}-trunk`, 0.28, 0.78, 0.28, cellToVec(x, z, 0.58), materials.wood);
       liveBox(live, `${id}-leaf-a`, 0.74, 0.52, 0.74, cellToVec(x, z, 1.12), materials.leaf);
       liveBox(live, `${id}-leaf-b`, 0.55, 0.42, 0.55, cellToVec(x, z - 0.04, 1.52), materials.leafLight);
+    }
+
+    function drawRocks(live: Set<string>, id: string, x: number, z: number) {
+      if (drawAsset(live, 'kenneyRocks', `${id}-kenney`, cellToVec(x, z, 0.4), 0.7, (x - z) * 0.24)) return;
+      liveBox(live, id, 0.32, 0.24, 0.32, cellToVec(x, z, 0.28), materials.stone);
+    }
+
+    function drawCrystalProp(live: Set<string>, id: string, x: number, z: number) {
+      if (drawAsset(live, 'kenneyCrystal', `${id}-kenney`, cellToVec(x, z, 0.38), 0.64, (x + z) * 0.18)) return;
+      liveCone(live, id, 0.22, 0.5, cellToVec(x, z, 0.6), materials.crystal, 4);
     }
 
     function drawFlower(live: Set<string>, id: string, x: number, z: number, material: StandardMaterial) {
@@ -521,7 +581,7 @@ export function BlockholdScene() {
     function drawDecor(live: Set<string>) {
       [[0, 8], [2, 9], [3, 1], [7, 1], [10, 8], [8, 10]].forEach(([x, z], index) => drawTree(live, `tree-${index}`, x, z));
       [[0, 2], [0, 5], [2, 3], [4, 10], [7, 9], [9, 2], [10, 5], [10, 10]].forEach(([x, z], index) => {
-        liveBox(live, `stone-${index}`, 0.32, 0.24, 0.32, cellToVec(x, z, 0.28), index % 2 ? materials.stone : materials.stoneLight);
+        drawRocks(live, `stone-${index}`, x, z);
       });
       [
         [1.2, 9.1], [3.35, 8.15], [4.15, 2.2], [8.3, 8.2],
@@ -544,7 +604,7 @@ export function BlockholdScene() {
         drawCoin(live, `coin-${index}`, x, z);
       });
       [[1.7, 8.1], [2.6, 4.25], [4.4, 7.3], [6.7, 4.25], [7.9, 8.55], [9.15, 6.35], [3.75, 0.95], [5.1, 9.7]].forEach(([x, z], index) => {
-        liveCone(live, `tiny-crystal-${index}`, 0.22, 0.5, cellToVec(x, z, 0.6), index % 2 ? materials.crystalLavender : materials.crystal, 4);
+        drawCrystalProp(live, `tiny-crystal-${index}`, x, z);
       });
       [[2.35, 6.6, 1.32], [4.85, 5.75, 1.72], [6.25, 6.65, 1.35], [8.35, 4.65, 1.45], [5.3, 8.9, 1.82], [1.1, 2.8, 1.25]].forEach(([x, z, y], index) => {
         drawSparkle(live, `sparkle-${index}`, x, z, y, [materials.sparkle, materials.confettiA, materials.confettiB, materials.confettiC][index % 4]);
@@ -570,7 +630,7 @@ export function BlockholdScene() {
           const bob = Math.sin(performance.now() / 180 + index) * 0.16;
           drawSparkle(live, `core-gltf-twinkle-${index}`, x + dx, z + dz, y + bob, index % 2 ? materials.crystal : materials.sparkle);
         });
-        drawPuppy(live, 'core-mascot', x - 1.38, z - 0.62, 0.18, 1.26, 1);
+        drawPuppy(live, 'core-mascot', x - 1.16, z - 0.58, 0.24, 1.68, 1);
         return;
       }
       liveBox(live, 'core-plaza', 2, 0.2, 2, cellToVec(x, z, 0.22), materials.stone);
@@ -605,6 +665,26 @@ export function BlockholdScene() {
       return laneCells || coreRun || bridge;
     }
 
+    function drawBoardTileModel(live: Set<string>, x: number, z: number, activeLane: number, forecastLane: number, phase: string) {
+      const id = `kenney-board-${x}-${z}`;
+      if (z === 0 && [1, 3, 5, 7, 9].includes(x)) {
+        return drawAsset(live, 'kenneySpawn', id, cellToVec(x, z, 0.4), 0.68, Math.PI);
+      }
+      const onLane = [1, 3, 5, 7, 9].includes(x) && z <= 8;
+      const onCoreRun = z === 8 && x >= Math.min(activeLane, 5) && x <= Math.max(activeLane, 5);
+      const onBridge = z === 2 && x >= 1 && x <= 9 && x % 2 === 1;
+      if (onLane || onBridge || onCoreRun) {
+        const corner = z === 8 || z === 2 || x === forecastLane;
+        const yaw = onCoreRun ? Math.PI / 2 : corner ? (x < 5 ? -Math.PI / 2 : Math.PI / 2) : 0;
+        const scale = x === activeLane || (phase === 'build' && x === forecastLane) ? 0.76 : 0.62;
+        return drawAsset(live, corner ? 'kenneyPathCorner' : 'kenneyPathStraight', id, cellToVec(x, z, 0.42), scale, yaw);
+      }
+      if ((x + z) % 2 === 0 || x === 0 || x === 10 || z === 10) {
+        return drawAsset(live, 'kenneyTile', id, cellToVec(x, z, 0.38), 0.62, ((x * 3 + z) % 4) * Math.PI / 2);
+      }
+      return false;
+    }
+
     function draw() {
       const s = api();
       const forecastLane = getRaidPlan(s.day).dangerLane;
@@ -624,7 +704,8 @@ export function BlockholdScene() {
           const forecast = s.phase === 'build' && x === forecastLane && z <= s.core.z;
           const material = danger ? materials.danger : forecast ? materials.forecast : (x + z) % 2 ? materials.grass : materials.grassAlt;
           const tile = liveBox(live, `tile-${x}-${z}`, lane ? 0.78 : 0.88, lane ? 0.055 : 0.07, lane ? 0.78 : 0.88, cellToVec(x, z, 0.38), material, true);
-          tile.visibility = lane ? 0.32 : 0.76;
+          const hasKenneyTile = drawBoardTileModel(live, x, z, activeLane, forecastLane, s.phase);
+          tile.visibility = hasKenneyTile ? 0.08 : lane ? 0.32 : 0.76;
         }
       }
 
@@ -634,9 +715,16 @@ export function BlockholdScene() {
         liveBox(live, `spawn-dock-${lane}`, 0.78, 0.18, 0.78, cellToVec(lane, 0, 0.48), lane === activeLane ? materials.danger : materials.sand);
         liveBox(live, `spawn-flag-post-${lane}`, 0.06, 0.74, 0.06, cellToVec(lane - 0.31, 0.22, 0.88), materials.wood);
         liveBox(live, `spawn-flag-${lane}`, 0.33, 0.2, 0.05, cellToVec(lane - 0.15, 0.2, 1.18), materials.blueLight);
+        if (s.phase === 'build' && lane === forecastLane) {
+          [0, 1, 2].forEach((offset) => {
+            const bob = Math.sin(performance.now() / 210 + offset) * 0.05;
+            drawAsset(live, 'kenneyUfo', `forecast-ufo-${offset}`, cellToVec(lane + (offset - 1) * 0.38, 0.04 - offset * 0.5, 1.02 + offset * 0.06), 0.68 + offset * 0.08, Math.PI + offset * 0.2, bob);
+          });
+        }
       });
 
       drawDecor(live);
+      drawPuppy(live, 'hero-frontline-puppy', 8.15, 5.55, 0.34, 1.88, 1);
 
       if (s.phase === 'build' && hoverCell) {
         const occupied = Boolean(s.blocks[`${hoverCell.x},${hoverCell.z}`]);

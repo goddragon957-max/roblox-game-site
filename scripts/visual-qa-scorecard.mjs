@@ -56,6 +56,18 @@ const modelFiles = [
   'public/assets/models/blob_brute.glb',
   'public/assets/models/pup_tower.glb',
   'public/assets/models/crystal_core.glb',
+  'public/assets/models/kenney/tile.glb',
+  'public/assets/models/kenney/tile-spawn.glb',
+  'public/assets/models/kenney/tile-wide-straight.glb',
+  'public/assets/models/kenney/tile-wide-corner.glb',
+  'public/assets/models/kenney/tower-round-base.glb',
+  'public/assets/models/kenney/tower-round-build-a.glb',
+  'public/assets/models/kenney/weapon-cannon.glb',
+  'public/assets/models/kenney/weapon-turret.glb',
+  'public/assets/models/kenney/enemy-ufo-a.glb',
+  'public/assets/models/kenney/detail-tree.glb',
+  'public/assets/models/kenney/detail-rocks.glb',
+  'public/assets/models/kenney/detail-crystal.glb',
 ];
 const missingModels = [];
 const tinyModels = [];
