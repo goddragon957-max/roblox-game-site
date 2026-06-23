@@ -16,5 +16,8 @@
     "detail-tree.glb",
     "detail-rocks.glb",
     "detail-crystal.glb"
+  ],
+  "selectedTextureFiles": [
+    "Textures/colormap.png"
   ]
 }

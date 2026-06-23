@@ -25,6 +25,7 @@ const kenneyFiles = [
   'detail-rocks.glb',
   'detail-crystal.glb',
 ];
+const kenneyTextureFiles = ['Textures/colormap.png'];
 
 async function downloadFile(url, destination) {
   await new Promise((resolve, reject) => {
@@ -59,6 +60,13 @@ async function extractKenneyAssets() {
     const data = execFileSync('unzip', ['-p', kenneyZip, source]);
     writeFileSync(join(kenneyOutDir, file), data);
   }
+  for (const file of kenneyTextureFiles) {
+    const source = `Models/GLB format/${file}`;
+    const data = execFileSync('unzip', ['-p', kenneyZip, source]);
+    const destination = join(kenneyOutDir, file);
+    mkdirSync(join(kenneyOutDir, 'Textures'), { recursive: true });
+    writeFileSync(destination, data);
+  }
   const license = execFileSync('unzip', ['-p', kenneyZip, 'License.txt']);
   writeFileSync(join(kenneyOutDir, 'License.txt'), license);
   const zipHash = createHash('sha256').update(readFileSync(kenneyZip)).digest('hex');
@@ -68,6 +76,7 @@ async function extractKenneyAssets() {
     license: 'CC0 1.0 Universal',
     zipSha256: zipHash,
     selectedFiles: kenneyFiles,
+    selectedTextureFiles: kenneyTextureFiles,
   }, null, 2)}\n`);
 }
 

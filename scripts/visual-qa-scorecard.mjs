@@ -68,6 +68,7 @@ const modelFiles = [
   'public/assets/models/kenney/detail-tree.glb',
   'public/assets/models/kenney/detail-rocks.glb',
   'public/assets/models/kenney/detail-crystal.glb',
+  'public/assets/models/kenney/Textures/colormap.png',
 ];
 const missingModels = [];
 const tinyModels = [];

@@ -26,6 +26,7 @@ The generator downloads the zip into `.tmp/kenney/`, extracts only this GLB subs
 - `detail-tree.glb`
 - `detail-rocks.glb`
 - `detail-crystal.glb`
+- `Textures/colormap.png`
 
 Runtime usage:
 
