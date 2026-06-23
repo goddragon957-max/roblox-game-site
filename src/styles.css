@@ -5,8 +5,8 @@
 :root{
   color-scheme:light;
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --sky:#8fd4ff;
-  --sky-soft:#dff5ff;
+  --sky:#20c8ff;
+  --sky-soft:#dff9ff;
   --surface:#fff9df;
   --surface-strong:#fff2b8;
   --wood:#8f552d;
@@ -34,9 +34,10 @@ button{font:inherit}
   position:relative;
   min-width:320px;
   background:
-    radial-gradient(circle at 18% 18%,rgba(255,255,255,.78) 0 10%,transparent 24%),
+    radial-gradient(circle at 87% 4%,rgba(255,253,191,.95) 0 5%,rgba(255,253,191,.35) 13%,transparent 28%),
+    radial-gradient(circle at 18% 18%,rgba(255,255,255,.82) 0 10%,transparent 24%),
     radial-gradient(circle at 82% 8%,rgba(255,246,210,.75) 0 12%,transparent 28%),
-    linear-gradient(180deg,var(--sky-soft),var(--sky) 56%,#b9e9ff);
+    linear-gradient(180deg,var(--sky-soft),var(--sky) 56%,#91e7ff);
 }
 
 #scene{
@@ -55,6 +56,7 @@ button{font:inherit}
   place-items:center;
   padding:90px 24px 190px;
   background:
+    radial-gradient(circle at 84% 8%,rgba(255,248,162,.8) 0 8%,transparent 24%),
     radial-gradient(circle at 18% 18%,rgba(255,255,255,.7) 0 10%,transparent 24%),
     linear-gradient(180deg,var(--sky-soft),var(--sky));
 }
@@ -64,8 +66,12 @@ button{font:inherit}
   aspect-ratio:1;
   padding:18px;
   border-radius:24px;
-  background:linear-gradient(180deg,#7ac943,#57a933 60%,#8b5a32 61%,#5e361d);
-  box-shadow:0 38px 70px rgba(66,94,105,.28),0 18px 0 #704629;
+  background:
+    radial-gradient(circle at 28% 32%,#ff7bb9 0 2%,transparent 3%),
+    radial-gradient(circle at 72% 28%,#5ac8ff 0 2%,transparent 3%),
+    radial-gradient(circle at 48% 74%,#ffd84d 0 2%,transparent 3%),
+    linear-gradient(180deg,#86e03e,#57b931 58%,#e69b76 59%,#8b5232 76%,#5e361d);
+  box-shadow:0 38px 70px rgba(66,94,105,.28),0 24px 0 #d88a77,0 38px 0 #704629;
   transform:rotateX(52deg) rotateZ(-45deg);
   transform-style:preserve-3d;
 }
@@ -86,7 +92,7 @@ button{font:inherit}
   box-shadow:inset 0 2px 0 rgba(255,255,255,.18);
 }
 .fallback-cell:nth-child(odd){background:#66bd35}
-.fallback-cell.path{background:#e9bf73;border-color:#c9934f}
+.fallback-cell.path{background:#ffd04f;border-color:#f29d32;box-shadow:inset 0 0 0 3px rgba(255,242,166,.7)}
 .fallback-cell.active-lane{box-shadow:inset 0 0 0 3px rgba(255,184,74,.7)}
 .fallback-cell.core{background:#b8edf8;box-shadow:0 0 20px rgba(47,140,255,.7),inset 0 0 0 3px #53d9ff}
 .fallback-crystal,.fallback-block,.fallback-blob,.fallback-puppy{
@@ -97,11 +103,11 @@ button{font:inherit}
   transform:translate(-50%,-50%) rotateZ(45deg) rotateX(-52deg);
 }
 .fallback-crystal{
-  width:42%;
-  height:72%;
-  border-radius:50% 50% 10px 10px;
-  background:linear-gradient(135deg,#c6f6ff,#19a7ff);
-  box-shadow:0 0 16px #19a7ff;
+  width:68%;
+  height:66%;
+  border-radius:50% 50% 14px 14px;
+  background:radial-gradient(circle at 34% 28%,#fff 0 8%,transparent 10%),linear-gradient(135deg,#ff92e4,#ff35cc 52%,#67e5ff);
+  box-shadow:0 0 22px #ff35cc,0 0 34px rgba(103,229,255,.8);
 }
 .fallback-block{
   width:64%;
@@ -114,11 +120,12 @@ button{font:inherit}
 .fallback-cell.turret .fallback-block{background:#9a5f31;border-color:#2563eb}
 .fallback-cell.frost .fallback-block{background:#53d9ff;border-color:#c6f6ff;box-shadow:0 0 14px #53d9ff}
 .fallback-blob{
-  width:54%;
-  height:54%;
+  width:68%;
+  height:62%;
   border-radius:50%;
   background:#63c94d;
   border:3px solid rgba(58,39,25,.3);
+  box-shadow:inset -5px -7px 0 rgba(0,0,0,.08),inset 4px 5px 0 rgba(255,255,255,.35);
 }
 .fallback-cell.runner .fallback-blob{background:#5bd5ff}
 .fallback-cell.brute .fallback-blob{background:#d65ac8;width:70%;height:70%}

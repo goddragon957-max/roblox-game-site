@@ -1,72 +1,93 @@
-# CODEX GOAL — Full Visual Rebuild: Make It Look Like a Real Game
+# CODEX GOAL — Adorable Colorful Diorama Pass
 
 Repo: `/home/sy/projects/roblox-game-site`
 
 User feedback to treat as acceptance-critical:
 
-> “이게 진짜 게임처럼 보이냐? 존나 기괴해. 다 갈아엎어. 캐릭터 디자인부터 codex image 쓰든 외부 3d 라이브러리 가져오든 해서 다시 만들어.”
+> “좀 더 아기자기하게 못만드냐 그리고 이미지 처럼 화려하지도 않은데. 골모드로 진행해.”
 
-This is not a polish pass. The previous dark tactical HUD/dashboard direction failed. Rebuild the visible game from art direction upward so the first screen looks like a charming playable game, not an AI/dashboard prototype.
+Previous rebuild removed the dark dashboard, but it is still too sparse and not cute/colorful enough compared with the generated image reference. This pass must make the first screen feel like a polished, adorable, saturated toy-diorama tower defense game.
 
-## Visual target
+## Visual references
 
-A generated concept reference was saved here:
+Use these as style targets:
 
-`docs/visual-targets/blockhold-rebuild-reference.png`
+- Existing reference: `docs/visual-targets/blockhold-rebuild-reference.png`
+- New stronger reference: `docs/visual-targets/puppy-guard-cute-diorama-reference.png`
 
-Use it as style direction, not as a mandatory background asset.
+The new reference is the stricter target: bright cyan sky, golden winding paths, dense flowers/mushrooms/fences/balloons/confetti, chubby puppy knights with big heads, colorful slime blobs, glowing pink/blue heart crystal core, chunky toy towers, lots of sparkle/particle accents, and minimal cute HUD.
 
-Concrete art direction:
+## Hard acceptance bar
 
-- Bright Roblox/toy-like isometric voxel tower-defense.
-- Floating grassy island with chunky terrain sides, flowers, trees, stones, path tiles, a glowing crystal core, and warm sky/soft depth.
-- Cute readable defenders: puppy knight/guard silhouettes with helmets, blue scarves, shields, flags, or tower platforms.
-- Cute readable enemies: round slime/goblin blobs with tiny horns/ears, clear color variants for grunt/runner/brute.
-- Towers should look like cozy wooden/stone toy towers, not purple cylinders.
-- Traps/frost runes should be visually iconic and readable.
-- HUD should be minimal game HUD: top-left hearts/wave/coins, bottom build bar, tiny right objective panel only if needed.
-- Board must dominate the screen. Avoid huge scroll panels, dashboards, glass slabs, long text blocks, and developer labels.
+The screenshot should no longer read as “empty bright island.” It must read as:
 
-## Required product changes
+> a cute colorful mobile/toy tower-defense diorama with clear characters and rich props.
 
-1. Rename/retitle visible product if useful: “Puppy Guard: Crystal Siege” or similar is acceptable, but keep project/repo path unchanged.
-2. Replace dark tactical scene with bright toy-island scene.
-3. Rework `src/render/BlockholdScene.tsx` substantially:
-   - camera framed lower/closer like an isometric toy game;
-   - floating island base with grass top and dirt sides;
-   - winding path tiles, not just repeated dark grid squares;
-   - decorative trees/flowers/stones/fences/torches;
-   - cute puppy defenders and towers built procedurally from Babylon meshes;
-   - cute blob enemies with eyes/horns/color variants;
-   - crystal core shrine with glow;
-   - clear tile hover/build preview and selected cell feedback;
-   - readable combat markers/projectile/trap/frost feedback if feasible.
-4. Rework `src/components/Hud.tsx` and `src/components/BuildPalette.tsx` into minimal game HUD:
-   - no giant dashboard blocks;
-   - top-left compact stats/buttons;
-   - bottom-centered build bar/cards;
-   - action button looks like a game button;
-   - text should be short and game-like.
-5. Rework `src/styles.css` accordingly:
-   - bright sky/soft toy palette;
-   - rounded game UI surfaces;
-   - one cohesive accent system, semantic danger/coin/health exceptions;
-   - mobile layout still playable.
-6. Keep gameplay wired:
-   - Start Raid / Pause / Next Day / Restart;
-   - build palette selects wall/trap/turret/frost;
-   - coin shop/upgrades can be compact/hidden behind small panels but must remain accessible or at least not broken;
-   - keyboard shortcuts continue.
-7. If you choose to add an external runtime library or asset package, it must be MIT/permissive or procedural and must not require paid keys. Prefer procedural Babylon meshes if faster.
+Before finishing, visually check the first screen and Start Raid screen against these questions:
+
+- Are puppy defenders/towers large and cute enough to identify immediately?
+- Are enemies visibly expressive pastel blob characters, not small colored dots?
+- Does the island feel decorated/dense: flowers, mushrooms, fences, balloons, flags, sparkles, clouds, crystals?
+- Is the path more golden and playful, closer to the reference image?
+- Is the core more magical and eye-catching, ideally heart/crystal-like rather than just a generic shard?
+- Is the HUD still minimal and not covering the board?
+
+## Required implementation changes
+
+### 1. World / scene richness
+
+In `src/render/BlockholdScene.tsx`, make the Babylon scene richer and more colorful:
+
+- More saturated sky and warm sun rays feel.
+- Add many small procedural decorative props: flowers, mushrooms, fences, balloons, puppy flags, coin tokens, clouds, sparkles/confetti, and extra crystals.
+- Add a few floating side islands/clouds in the background if feasible.
+- Make the path golden/yellow, thicker, and more clearly winding/playful.
+- Add more height/layers to the island edges so it feels like a chunky toy diorama.
+- Keep performance reasonable; procedural primitives are fine.
+
+### 2. Character cuteness / scale
+
+- Puppy defenders/towers must be much more visible and cute:
+  - bigger heads, round eyes, helmet, scarf, shield/sword/flag;
+  - at least several visible puppy guards/towers in first view;
+  - chibi proportions, not tiny props.
+- Blob enemies must be larger and more expressive:
+  - pastel green/pink/blue/purple variants;
+  - eyes, horns/ears, little shine spots;
+  - visible at raid start without zooming.
+- Add at least one decorative puppy near the core or tower so the first screen has a mascot focal point even before building.
+
+### 3. Core / effects
+
+- Upgrade core into a strong magical centerpiece:
+  - pink/blue heart-like crystal or clustered crystal shrine;
+  - glow layer/sparkle accents around it;
+  - surrounding fence/flowers/crystals.
+- Add visible sparkle/coin/hit/frost effects using simple mesh markers or small animated props.
+- If no true animation is added, at least use clear static sparkles and combat markers.
+
+### 4. HUD / controls
+
+- Keep HUD cute and minimal:
+  - top-left hearts/coins/wave like mobile game chips;
+  - bottom build bar with cute rounded cards;
+  - avoid long paragraphs and dashboard slabs.
+- Do not hide the board/action. During raid, the build bar should stay compact or collapsed.
+- Preserve Start Raid, Pause/Resume, Next Day, Restart, build buttons, keyboard shortcuts, and canvas place/remove behavior.
+
+### 5. Optional CSS fallback
+
+If the WebGL fallback exists, make it more colorful too, but prioritize the actual Babylon scene.
 
 ## Hard no-go list
 
-- Do not leave the existing dark tactical dashboard look.
-- Do not ship text-heavy panels that cover the board.
-- Do not use copyrighted Roblox/Tower Defense Simulator assets/names.
-- Do not make grotesque/horror characters.
-- Do not leave enemies as plain cylinders/cubes.
-- Do not claim “game-like” unless characters, board, and HUD are visibly game-like.
+- No return to dark tactical/dashboard style.
+- No giant scroll panels.
+- No tiny unreadable enemies.
+- No sparse empty island.
+- No copyrighted Roblox/TDS assets or names.
+- No grotesque characters.
+- Do not commit or push. Hermes will verify and ship.
 
 ## Verification required before finishing
 
@@ -78,11 +99,11 @@ npm run lint
 npm run build
 ```
 
-Then do/enable browser smoke assumptions:
+Also run/enable browser smoke assumptions:
 
-- page loads without console errors;
-- first screenshot shows a bright toy/island game scene with cute defenders/enemies/core/path;
-- Start Raid changes visible state to raid;
-- build controls remain clickable.
+- first screen loads without console errors;
+- Start Raid changes state visibly;
+- first screen and raid screen look more colorful/dense/cute than commit `abf2c72`;
+- HUD/build bar does not obscure the main action.
 
-Do not commit or push. Hermes will verify, adjust, commit, and push.
+Report changed files and command results only after verification.
