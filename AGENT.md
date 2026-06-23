@@ -20,13 +20,13 @@ Golden rules to enforce:
 
 ## Product Direction
 
-Keep the existing tower-defense mechanics, but the visible game is now **Puppy Guard: Crystal Siege**, a bright Roblox/toy-like floating-island defense game:
+Keep the existing tower-defense mechanics, but treat the current visuals as **not user-validated** until they pass `VERIFY.md`.
 
-- Reference feel: cute Roblox toy diorama + Bloons TD lane pressure + Orcs Must Die trap killzones.
-- Visual direction: puppy knight defenders, colorful blob enemies, wooden pup towers, spike traps, frost runes, glowing crystal core, grassy floating island.
+- Reference feel target: cute Roblox/Bloons-style tower-defense readability + authored board-game stage + satisfying hit/coin feedback.
 - Core loop: build phase -> place defenses -> raid phase -> survive -> rewards/upgrades -> next day.
-- User strongly rejected dark dashboard/developer HUD visuals. Do not return to that style.
-- User prefers fewer questions and autonomous progress. Make reasonable product decisions and keep shipping verified increments.
+- User strongly rejected dark dashboards, low-res pixelation, cheap procedural art, and assistant-improvised design.
+- Do not rely on taste claims like “looks better.” Every visual iteration must pass the first-3-seconds scorecard in `VERIFY.md`.
+- User prefers fewer questions and autonomous progress. Make reasonable product decisions, but use references/assets/verification rather than improvising art direction.
 
 ## Current Repo
 
@@ -48,7 +48,11 @@ Improve the game in small verified slices. Do not ask the user for decisions unl
 
 Prioritized roadmap:
 
-0. Current visual baseline: bright toy-island scene with puppy guards, colorful blob enemies, glowing crystal core, and minimal game HUD. Preserve this direction.
+0. Visual QA gate first:
+   - read `VERIFY.md` before every visual/game-art change,
+   - score the first screen and raid-state screenshots against the six first-3-seconds criteria,
+   - if any score is `0`, do not ship; pick the weakest criterion as the next iteration,
+   - prefer reference-matched licensed assets and authored composition over procedural decoration.
 1. Improve character/game feel first:
    - make puppy defenders and blob enemies larger, more animated, and more readable,
    - add projectiles, hit flashes, trap pops, frost effects, coin pops,
@@ -95,6 +99,8 @@ Guidelines:
 Before committing/pushing:
 
 ```bash
+npm run generate:assets
+npm run verify:visual
 npm run test
 npm run lint
 npm run build
@@ -105,7 +111,8 @@ For visible changes, run a local dev server and browser-smoke the app when feasi
 - confirm the new UI marker appears,
 - click Start Raid,
 - verify phase changes to raid/pause UI,
-- check browser console for JS errors.
+- check browser console for JS errors,
+- score the first-screen and raid-state screenshots using `VERIFY.md`; any `0` means the visual pass failed and must iterate again.
 
 After push, verify Vercel with a cache-busting URL:
 
@@ -122,4 +129,4 @@ https://roblox-game-site.vercel.app/?v=<commit-or-run-marker>
 
 ## Codex /goal Prompt
 
-/go Maintain the Blockhold Siege tower-defense direction and improve it autonomously in one small, verified, shippable slice. Use the roadmap in AGENT.md. Prefer the highest-impact missing item visible in the current code. Implement the slice, update tests where appropriate, run `npm run test`, `npm run lint`, and `npm run build`. If visual, smoke test locally if tooling allows. Commit and push to main with a clear message. Do not ask the user for product decisions; choose sensible defaults. Avoid destructive rewrites and avoid overcomplicating the game.
+/go Maintain the tower-defense mechanics, but do not trust the current visuals as accepted. Read `VERIFY.md` and `docs/agents/visual-qa-agent.md` before changing UI/art. Improve one small, verified, shippable slice that raises the first-3-seconds visual QA score: genre readability, character readability, enemy readability, board/stage readability, game-HUD readability, and screenshot desirability. Prefer reference-matched licensed assets/authored composition over procedural decoration. Run `npm run generate:assets`, `npm run verify:visual`, `npm run test`, `npm run lint`, and `npm run build`. If visual, smoke test locally, click Start Raid, inspect screenshots, and report the scorecard. Commit and push only after the visual gate has no zero scores. Do not ask the user for product decisions; choose sensible defaults. Avoid destructive rewrites and avoid overcomplicating the game.

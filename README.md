@@ -27,9 +27,15 @@ docs/visual-targets/blockhold-rebuild-reference.png
 ```bash
 npm install
 npm run dev
+npm run generate:assets
+npm run verify:visual
 npm run test
 npm run build
 ```
+
+## Visual QA Gate
+
+Visual/game-art changes must pass `VERIFY.md`, not only build/lint. The first-screen and raid-state screenshots are scored against six criteria: genre readability, character readability, enemy readability, board/stage readability, game-HUD readability, and screenshot desirability. Any `0` is a hard fail and the next iteration must target the weakest criterion.
 
 ## Controls
 

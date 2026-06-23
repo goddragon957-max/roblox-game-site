@@ -1,10 +1,16 @@
-# CODEX GOAL — High Quality Toon GLTF Asset Pass
+# CODEX GOAL — Visual Recovery Loop With First-3-Seconds Gate
 
 Repo: `/home/sy/projects/roblox-game-site`
 
 Latest user feedback, acceptance-critical:
 
 > “넌 눈이 없구나 해상도 너무 떨어져 구려보여 너무 구리다 Blender/GLTF 캐릭터 에셋, 손그림 스타일 텍스처, toon outline shader, projectile / hit / coin pop 애니메이션, 타일을 정사각 격자 말고 더 곡선형/보드게임형 path로 교체 이거 까지 해보자 go 모드로”
+>
+> “진짜 개 끔찍해 너 디자인 감각이 아에 없는거 같아”
+>
+> “첫 3초 안에 게임 장르가 보이는가? 캐릭터가 캐릭터처럼 보이는가? 적이 적처럼 보이는가? 맵이 보드/스테이지처럼 보이는가? UI가 웹앱이 아니라 게임 HUD인가? 스샷 한 장만 봐도 플레이하고 싶은가?”
+
+The current visuals are **not accepted** just because GLB files load or tests pass. Every future visual pass must read `VERIFY.md` and satisfy the first-3-seconds scorecard. Any score of `0` is a hard fail and should drive the next iteration.
 
 Interpretation:
 
@@ -117,6 +123,8 @@ Use existing `combatMarkers` if possible and derive projectile visuals from mark
 Run:
 
 ```bash
+npm run generate:assets
+npm run verify:visual
 npm run test
 npm run lint
 npm run build
