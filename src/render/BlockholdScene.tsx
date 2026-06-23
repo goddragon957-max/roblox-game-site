@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  AbstractMesh,
   ArcRotateCamera,
   Camera,
   Color3,
+  Color4,
   DirectionalLight,
   Engine,
   GlowLayer,
@@ -11,12 +13,26 @@ import {
   MeshBuilder,
   PointLight,
   Scene,
+  SceneLoader,
   StandardMaterial,
+  TransformNode,
   Vector3,
 } from '@babylonjs/core';
+import '@babylonjs/loaders/glTF';
 import { useGameStore } from '../store/gameStore';
 import { getRaidPlan } from '../game/simulation';
 import type { BlockType, Cell, RaiderKind } from '../game/types';
+
+type ToonAssetKey = 'puppy' | 'tower' | 'core' | RaiderKind;
+
+const assetFiles: Record<ToonAssetKey, string> = {
+  puppy: 'puppy_guard.glb',
+  tower: 'pup_tower.glb',
+  core: 'crystal_core.glb',
+  grunt: 'blob_grunt.glb',
+  runner: 'blob_runner.glb',
+  brute: 'blob_brute.glb',
+};
 
 const mat = (scene: Scene, name: string, color: string, emissive = '#000000', alpha = 1) => {
   const material = new StandardMaterial(name, scene);
@@ -37,8 +53,8 @@ export function BlockholdScene() {
     const canvas = canvasRef.current!;
     let engine: Engine;
     try {
-      engine = new Engine(canvas, false);
-      engine.setHardwareScalingLevel(2.75);
+      engine = new Engine(canvas, true, { adaptToDeviceRatio: true, antialias: true });
+      engine.setHardwareScalingLevel(1);
     } catch {
       setWebglFailed(true);
       return;
@@ -154,9 +170,61 @@ export function BlockholdScene() {
     };
 
     const meshes = new Map<string, Mesh>();
+    const assetTemplates = new Map<ToonAssetKey, TransformNode>();
+    const assetNodes = new Map<string, TransformNode>();
+    let glbAssetsFailed = false;
     let hoverCell: Cell | undefined;
     const center = () => (api().size - 1) / 2;
     const cellToVec = (x: number, z: number, y = 0) => new Vector3(x - center(), y, z - center());
+
+    const outlineColor = new Color4(0.09, 0.07, 0.04, 0.82);
+    const polishImportedMesh = (mesh: AbstractMesh) => {
+      mesh.isPickable = false;
+      if (mesh instanceof Mesh) {
+        mesh.enableEdgesRendering(0.45);
+        mesh.edgesWidth = 5.6;
+        mesh.edgesColor = outlineColor;
+      }
+      const material = mesh.material;
+      if (material && 'roughness' in material) (material as { roughness?: number }).roughness = 0.95;
+      if (material && 'metallic' in material) (material as { metallic?: number }).metallic = 0;
+    };
+
+    Promise.all((Object.entries(assetFiles) as Array<[ToonAssetKey, string]>).map(async ([asset, file]) => {
+      const result = await SceneLoader.ImportMeshAsync('', '/assets/models/', file, scene);
+      const root = new TransformNode(`toon-template-${asset}`, scene);
+      result.meshes.forEach((mesh) => {
+        if (mesh.name !== '__root__') {
+          mesh.parent = root;
+          polishImportedMesh(mesh);
+        }
+        mesh.setEnabled(false);
+      });
+      root.setEnabled(false);
+      assetTemplates.set(asset, root);
+    })).catch(() => {
+      glbAssetsFailed = true;
+    });
+
+    function drawAsset(live: Set<string>, asset: ToonAssetKey, id: string, pos: Vector3, scale = 1, yaw = 0, bounce = 0) {
+      const template = assetTemplates.get(asset);
+      if (!template || glbAssetsFailed) return false;
+      live.add(id);
+      let node = assetNodes.get(id);
+      if (!node) {
+        node = template.clone(id, null, false) ?? undefined;
+        if (!node) return false;
+        node.getChildMeshes(false).forEach(polishImportedMesh);
+        assetNodes.set(id, node);
+      }
+      node.setEnabled(true);
+      node.getChildMeshes(false).forEach((mesh) => mesh.setEnabled(true));
+      node.position.copyFrom(pos);
+      node.position.y += bounce;
+      node.rotation.set(0, yaw, 0);
+      node.scaling.setAll(scale);
+      return true;
+    }
 
     function remember(id: string, mesh: Mesh, material: StandardMaterial, pickable = false) {
       mesh.material = material;
@@ -192,6 +260,17 @@ export function BlockholdScene() {
       return remember(id, mesh, material);
     }
 
+    function tube(id: string, path: Vector3[], radius: number, material: StandardMaterial, tessellation = 18) {
+      let mesh = meshes.get(id);
+      if (!mesh) {
+        mesh = MeshBuilder.CreateTube(id, { path, radius, tessellation, cap: Mesh.CAP_ALL }, scene);
+      }
+      mesh.material = material;
+      mesh.isPickable = false;
+      meshes.set(id, mesh);
+      return mesh;
+    }
+
     function cone(id: string, diameter: number, height: number, pos: Vector3, material: StandardMaterial, tessellation = 8) {
       let mesh = meshes.get(id);
       if (!mesh) mesh = MeshBuilder.CreateCylinder(id, { diameterTop: 0, diameterBottom: diameter, height, tessellation }, scene);
@@ -220,6 +299,7 @@ export function BlockholdScene() {
 
     function drawPuppy(live: Set<string>, id: string, x: number, z: number, y = 0.18, scale = 1, wobble = 0) {
       const bob = Math.sin(performance.now() / 250 + x * 1.7 + z) * 0.045 * wobble;
+      if (drawAsset(live, 'puppy', id, cellToVec(x, z, y - 0.02), scale, 0, bob)) return;
       const squash = 1 + Math.sin(performance.now() / 220 + x + z) * 0.035 * wobble;
       liveCylinder(live, `${id}-shadow`, 1.12 * scale, 0.025, cellToVec(x, z, y + 0.02), materials.shadow, 14);
       const body = liveSphere(live, `${id}-body`, 0.74 * scale, cellToVec(x, z, y + bob + 0.4 * scale), materials.puppy, 10);
@@ -247,6 +327,8 @@ export function BlockholdScene() {
     }
 
     function drawTowerPuppy(live: Set<string>, id: string, x: number, z: number) {
+      const bob = Math.sin(performance.now() / 300 + x + z) * 0.018;
+      if (drawAsset(live, 'tower', id, cellToVec(x, z, 0.18), 1, 0, bob)) return;
       liveBox(live, `${id}-base`, 1.04, 0.72, 1.04, cellToVec(x, z, 0.48), materials.wood);
       liveBox(live, `${id}-door`, 0.4, 0.44, 0.09, cellToVec(x, z - 0.54, 0.4), materials.metalDark);
       liveBox(live, `${id}-rail`, 1.24, 0.16, 1.24, cellToVec(x, z, 0.9), materials.woodLight);
@@ -293,6 +375,11 @@ export function BlockholdScene() {
       const t = performance.now() / 145 + x * 0.7 + z * 1.3;
       const bounce = Math.abs(Math.sin(t)) * (kind === 'runner' ? 0.2 : 0.13);
       const wobble = Math.sin(t) * 0.13;
+      if (drawAsset(live, kind, id, cellToVec(x, z, 0.18), kind === 'brute' ? 1.05 : 0.95, Math.sin(t * 0.35) * 0.18, bounce * 0.45)) {
+        liveBox(live, `${id}-hp-back`, 0.76, 0.07, 0.1, cellToVec(x, z, 1.42 + bounce * 0.45), materials.hpBack);
+        liveBox(live, `${id}-hp`, Math.max(0.1, 0.72 * (hp / maxHp)), 0.08, 0.11, cellToVec(x, z, 1.49 + bounce * 0.45), materials.hp);
+        return;
+      }
       liveCylinder(live, `${id}-shadow`, spec.body * (1.15 + bounce * 0.18), 0.025, cellToVec(x, z, 0.12), materials.shadow, 14);
       const body = liveSphere(live, `${id}-body`, spec.body, cellToVec(x, z, spec.y + bounce), spec.material, 10);
       body.scaling.set(1 + wobble * 0.28, (kind === 'brute' ? 1.02 : 0.9) - bounce * 0.18, 1 - wobble * 0.2);
@@ -370,6 +457,67 @@ export function BlockholdScene() {
       liveSphere(live, `${id}-paw`, 0.08, cellToVec(x, z - 0.03, 0.59), materials.torch, 8);
     }
 
+    function curvedLanePoints(lane: number) {
+      const side = lane < 5 ? -1 : lane > 5 ? 1 : 0;
+      return [
+        cellToVec(lane, 0, 0.62),
+        cellToVec(lane + side * 0.35, 1.55, 0.66),
+        cellToVec(lane + side * 0.9, 3.15, 0.68),
+        cellToVec(lane - side * 0.45, 5.2, 0.68),
+        cellToVec(5 + side * 0.55, 6.75, 0.7),
+        cellToVec(5, 8, 0.72),
+      ];
+    }
+
+    function samplePath(points: Vector3[], t: number) {
+      const scaled = Math.min(points.length - 1.001, Math.max(0, t) * (points.length - 1));
+      const index = Math.floor(scaled);
+      const local = scaled - index;
+      return Vector3.Lerp(points[index], points[index + 1], local);
+    }
+
+    function drawCurvedBoardPath(live: Set<string>, activeLane: number, forecastLane: number, phase: string) {
+      [1, 3, 5, 7, 9].forEach((lane) => {
+        const active = lane === activeLane;
+        const forecast = phase === 'build' && lane === forecastLane;
+        const path = curvedLanePoints(lane);
+        const id = `curved-path-${lane}`;
+        live.add(id);
+        tube(id, path, active ? 0.28 : 0.18, active ? materials.sand : forecast ? materials.forecast : materials.sandEdge, active ? 22 : 16);
+        const stones = active ? 9 : 5;
+        for (let index = 0; index < stones; index += 1) {
+          const point = samplePath(path, (index + 0.4) / stones);
+          const stone = liveCylinder(live, `path-stone-${lane}-${index}`, active ? 0.42 : 0.28, 0.08, point.add(new Vector3(0, 0.06, 0)), active ? materials.pathPebble : materials.sand, 18);
+          stone.scaling.z = 0.72;
+          stone.rotation.y = index * 0.63;
+        }
+      });
+    }
+
+    function nearestTowerCell(cell: Cell, blocks: ReturnType<typeof api>['blocks']) {
+      return Object.entries(blocks)
+        .filter(([, block]) => block.type === 'turret')
+        .map(([blockKey]) => {
+          const [x, z] = blockKey.split(',').map(Number);
+          return { x, z, distance: Math.abs(cell.x - x) + Math.abs(cell.z - z) };
+        })
+        .filter((tower) => tower.distance <= 4)
+        .sort((a, b) => a.distance - b.distance)[0];
+    }
+
+    function drawProjectile(live: Set<string>, id: string, from: Cell | undefined, to: Cell, ticks: number) {
+      if (!from) return;
+      const start = cellToVec(from.x, from.z, 1.72);
+      const end = cellToVec(to.x, to.z, 1.1);
+      const progress = (4 - ticks) / 4;
+      for (let index = 0; index < 4; index += 1) {
+        const t = Math.min(1, Math.max(0, progress - index * 0.08));
+        const point = Vector3.Lerp(start, end, t);
+        point.y += Math.sin(t * Math.PI) * 0.48;
+        liveSphere(live, `${id}-bolt-${index}`, 0.16 - index * 0.02, point, index === 0 ? materials.turretBolt : materials.sparkle, 8);
+      }
+    }
+
     function drawDecor(live: Set<string>) {
       [[0, 8], [2, 9], [3, 1], [7, 1], [10, 8], [8, 10]].forEach(([x, z], index) => drawTree(live, `tree-${index}`, x, z));
       [[0, 2], [0, 5], [2, 3], [4, 10], [7, 9], [9, 2], [10, 5], [10, 10]].forEach(([x, z], index) => {
@@ -416,6 +564,15 @@ export function BlockholdScene() {
     }
 
     function drawCore(live: Set<string>, x: number, z: number) {
+      const pulse = 1 + Math.sin(performance.now() / 260) * 0.035;
+      if (drawAsset(live, 'core', 'core-gltf', cellToVec(x, z, 0.2), pulse, 0, 0)) {
+        [[-0.9, 0.1, 1.55], [0.92, -0.22, 1.68], [0.08, -0.92, 1.45], [-0.16, 0.9, 1.78]].forEach(([dx, dz, y], index) => {
+          const bob = Math.sin(performance.now() / 180 + index) * 0.16;
+          drawSparkle(live, `core-gltf-twinkle-${index}`, x + dx, z + dz, y + bob, index % 2 ? materials.crystal : materials.sparkle);
+        });
+        drawPuppy(live, 'core-mascot', x - 1.38, z - 0.62, 0.18, 1.26, 1);
+        return;
+      }
       liveBox(live, 'core-plaza', 2, 0.2, 2, cellToVec(x, z, 0.22), materials.stone);
       liveBox(live, 'core-step-a', 1.48, 0.18, 1.48, cellToVec(x, z, 0.43), materials.stoneLight);
       liveCylinder(live, 'core-plinth', 1.02, 0.34, cellToVec(x, z, 0.7), materials.crystalBase, 12);
@@ -465,14 +622,13 @@ export function BlockholdScene() {
           const lane = isPathCell(x, z, activeLane);
           const danger = s.phase === 'raid' && x === s.dangerLane && z <= s.core.z;
           const forecast = s.phase === 'build' && x === forecastLane && z <= s.core.z;
-          const material = danger ? materials.danger : forecast ? materials.forecast : lane ? materials.sand : (x + z) % 2 ? materials.grass : materials.grassAlt;
-          liveBox(live, `tile-${x}-${z}`, lane ? 1.16 : 0.92, lane ? 0.2 : 0.09, lane ? 1.16 : 0.92, cellToVec(x, z, 0.4), material, true);
-          if (lane) {
-            liveBox(live, `tile-edge-${x}-${z}`, 1, 0.05, 1, cellToVec(x, z, 0.54), materials.sandEdge);
-            if ((x + z) % 3 === 0) liveSphere(live, `path-dot-${x}-${z}`, 0.14, cellToVec(x + 0.24, z - 0.18, 0.57), materials.pathPebble, 8);
-          }
+          const material = danger ? materials.danger : forecast ? materials.forecast : (x + z) % 2 ? materials.grass : materials.grassAlt;
+          const tile = liveBox(live, `tile-${x}-${z}`, lane ? 0.78 : 0.88, lane ? 0.055 : 0.07, lane ? 0.78 : 0.88, cellToVec(x, z, 0.38), material, true);
+          tile.visibility = lane ? 0.32 : 0.76;
         }
       }
+
+      drawCurvedBoardPath(live, activeLane, forecastLane, s.phase);
 
       [1, 3, 5, 7, 9].forEach((lane) => {
         liveBox(live, `spawn-dock-${lane}`, 0.78, 0.18, 0.78, cellToVec(lane, 0, 0.48), lane === activeLane ? materials.danger : materials.sand);
@@ -504,14 +660,29 @@ export function BlockholdScene() {
         const id = `fx-${effect.id}`;
         const size = effect.kind === 'kill' ? 0.42 : 0.3;
         const material = effect.kind === 'kill' ? materials.kill : effect.kind === 'core' ? materials.coreHit : materials.hit;
-        liveSphere(live, id, size, cellToVec(effect.cell.x, effect.cell.z, 1.18 + effect.ticks * 0.17), material, 8);
-        drawSparkle(live, `${id}-sparkle`, effect.cell.x + 0.24, effect.cell.z - 0.18, 1.22 + effect.ticks * 0.15, material);
+        const popY = 1.18 + effect.ticks * 0.2;
+        if (effect.kind !== 'core') drawProjectile(live, id, nearestTowerCell(effect.cell, s.blocks), effect.cell, effect.ticks);
+        if (effect.kind === 'kill') {
+          const coin = liveCylinder(live, id, size, 0.08, cellToVec(effect.cell.x, effect.cell.z, popY), material, 20);
+          coin.rotation.x = Math.PI / 2;
+          coin.rotation.z = performance.now() / 180;
+          liveSphere(live, `${id}-coin-shine`, size * 0.28, cellToVec(effect.cell.x - 0.05, effect.cell.z - 0.06, popY + 0.03), materials.sparkle, 8);
+        } else {
+          liveSphere(live, id, size, cellToVec(effect.cell.x, effect.cell.z, popY), material, 8);
+        }
+        drawSparkle(live, `${id}-sparkle`, effect.cell.x + 0.24, effect.cell.z - 0.18, 1.22 + effect.ticks * 0.17, material);
       });
 
       for (const [id, mesh] of meshes) {
         if (!live.has(id)) {
           mesh.dispose();
           meshes.delete(id);
+        }
+      }
+      for (const [id, node] of assetNodes) {
+        if (!live.has(id)) {
+          node.dispose(false, false);
+          assetNodes.delete(id);
         }
       }
       scene.render();

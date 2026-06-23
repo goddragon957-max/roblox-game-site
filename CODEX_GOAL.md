@@ -1,106 +1,118 @@
-# CODEX GOAL — 3D Arcade Cute Style Reboot
+# CODEX GOAL — High Quality Toon GLTF Asset Pass
 
 Repo: `/home/sy/projects/roblox-game-site`
 
 Latest user feedback, acceptance-critical:
 
-> “전혀 다른데 좀더 아기자기하게 못만드냐 그리고 약간 아케이드 느낌으로 다가 해상도가 너무 큰가 이미지를 보고 따라하지 말고 저런거 못그리냐 3d로?”
+> “넌 눈이 없구나 해상도 너무 떨어져 구려보여 너무 구리다 Blender/GLTF 캐릭터 에셋, 손그림 스타일 텍스처, toon outline shader, projectile / hit / coin pop 애니메이션, 타일을 정사각 격자 말고 더 곡선형/보드게임형 path로 교체 이거 까지 해보자 go 모드로”
 
 Interpretation:
 
-The previous pass tried to copy the generated reference by adding props, but the resulting Babylon scene still reads as sparse/high-res/generic WebGL primitives. The user is asking for a **real 3D arcade/toon art direction**, not more literal image-following. The problem is not just missing decorations; it is camera/projection/render resolution/shape language.
+The previous low-res arcade pass was wrong. It made the game look cheap. Do **not** pixelate or downscale the canvas. The goal now is a high-quality stylized 3D game-art pass:
 
-## New art direction
+- crisp/high-resolution rendering;
+- actual GLTF/GLB game assets in the repo;
+- hand-painted/toon material feel;
+- toon outline shader/effect;
+- projectile, hit, coin-pop animations;
+- a curved board-game style path instead of square-grid visual tiles.
 
-Make Puppy Guard feel like a cute arcade 3D toy game:
+## Hard no-go list
 
-- Low-res arcade render: intentionally chunky/pixel-upscaled, not crisp high-resolution WebGL.
-- Orthographic/isometric camera: board reads like a 3D arcade diorama/sprite, not perspective CAD/WebGL.
-- Big chibi 3D characters: puppies and blobs must be the emotional center, not tiny props.
-- Flat saturated toon colors: fewer muddy 3D gradients, more readable color blocks.
-- Simple chunky shapes: rounded/squashed spheres/cylinders/boxes, thick outlines/shadows if feasible.
-- Board fills screen but with tighter camera composition; HUD must stop feeling like a web overlay covering a tiny board.
-- Arcade game feel: pixelated canvas, bounce/wobble animation, coin/star pops, playful path, big Start button/chips.
+- No pixelated/canvas downscaling. Remove/disable `engine.setHardwareScalingLevel(2.75)` and CSS `image-rendering: crisp-edges/pixelated` from the main WebGL canvas.
+- No claiming GLTF assets without actual `.glb` or `.gltf` files committed under the project.
+- No tiny primitive-only puppy/blob characters as the primary look.
+- No square grid path as the visible dominant path. The simulation can still use grid cells internally, but the rendered path should look like a smooth board-game ribbon.
+- No giant HUD/dashboard panels hiding the board.
+- No committing or pushing; Hermes will verify and ship.
 
-## Do NOT do this
+## Tooling constraints
 
-- Do not keep adding tiny flowers/balloons as the main solution.
-- Do not try to literally copy the generated image.
-- Do not use a giant high-resolution crisp canvas look.
-- Do not return to dark tactical dashboard style.
-- Do not leave characters as small dots among too many props.
-- Do not rewrite game mechanics unless needed for visual state.
-- Do not commit or push; Hermes will verify and ship.
+Check whether `blender` is available. If Blender is available, use a headless Blender Python script to generate/export GLB assets.
 
-## Required implementation plan
+If Blender is NOT available, do **not** stop. Create a local asset-generation script that directly writes GLB files using Node or Python. The output must still be real `.glb` files loaded by Babylon. Procedural GLB generation is acceptable if it produces stylized chibi assets with multiple meshes/materials.
 
-### 1. Low-res arcade render
+## Required files / assets
 
-In `src/render/BlockholdScene.tsx` and CSS:
+Create a durable asset pipeline, for example:
 
-- Make the Babylon canvas render intentionally lower-res and upscale it:
-  - use `engine.setHardwareScalingLevel(...)` with a value around `2` to `3`, or equivalent;
-  - disable overly smooth antialiasing if appropriate;
-  - add CSS `image-rendering: pixelated` or `crisp-edges` for the canvas/frame;
-  - add `data-ui-pass="puppy-arcade-3d"` in `App.tsx` so smoke tests can identify the pass.
-- Add a subtle arcade frame/vignette that does not hide the board.
+- `scripts/generate-gltf-assets.mjs` or `scripts/generate_gltf_assets.py`
+- `public/assets/models/puppy_guard.glb`
+- `public/assets/models/blob_grunt.glb`
+- `public/assets/models/blob_runner.glb`
+- `public/assets/models/blob_brute.glb`
+- `public/assets/models/pup_tower.glb`
+- `public/assets/models/crystal_core.glb`
+- optional texture files under `public/assets/textures/`
+- a short `docs/visual-targets/toon-gltf-asset-pass.md` documenting the asset approach and how to regenerate
 
-### 2. Orthographic arcade camera
+The assets should be original and simple but visibly more game-like than raw scene primitives:
 
-- Change the Babylon camera to orthographic/isometric mode.
-- Keep the whole board playable, but zoom/composition should make characters and core much larger.
-- On resize, update `orthoLeft`, `orthoRight`, `orthoTop`, `orthoBottom` so the board stays centered.
-- The screenshot should feel like a 3D arcade board/sprite, not a perspective miniature.
+- Puppy: chibi head/body, big eyes, ears, helmet/scarf/shield, cute silhouette.
+- Blobs: rounded pastel slime bodies, eyes, mouth/shine/horns; separate color variants for grunt/runner/brute.
+- Tower: chunky wooden puppy tower with large bolt cannon/flag.
+- Core: large heart/crystal shrine.
 
-### 3. Chibi 3D shape language
+## Babylon integration
 
-Rework the core helper shapes, especially `drawPuppy`, `drawTowerPuppy`, and `drawBlob`:
+Install/load any required Babylon loader dependency if missing, likely:
 
-- Puppies:
-  - much bigger head/body ratio;
-  - huge eyes, cheeks, ears, scarf/helmet readable from isometric camera;
-  - squat arcade silhouette;
-  - at least one large mascot puppy near the core in the first screen.
-- Blobs:
-  - larger, rounder, pastel, expressive eyes/mouth/horns;
-  - obvious bounce/wobble during raid using time-based scaling/position;
-  - no tiny HP details if they make blobs visually noisy; use simple colored bars or none.
-- Towers:
-  - read as chunky puppy arcade towers, not detailed miniature structures;
-  - flag/projectile/bolt should be large and colorful.
+```bash
+npm install @babylonjs/loaders
+```
 
-### 4. Simplify scene density into readable arcade composition
+Then in `src/render/BlockholdScene.tsx` or a helper module:
 
-The current scene has many tiny props. Keep some, but prioritize readability:
+- import `@babylonjs/loaders/glTF`;
+- load GLB assets once with `SceneLoader.ImportMeshAsync` / `AssetsManager` or equivalent;
+- clone/instance loaded asset roots into board positions;
+- keep procedural fallback if loading fails, but the normal path must use GLB assets;
+- add a visible loading-safe path so the scene does not crash before assets finish.
 
-- Fewer tiny scattered props if they create noise.
-- Larger props at screen edges: oversized mushrooms, stars, clouds, candy fences, toy flags.
-- Make the path a thick playful golden ribbon, not thin tile grid squares.
-- Make the core a huge glowing heart/crystal arcade objective.
-- Use shadows/ground discs under characters so they read as 3D pieces.
+Add a smoke-testable marker such as:
 
-### 5. HUD should become arcade overlay, not web panel
+```tsx
+data-ui-pass="toon-gltf-boardgame"
+```
 
-In `src/components/Hud.tsx`, `src/components/BuildPalette.tsx`, and `src/styles.css`:
+## Rendering quality
 
-- Shrink the left HUD drastically or transform it into compact arcade chips.
-- Keep critical info only: hearts/core, wave, coins, Start/Pause.
-- Move/resize Start Raid into a colorful arcade button that does not block the board.
-- Make build controls compact, maybe icon-first cards; do not cover the emotional center of the board.
-- Keep all interactions working: Start Raid, Pause/Resume, Next Day, Restart, build selection, canvas place/remove, keyboard shortcuts.
+- Restore high-resolution rendering; no low-res pixel scaling.
+- Keep orthographic/isometric camera if it improves board readability, but make it crisp and polished.
+- Add toon outline effect:
+  - use Babylon edges renderer, mesh clone outline shell, HighlightLayer, or a small custom ShaderMaterial; choose the simplest stable approach;
+  - outlines should be visible around characters/core/towers/blobs, not just terrain.
+- Use flat/toon materials with high saturation and soft shadows.
+- Add hand-painted texture feel via either generated texture files or Babylon DynamicTexture/canvas textures with brush/noise/pastel strokes. The result should look intentionally illustrated, not plain plastic.
 
-### 6. Motion/effects
+## Curved board-game path
 
-Add simple time-based visual motion inside the render loop:
+The internal simulation may remain grid-based. The visual path must change:
 
-- idle bob for puppy mascots/towers;
-- bounce/wobble for blobs;
-- sparkle/coin pulse around core;
-- visible attack/kill pop markers if available.
+- render a smooth, thick, golden curved ribbon from spawn lanes to the crystal core;
+- add rounded stepping stones / board-game dots along the curve;
+- hide or de-emphasize visible square path tiles so the user no longer sees a boring square grid as the main path;
+- build placement cells can remain subtly visible, but terrain should not scream “debug grid.”
 
-This is important: static high-res primitives are why the scene feels wrong.
+## Animations/effects
 
-## Acceptance checklist before finishing
+Add visible game feedback:
+
+- turret projectile/bolt animation from tower/guard to nearby raider or along lane when combat markers appear;
+- hit flash/star burst on enemies;
+- kill coin pop animation (coin/star rises and fades);
+- core sparkle/pulse;
+- raider idle/move bounce.
+
+Use existing `combatMarkers` if possible and derive projectile visuals from marker/cell state. It is acceptable to create approximate arcade feedback if exact shooter-target mapping is not in state yet.
+
+## HUD/control constraints
+
+- Keep compact HUD from previous pass, but remove anything that makes it look low-res/cheap.
+- Build controls can stay bottom overlay but should not hide the board.
+- Preserve all interactions: Start Raid, Pause/Resume, Next Day, Restart, build selection, canvas place/remove, keyboard shortcuts.
+
+## Verification required before finishing
 
 Run:
 
@@ -110,14 +122,13 @@ npm run lint
 npm run build
 ```
 
-Then browser-smoke locally:
+Also run a local browser smoke when feasible:
 
-- first screen loads with `data-ui-pass="puppy-arcade-3d"`;
-- canvas appears intentionally pixel/chunky/arcade, not high-res crisp;
-- orthographic camera makes the board feel like a cute arcade diorama;
-- puppy and blob characters are big/readable/emotional center;
-- Start Raid changes to raid state;
-- raid blobs visibly bounce/wobble and remain readable;
-- console has no JS errors.
+- app marker is `toon-gltf-boardgame`;
+- the main WebGL canvas is high-resolution, not pixel-upscaled;
+- GLB assets are requested/loaded from `/assets/models/*.glb`;
+- first screen shows chibi GLTF puppy/tower/core assets, toon outlines, and a curved golden path;
+- Start Raid works;
+- raid screen shows blob GLTF enemies, projectile/hit/coin-pop effects, and no console errors.
 
-Report changed files and command results only after verification.
+Report changed files and exact command results. Do not commit or push.
