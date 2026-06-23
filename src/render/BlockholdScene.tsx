@@ -88,7 +88,7 @@ export function BlockholdScene() {
     const scene = new Scene(engine);
     scene.clearColor.set(0.12, 0.78, 1, 1);
 
-    const camera = new ArcRotateCamera('toy-camera', -0.78, 0.94, 16, new Vector3(0, 0.15, 0.92), scene);
+    const camera = new ArcRotateCamera('toy-camera', -0.78, 0.94, 16, new Vector3(0, 0.18, 1.18), scene);
     camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
     camera.attachControl(canvas, true);
     camera.lowerBetaLimit = 0.82;
@@ -100,7 +100,7 @@ export function BlockholdScene() {
 
     const updateOrthoCamera = () => {
       const aspect = Math.max(0.6, engine.getRenderWidth() / Math.max(1, engine.getRenderHeight()));
-      const vertical = 6.25;
+      const vertical = 6.15;
       camera.orthoTop = vertical;
       camera.orthoBottom = -vertical;
       camera.orthoLeft = -vertical * aspect;
@@ -186,6 +186,8 @@ export function BlockholdScene() {
       kill: mat(scene, 'coin-pop', '#facc15', '#b45309'),
       coreHit: mat(scene, 'core-hit-pop', '#ff5b5b', '#9f1239'),
       shadow: mat(scene, 'soft-shadow', '#2f261d', '#000000', 0.23),
+      heroSpotlight: mat(scene, 'hero-spotlight', '#fff4a8', '#ffd84d', 0.34),
+      enemySpotlight: mat(scene, 'enemy-spotlight', '#ff6f61', '#8b1f17', 0.28),
     };
 
     const previewMaterials: Record<BlockType, StandardMaterial> = {
@@ -408,13 +410,19 @@ export function BlockholdScene() {
 
     function drawBlob(live: Set<string>, id: string, kind: RaiderKind, x: number, z: number, hp: number, maxHp: number) {
       const spec = {
-        grunt: { body: 1.14, y: 0.74, material: materials.grunt },
-        runner: { body: 1.04, y: 0.68, material: materials.runner },
-        brute: { body: 1.42, y: 0.9, material: materials.brute },
+        grunt: { body: 1.22, y: 0.76, material: materials.grunt, scale: 1.12 },
+        runner: { body: 1.12, y: 0.7, material: materials.runner, scale: 1.04 },
+        brute: { body: 1.52, y: 0.92, material: materials.brute, scale: 1.24 },
       }[kind];
       const t = performance.now() / 145 + x * 0.7 + z * 1.3;
       const bounce = Math.abs(Math.sin(t)) * (kind === 'runner' ? 0.2 : 0.13);
       const wobble = Math.sin(t) * 0.13;
+      liveCylinder(live, `${id}-danger-ring`, spec.body * 1.12, 0.026, cellToVec(x, z, 0.23), materials.enemySpotlight, 18);
+      if (drawAsset(live, kind, id, cellToVec(x, z, 0.24), spec.scale, Math.sin(t * 0.35) * 0.18, bounce * 0.45)) {
+        liveBox(live, `${id}-hp-back`, 0.84, 0.08, 0.11, cellToVec(x, z, 1.48 + bounce * 0.45), materials.hpBack);
+        liveBox(live, `${id}-hp`, Math.max(0.1, 0.8 * (hp / maxHp)), 0.09, 0.12, cellToVec(x, z, 1.56 + bounce * 0.45), materials.hp);
+        return;
+      }
       const ufoScale = kind === 'brute' ? 0.68 : kind === 'runner' ? 0.5 : 0.56;
       if (drawAsset(live, 'kenneyUfo', `${id}-kenney-ufo`, cellToVec(x, z, 0.78), ufoScale, Math.sin(t * 0.35) * 0.18, bounce * 0.55)) {
         liveCylinder(live, `${id}-shadow`, spec.body * (1.05 + bounce * 0.12), 0.025, cellToVec(x, z, 0.2), materials.shadow, 14);
@@ -422,11 +430,6 @@ export function BlockholdScene() {
         if (kind === 'brute') drawAsset(live, 'kenneyCannon', `${id}-brute-weapon`, cellToVec(x, z - 0.12, 1), 0.42, Math.PI, bounce * 0.55);
         liveBox(live, `${id}-hp-back`, 0.76, 0.07, 0.1, cellToVec(x, z, 1.62 + bounce * 0.55), materials.hpBack);
         liveBox(live, `${id}-hp`, Math.max(0.1, 0.72 * (hp / maxHp)), 0.08, 0.11, cellToVec(x, z, 1.69 + bounce * 0.55), materials.hp);
-        return;
-      }
-      if (drawAsset(live, kind, id, cellToVec(x, z, 0.18), kind === 'brute' ? 1.05 : 0.95, Math.sin(t * 0.35) * 0.18, bounce * 0.45)) {
-        liveBox(live, `${id}-hp-back`, 0.76, 0.07, 0.1, cellToVec(x, z, 1.42 + bounce * 0.45), materials.hpBack);
-        liveBox(live, `${id}-hp`, Math.max(0.1, 0.72 * (hp / maxHp)), 0.08, 0.11, cellToVec(x, z, 1.49 + bounce * 0.45), materials.hp);
         return;
       }
       liveCylinder(live, `${id}-shadow`, spec.body * (1.15 + bounce * 0.18), 0.025, cellToVec(x, z, 0.12), materials.shadow, 14);
@@ -543,11 +546,11 @@ export function BlockholdScene() {
         const path = curvedLanePoints(lane);
         const id = `curved-path-${lane}`;
         live.add(id);
-        tube(id, path, active ? 0.28 : 0.18, active ? materials.sand : forecast ? materials.forecast : materials.sandEdge, active ? 22 : 16);
-        const stones = active ? 9 : 5;
+        tube(id, path, active ? 0.14 : 0.045, active ? materials.sand : forecast ? materials.forecast : materials.sandEdge, active ? 16 : 8);
+        const stones = active ? 6 : 2;
         for (let index = 0; index < stones; index += 1) {
           const point = samplePath(path, (index + 0.4) / stones);
-          const stone = liveCylinder(live, `path-stone-${lane}-${index}`, active ? 0.42 : 0.28, 0.08, point.add(new Vector3(0, 0.06, 0)), active ? materials.pathPebble : materials.sand, 18);
+          const stone = liveCylinder(live, `path-stone-${lane}-${index}`, active ? 0.26 : 0.12, 0.045, point.add(new Vector3(0, 0.06, 0)), active ? materials.pathPebble : materials.sand, 12);
           stone.scaling.z = 0.72;
           stone.rotation.y = index * 0.63;
         }
@@ -619,8 +622,16 @@ export function BlockholdScene() {
         liveBox(live, `torch-post-${index}`, 0.13, 0.72, 0.13, cellToVec(x, z, 0.55), materials.wood);
         liveSphere(live, `torch-flame-${index}`, 0.22, cellToVec(x, z, 1), materials.torch, 8);
       });
-      [[4.25, 7.15], [6.55, 6.85], [4.15, 8.85]].forEach(([x, z], index) => drawPuppy(live, `decor-puppy-${index}`, x, z, 0.18, index === 2 ? 1.18 : 0.94, 1));
-      [[1.25, 4.15], [8.8, 6.9], [9.55, 9.1]].forEach(([x, z], index) => drawTowerPuppy(live, `decor-tower-${index}`, x, z));
+      [[1.25, 4.15], [9.55, 9.1]].forEach(([x, z], index) => drawTowerPuppy(live, `decor-tower-${index}`, x, z));
+    }
+
+    function drawHeroFocus(live: Set<string>, x: number, z: number, scale = 2.08) {
+      const bob = Math.sin(performance.now() / 220) * 0.05;
+      liveCylinder(live, 'hero-focus-ring', 1.95, 0.04, cellToVec(x, z, 0.42), materials.heroSpotlight, 28);
+      liveCylinder(live, 'hero-focus-shadow', 1.55, 0.026, cellToVec(x, z, 0.44), materials.shadow, 18);
+      liveBox(live, 'hero-focus-banner-pole', 0.07, 1.08, 0.07, cellToVec(x - 0.72, z + 0.16, 1.02 + bob * 0.35), materials.wood);
+      liveBox(live, 'hero-focus-banner', 0.5, 0.3, 0.06, cellToVec(x - 0.48, z + 0.12, 1.35 + bob * 0.35), materials.blueLight);
+      drawPuppy(live, 'hero-focus-puppy', x, z, 0.36, scale, 1);
     }
 
     function drawCore(live: Set<string>, x: number, z: number) {
@@ -630,7 +641,7 @@ export function BlockholdScene() {
           const bob = Math.sin(performance.now() / 180 + index) * 0.16;
           drawSparkle(live, `core-gltf-twinkle-${index}`, x + dx, z + dz, y + bob, index % 2 ? materials.crystal : materials.sparkle);
         });
-        drawPuppy(live, 'core-mascot', x - 1.16, z - 0.58, 0.24, 1.68, 1);
+        drawPuppy(live, 'core-mascot', x - 1.16, z - 0.58, 0.24, 1.12, 1);
         return;
       }
       liveBox(live, 'core-plaza', 2, 0.2, 2, cellToVec(x, z, 0.22), materials.stone);
@@ -655,7 +666,7 @@ export function BlockholdScene() {
         const pulse = Math.sin(performance.now() / 180 + index) * 0.16;
         drawSparkle(live, `core-twinkle-${index}`, x + dx, z + dz, y + pulse, index % 2 ? materials.crystal : materials.sparkle);
       });
-      drawPuppy(live, 'core-mascot', x - 1.38, z - 0.62, 0.18, 1.26, 1);
+      drawPuppy(live, 'core-mascot', x - 1.38, z - 0.62, 0.18, 1.12, 1);
     }
 
     function isPathCell(x: number, z: number, dangerLane: number) {
@@ -716,15 +727,20 @@ export function BlockholdScene() {
         liveBox(live, `spawn-flag-post-${lane}`, 0.06, 0.74, 0.06, cellToVec(lane - 0.31, 0.22, 0.88), materials.wood);
         liveBox(live, `spawn-flag-${lane}`, 0.33, 0.2, 0.05, cellToVec(lane - 0.15, 0.2, 1.18), materials.blueLight);
         if (s.phase === 'build' && lane === forecastLane) {
-          [0, 1, 2].forEach((offset) => {
+          (['grunt', 'runner', 'brute'] as RaiderKind[]).forEach((kind, offset) => {
             const bob = Math.sin(performance.now() / 210 + offset) * 0.05;
-            drawAsset(live, 'kenneyUfo', `forecast-ufo-${offset}`, cellToVec(lane + (offset - 1) * 0.38, 0.04 - offset * 0.5, 1.02 + offset * 0.06), 0.68 + offset * 0.08, Math.PI + offset * 0.2, bob);
+            const scale = kind === 'brute' ? 0.88 : kind === 'runner' ? 0.72 : 0.78;
+            const x = lane + (offset - 1) * 0.42;
+            const z = 0.04 - offset * 0.5;
+            liveCylinder(live, `forecast-threat-ring-${offset}`, 0.86 + offset * 0.1, 0.026, cellToVec(x, z, 0.36), materials.enemySpotlight, 18);
+            if (!drawAsset(live, kind, `forecast-blob-${offset}`, cellToVec(x, z, 0.36), scale, Math.PI + offset * 0.2, bob)) {
+              drawAsset(live, 'kenneyUfo', `forecast-ufo-${offset}`, cellToVec(x, z, 1.02 + offset * 0.06), 0.68 + offset * 0.08, Math.PI + offset * 0.2, bob);
+            }
           });
         }
       });
 
       drawDecor(live);
-      drawPuppy(live, 'hero-frontline-puppy', 8.15, 5.55, 0.34, 1.88, 1);
 
       if (s.phase === 'build' && hoverCell) {
         const occupied = Boolean(s.blocks[`${hoverCell.x},${hoverCell.z}`]);
@@ -734,6 +750,7 @@ export function BlockholdScene() {
       }
 
       drawCore(live, s.core.x, s.core.z);
+      drawHeroFocus(live, 8.35, 6.45, 1.72);
 
       Object.entries(s.blocks).forEach(([k, b]) => {
         const [x, z] = k.split(',').map(Number);
@@ -790,7 +807,7 @@ export function BlockholdScene() {
         camera.alpha = -0.78;
         camera.beta = 0.94;
         camera.radius = 16;
-        camera.target = new Vector3(0, 0.15, 0.92);
+        camera.target = new Vector3(0, 0.18, 1.18);
         updateOrthoCamera();
       }
       if (e.code === 'Space') api().togglePause();
