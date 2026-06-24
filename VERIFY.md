@@ -1,11 +1,8 @@
-# VERIFY.md — Visual QA Gate
+# VERIFY.md - 2D Visual QA Gate
 
-This project is not allowed to call a visual game-art pass “done” from build/lint alone.
-The user’s latest correction is acceptance-critical: a screenshot must read as a real game in the first 3 seconds.
+This project is not allowed to call a visual game pass done from build/lint alone. A screenshot must read as an original 2D side-scrolling action RPG in the first 3 seconds.
 
-## Required command gates
-
-Run these before every commit/push that changes gameplay, rendering, UI, or art direction:
+## Required Command Gates
 
 ```bash
 npm run generate:assets
@@ -18,18 +15,16 @@ npm run build
 For visible changes, also run a local browser smoke test:
 
 - open the app in a browser;
-- verify the main marker is present;
-- verify the canvas is high-resolution, not pixel-upscaled;
-- verify GLB/model assets load with 200 responses when model assets are used;
-- click `Start Raid`;
-- verify an observable state change and no fatal console errors;
-- capture or inspect at least one first-screen screenshot and one raid-state screenshot.
+- verify `data-ui-pass="moonleaf-2d-action-rpg"`;
+- verify Pixi canvas `data-game-canvas="moonleaf-2d"`;
+- verify Start or keyboard movement changes game state;
+- verify attack damages an enemy and shows hit feedback;
+- verify console errors are 0;
+- inspect first-screen and combat screenshots.
 
-## First-3-seconds visual scorecard
+## First-3-Seconds Visual Scorecard
 
-A visual pass fails if any criterion scores `0`. Do not ship a visual pass that fails this gate; pick the weakest criterion and iterate again.
-
-Score each item:
+A visual pass fails if any criterion scores `0`.
 
 - `0` = fails / unreadable / looks like a debug toy or web dashboard
 - `1` = partially readable but still weak
@@ -37,34 +32,32 @@ Score each item:
 
 | # | Criterion | Required evidence |
 |---|---|---|
-| 1 | First 3 seconds: is the game genre obvious? | A fresh viewer can tell this is a tower-defense / build-to-survive game from the first screen. |
-| 2 | Does the character read as a character? | Defender/hero has a strong silhouette, face/body identity, scale, and readable role. |
-| 3 | Does the enemy read as an enemy? | Enemy has a distinct silhouette, face/threat identity, lane position, and readable movement/combat role. |
-| 4 | Does the map read as a board/stage? | The scene looks like an authored play space, not a debug grid, random toy pile, or SaaS illustration. |
-| 5 | Does the UI read as a game HUD? | HUD communicates wave/core/build/action state and does not look like a web admin dashboard. |
-| 6 | Would a screenshot alone make someone want to play? | One screenshot has a clear fantasy, charm, action promise, and polish hook. |
+| 1 | First 3 seconds: is the game genre obvious? | Side-view movement space, hero, enemies, platform field, and action HUD are visible immediately. |
+| 2 | Does the hero read as a cute playable character? | Hero has face/body/silhouette, readable weapon/role, and enough scale. |
+| 3 | Does the enemy read as an enemy? | At least one enemy is visible with distinct face/threat identity and HP/readability. |
+| 4 | Does the stage read as a side-scrolling field? | Forest village/field, platforms, ground, depth, and traversal path are clear. |
+| 5 | Does the UI read as a compact game HUD? | HP/MP/EXP/level/objective are compact overlays, not web dashboard slabs. |
+| 6 | Would a screenshot alone make someone want to play? | One screenshot has charm, action promise, readable fantasy, and polish hook. |
 
-## Pass thresholds
+## Pass Thresholds
 
-- **Hard fail:** any item is `0`.
-- **Minimum pass:** all items >= `1` and total >= `9 / 12`.
-- **Ship-quality target:** all items >= `1`, total >= `10 / 12`, and item 6 >= `2`.
+- Hard fail: any item is `0`.
+- Minimum pass: all items >= `1` and total >= `9 / 12`.
+- Ship-quality target: all items >= `1`, total >= `10 / 12`, and item 6 >= `2`.
 
-## Visual QA report format
-
-Every visual iteration should report:
+## Visual QA Report Format
 
 ```yaml
 visual_qa:
   url_or_local_preview: ""
   screenshots:
     first_screen: ""
-    raid_state: ""
+    combat_state: ""
   scores:
     genre_first_3_seconds: 0
-    character_reads_as_character: 0
+    hero_reads_as_character: 0
     enemy_reads_as_enemy: 0
-    map_reads_as_board_stage: 0
+    stage_reads_as_side_scroller: 0
     ui_reads_as_game_hud: 0
     screenshot_makes_you_want_to_play: 0
   total: 0
@@ -79,15 +72,15 @@ visual_qa:
     build: ""
   browser_results:
     console_errors: 0
-    start_raid_verified: false
-    canvas_high_resolution: false
-    model_assets_loaded: false
+    canvas_exists: false
+    start_or_keyboard_verified: false
+    attack_damages_enemy: false
 ```
 
-## Non-negotiables learned from failed passes
+## Non-Negotiables
 
-- Do not improvise art direction from procedural shapes and random colors.
-- Do not lower resolution or add pixel/crisp scaling unless the user explicitly asks for pixel art.
-- Do not claim “GLTF asset pass” unless actual `.glb`/`.gltf` files exist and the browser loads them.
-- Do not let panels hide the board or make the project look like a SaaS dashboard.
-- Do not trust the implementer’s self-review. A separate verifier or Hermes browser inspection must score the screenshot.
+- No Babylon, GLB, Kenney, or 3D tower-defense leftovers.
+- No copied MapleStory assets, names, maps, mobs, UI, or copyrighted designs.
+- No landing page in place of the game.
+- No giant dashboard panels hiding the stage.
+- No claiming done without static gates and browser smoke for visual changes.

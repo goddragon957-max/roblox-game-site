@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-06-24T05:16:51.476Z",
+  "direction": "original 2D side-scrolling action RPG",
+  "renderer": "Pixi.js shape/vector sprites",
+  "copyrightNote": "All primary game visuals are drawn from original vector/canvas primitives in src/render/PixiGame.tsx.",
+  "palette": {
+    "leaf": "#3f8f5f",
+    "sky": "#b9ecff",
+    "moonGold": "#ffd15c",
+    "ember": "#ff7d66",
+    "ink": "#233040"
+  }
+}

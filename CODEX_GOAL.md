@@ -1,126 +1,49 @@
-# CODEX GOAL — Visual Recovery Loop With First-3-Seconds Gate
+# CODEX GOAL - Original 2D Side-Scrolling RPG Slice
 
 Repo: `/home/sy/projects/roblox-game-site`
 
-Latest user feedback, acceptance-critical:
+Acceptance-critical direction: the previous Babylon/3D tower-defense prototype was rejected and preserved as tag `failed-3d-blockhold-31c83e3`. Rebuild forward as a 2D side-scrolling action RPG inspired by the feel of classic Korean side-scrolling MMORPGs without copying MapleStory assets, names, maps, mobs, UI, or copyrighted designs.
 
-> “넌 눈이 없구나 해상도 너무 떨어져 구려보여 너무 구리다 Blender/GLTF 캐릭터 에셋, 손그림 스타일 텍스처, toon outline shader, projectile / hit / coin pop 애니메이션, 타일을 정사각 격자 말고 더 곡선형/보드게임형 path로 교체 이거 까지 해보자 go 모드로”
->
-> “진짜 개 끔찍해 너 디자인 감각이 아에 없는거 같아”
->
-> “첫 3초 안에 게임 장르가 보이는가? 캐릭터가 캐릭터처럼 보이는가? 적이 적처럼 보이는가? 맵이 보드/스테이지처럼 보이는가? UI가 웹앱이 아니라 게임 HUD인가? 스샷 한 장만 봐도 플레이하고 싶은가?”
+## Goal
 
-The current visuals are **not accepted** just because GLB files load or tests pass. Every future visual pass must read `VERIFY.md` and satisfy the first-3-seconds scorecard. Any score of `0` is a hard fail and should drive the next iteration.
+Ship a playable first slice, not a landing page:
 
-Interpretation:
+- side-view forest village/field;
+- cute readable hero;
+- platforms/terrain;
+- WASD/arrow movement;
+- jump;
+- attack;
+- at least 3 enemies;
+- hit effects and damage numbers;
+- HP/MP/EXP/level HUD;
+- quest/objective;
+- coins or pickups;
+- death/respawn or win/progress feedback.
 
-The previous low-res arcade pass was wrong. It made the game look cheap. Do **not** pixelate or downscale the canvas. The goal now is a high-quality stylized 3D game-art pass:
+## Technical Direction
 
-- crisp/high-resolution rendering;
-- actual GLTF/GLB game assets in the repo;
-- hand-painted/toon material feel;
-- toon outline shader/effect;
-- projectile, hit, coin-pop animations;
-- a curved board-game style path instead of square-grid visual tiles.
+- Vite + React + TypeScript + Zustand.
+- Pixi.js renders the game scene.
+- React renders the compact HUD overlay.
+- Assets must be original vector/canvas/Pixi shapes or generated original 2D descriptors.
+- `generate:assets` may be a no-op or generate original 2D sprite metadata.
+- `verify:visual` must validate 2D markers/assets and no Babylon/Kenney/GLB/tower-defense leftovers.
 
-## Hard no-go list
+## Visual QA
 
-- No pixelated/canvas downscaling. Remove/disable `engine.setHardwareScalingLevel(2.75)` and CSS `image-rendering: crisp-edges/pixelated` from the main WebGL canvas.
-- No claiming GLTF assets without actual `.glb` or `.gltf` files committed under the project.
-- No tiny primitive-only puppy/blob characters as the primary look.
-- No square grid path as the visible dominant path. The simulation can still use grid cells internally, but the rendered path should look like a smooth board-game ribbon.
-- No giant HUD/dashboard panels hiding the board.
-- No committing or pushing; Hermes will verify and ship.
+The first 3 seconds must communicate:
 
-## Tooling constraints
+- genre;
+- playable character;
+- enemy;
+- side-scrolling stage;
+- compact game HUD;
+- screenshot desire.
 
-Check whether `blender` is available. If Blender is available, use a headless Blender Python script to generate/export GLB assets.
+StyleSeed applies to HUD and UI: one coherent accent system, compact overlay, no dashboard slabs, no generic web landing composition.
 
-If Blender is NOT available, do **not** stop. Create a local asset-generation script that directly writes GLB files using Node or Python. The output must still be real `.glb` files loaded by Babylon. Procedural GLB generation is acceptable if it produces stylized chibi assets with multiple meshes/materials.
-
-## Required files / assets
-
-Create a durable asset pipeline, for example:
-
-- `scripts/generate-gltf-assets.mjs` or `scripts/generate_gltf_assets.py`
-- `public/assets/models/puppy_guard.glb`
-- `public/assets/models/blob_grunt.glb`
-- `public/assets/models/blob_runner.glb`
-- `public/assets/models/blob_brute.glb`
-- `public/assets/models/pup_tower.glb`
-- `public/assets/models/crystal_core.glb`
-- optional texture files under `public/assets/textures/`
-- a short `docs/visual-targets/toon-gltf-asset-pass.md` documenting the asset approach and how to regenerate
-
-The assets should be original and simple but visibly more game-like than raw scene primitives:
-
-- Puppy: chibi head/body, big eyes, ears, helmet/scarf/shield, cute silhouette.
-- Blobs: rounded pastel slime bodies, eyes, mouth/shine/horns; separate color variants for grunt/runner/brute.
-- Tower: chunky wooden puppy tower with large bolt cannon/flag.
-- Core: large heart/crystal shrine.
-
-## Babylon integration
-
-Install/load any required Babylon loader dependency if missing, likely:
-
-```bash
-npm install @babylonjs/loaders
-```
-
-Then in `src/render/BlockholdScene.tsx` or a helper module:
-
-- import `@babylonjs/loaders/glTF`;
-- load GLB assets once with `SceneLoader.ImportMeshAsync` / `AssetsManager` or equivalent;
-- clone/instance loaded asset roots into board positions;
-- keep procedural fallback if loading fails, but the normal path must use GLB assets;
-- add a visible loading-safe path so the scene does not crash before assets finish.
-
-Add a smoke-testable marker such as:
-
-```tsx
-data-ui-pass="toon-gltf-boardgame"
-```
-
-## Rendering quality
-
-- Restore high-resolution rendering; no low-res pixel scaling.
-- Keep orthographic/isometric camera if it improves board readability, but make it crisp and polished.
-- Add toon outline effect:
-  - use Babylon edges renderer, mesh clone outline shell, HighlightLayer, or a small custom ShaderMaterial; choose the simplest stable approach;
-  - outlines should be visible around characters/core/towers/blobs, not just terrain.
-- Use flat/toon materials with high saturation and soft shadows.
-- Add hand-painted texture feel via either generated texture files or Babylon DynamicTexture/canvas textures with brush/noise/pastel strokes. The result should look intentionally illustrated, not plain plastic.
-
-## Curved board-game path
-
-The internal simulation may remain grid-based. The visual path must change:
-
-- render a smooth, thick, golden curved ribbon from spawn lanes to the crystal core;
-- add rounded stepping stones / board-game dots along the curve;
-- hide or de-emphasize visible square path tiles so the user no longer sees a boring square grid as the main path;
-- build placement cells can remain subtly visible, but terrain should not scream “debug grid.”
-
-## Animations/effects
-
-Add visible game feedback:
-
-- turret projectile/bolt animation from tower/guard to nearby raider or along lane when combat markers appear;
-- hit flash/star burst on enemies;
-- kill coin pop animation (coin/star rises and fades);
-- core sparkle/pulse;
-- raider idle/move bounce.
-
-Use existing `combatMarkers` if possible and derive projectile visuals from marker/cell state. It is acceptable to create approximate arcade feedback if exact shooter-target mapping is not in state yet.
-
-## HUD/control constraints
-
-- Keep compact HUD from previous pass, but remove anything that makes it look low-res/cheap.
-- Build controls can stay bottom overlay but should not hide the board.
-- Preserve all interactions: Start Raid, Pause/Resume, Next Day, Restart, build selection, canvas place/remove, keyboard shortcuts.
-
-## Verification required before finishing
-
-Run:
+## Required Commands
 
 ```bash
 npm run generate:assets
@@ -130,13 +53,12 @@ npm run lint
 npm run build
 ```
 
-Also run a local browser smoke when feasible:
+Browser smoke when feasible:
 
-- app marker is `toon-gltf-boardgame`;
-- the main WebGL canvas is high-resolution, not pixel-upscaled;
-- GLB assets are requested/loaded from `/assets/models/*.glb`;
-- first screen shows chibi GLTF puppy/tower/core assets, toon outlines, and a curved golden path;
-- Start Raid works;
-- raid screen shows blob GLTF enemies, projectile/hit/coin-pop effects, and no console errors.
+- run Vite preview;
+- verify canvas exists;
+- verify Start/controls or keyboard interaction changes state;
+- verify attack damages enemy;
+- verify console errors 0.
 
-Report changed files and exact command results. Do not commit or push.
+Do not commit or push; Hermes will verify and ship.
