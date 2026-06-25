@@ -1,54 +1,60 @@
-# Moonleaf Trail Agent Brief
+# Orbit Bloom Agent Brief
 
 ## Current Direction
 
-Rebuild and maintain this project as an original 2D side-scrolling action RPG slice. The preserved rejected 3D tower-defense prototype is tagged `failed-3d-blockhold-31c83e3`; do not revive Babylon, GLB, Kenney, tower-defense, or 3D-specific code/assets.
+This project has been reset from the previous Moonleaf/Roblox game direction into **Orbit Bloom**, a space-focus app where focused time births planets and grows a personal galaxy.
 
-Stack: Vite + React + TypeScript + Zustand + Pixi.js.
+Preserved backup: `pre-orbit-bloom-rebuild-20260625-163721`.
+
+## Stack
+
+- Vite + React + TypeScript
+- Zustand for product state
+- Three.js for the animated planet/galaxy scene
+- Tailwind/shadcn-style design judgment, implemented with local semantic CSS for this slice
+- Lucide Icons available for UI icons
 
 ## Product Requirements
 
-- First screen is playable game, not a landing page.
-- Side-view forest village/field with authored terrain and platforms.
-- Cute readable original hero.
-- At least three original enemies.
-- WASD/arrow movement, jump, and attack.
-- Hit effects, damage numbers, pickups/coins.
-- HP/MP/EXP/level HUD.
-- Quest/objective progress.
-- Death/respawn or win/progress feedback.
-- Use only original vector/canvas/Pixi shapes or original generated 2D assets.
-- No copyrighted game assets, names, mobs, maps, UI, or copied silhouettes.
+- First screen should feel like a premium mobile focus app, not a generic landing page.
+- The central experience is visual: a living planet, rings, stars, comets, and orbiting born planets.
+- Focus progress must be real state, not decorative:
+  - Start/pause toggles focus session.
+  - Progress increases over time while focusing.
+  - Plus/add button simulates a focus boost.
+  - Completion births the next planet and appends it to the galaxy.
+- The app should clearly communicate: “집중하면 행성이 태어나고 은하가 성장한다.”
+- No copied assets from Threads, Orbis, or any third-party app. Build original visuals procedurally.
 
-## StyleSeed HUD
+## StyleSeed UI Standard
 
-Apply StyleSeed judgment to UI changes:
+Use StyleSeed as the default design judgment layer for this project.
+Read https://styleseed-demo.vercel.app/llms.txt before major UI changes.
+Apply StyleSeed rules to every screen, empty/loading/success state, and motion detail.
 
-- compact game HUD overlay;
-- one coherent leaf/gold accent system;
-- semantic CSS tokens;
-- no web dashboard slabs;
-- no giant panels hiding the action;
-- touch targets at least 44px where buttons appear;
-- controls and game state must be wired, not decorative.
+Golden rules:
+- Premium mobile shell first; no dashboard slabs.
+- One coherent cosmic accent system: warm gold + violet/cyan support.
+- Use semantic CSS tokens and avoid random hardcoded component colors when expanding.
+- Content belongs in glass/cards/surfaces with clear hierarchy.
+- Buttons must be at least 44×44px and visibly wired to state.
+- Motion should reinforce focus/growth, not distract.
 
 ## Verification Per Slice
 
 ```bash
-npm run generate:assets
-npm run verify:visual
 npm run test
 npm run lint
 npm run build
 ```
 
-For visible changes, run a local browser smoke:
+For visual changes, run a local browser smoke:
 
-- marker `data-ui-pass="moonleaf-2d-action-rpg"` exists;
-- Pixi canvas marker `data-game-canvas="moonleaf-2d"` exists;
-- first 3 seconds show genre, hero, enemy, stage, HUD, and screenshot desire;
-- Start or keyboard input changes state;
-- attack damages an enemy and shows feedback;
-- console errors are 0.
+- marker `data-ui-pass="orbit-bloom-focus-app"` exists;
+- Three.js canvas exists;
+- `window.__orbitBloomScene.ready === true`;
+- Start focus changes progress/focusing state;
+- Add focus can increase births/moons;
+- console errors are zero.
 
-Do not commit or push unless explicitly asked.
+Do not revive Moonleaf/Pixi/game code unless the user explicitly asks to restore the backup tag.

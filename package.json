@@ -1,1 +1,31 @@
-{"type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"tsc --noEmit && vite build","test":"vitest run","lint":"tsc --noEmit","generate:assets":"node scripts/generate-2d-assets.mjs","verify:visual":"node scripts/visual-qa-scorecard.mjs"},"dependencies":{"@vitejs/plugin-react":"latest","autoprefixer":"latest","clsx":"latest","lucide-react":"latest","pixi.js":"^8.19.0","postcss":"latest","react":"latest","react-dom":"latest","tailwind-merge":"latest","tailwindcss":"^3.4.17","typescript":"latest","vite":"latest","zustand":"latest"},"devDependencies":{"@types/react":"latest","@types/react-dom":"latest","jsdom":"latest","vitest":"latest"}}
+{
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/three": "^0.184.1",
+    "@vitejs/plugin-react": "latest",
+    "autoprefixer": "latest",
+    "clsx": "latest",
+    "lucide-react": "latest",
+    "postcss": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwind-merge": "latest",
+    "tailwindcss": "^3.4.17",
+    "three": "^0.184.0",
+    "typescript": "latest",
+    "vite": "latest",
+    "zustand": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "jsdom": "latest",
+    "vitest": "latest"
+  }
+}

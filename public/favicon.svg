@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#b9ecff"/>
-  <circle cx="32" cy="34" r="22" fill="#3f8f5f"/>
-  <path d="M19 41C20 27 30 17 46 15c-1 17-11 27-27 26Z" fill="#83d66a" stroke="#233040" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M24 37c8-5 13-10 18-17" fill="none" stroke="#233040" stroke-width="4" stroke-linecap="round"/>
-  <path d="M38 42 48 52" stroke="#ffd15c" stroke-width="7" stroke-linecap="round"/>
-  <path d="M36 39 51 54" stroke="#233040" stroke-width="3" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="18" fill="#05050a"/><circle cx="32" cy="32" r="13" fill="#f7d889"/><ellipse cx="32" cy="32" rx="27" ry="8" fill="none" stroke="#fff0be" stroke-width="4" transform="rotate(-14 32 32)"/><circle cx="47" cy="18" r="3" fill="#97f7ff"/></svg>

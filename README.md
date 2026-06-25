@@ -1,44 +1,31 @@
-# Moonleaf Trail
+# Orbit Bloom
 
-Original 2D side-scrolling action RPG prototype built with Vite, React, TypeScript, Zustand, and Pixi.js.
+Orbit Bloom is a new space-focus app prototype replacing the previous Moonleaf/Roblox game direction.
 
-The first playable slice is a side-view forest village/field: a cute readable hero, platforms and terrain, three original enemies, WASD/arrow movement, jump, attack, hit sparks, damage numbers, HP/MP/EXP/level HUD, quest progress, coins/pickups, win feedback, and death/respawn.
+## Product concept
+
+Focus time becomes gravity. When the user protects a focus session, a planet is born; repeated sessions grow a personal galaxy. The first slice is a polished mobile-style web prototype with a real Three.js scene and interactive focus state.
+
+## Current slice
+
+- Vite + React + TypeScript + Zustand + Three.js.
+- Mobile app shell with dark cosmic StyleSeed-inspired UI.
+- Saturn-like procedural planet, rings, starfield, comets, orbiting born planets, and animated energy glow.
+- Focus progression state: start/pause, add focus burst, automatic birth completion, galaxy list growth.
+- Browser state markers for smoke testing: `data-ui-pass="orbit-bloom-focus-app"` and `window.__orbitBloomScene`.
 
 ## Run
 
 ```bash
 npm install
+npm run test
+npm run lint
+npm run build
 npm run dev
-npm run generate:assets
-npm run verify:visual
-npm run test
-npm run lint
-npm run build
 ```
 
-## Controls
+Open the dev server URL and verify the focus button increases progress, the plus button can birth a new planet, and the console has no JavaScript errors.
 
-- A/D or Left/Right: move
-- W, Up, or Space: jump
-- J, K, or X: attack
-- Start Adventure button or any movement key begins play
+## Previous direction
 
-## Visual Direction
-
-Moonleaf Trail is inspired by the readable feel of classic Korean side-scrolling MMORPGs, but all names, characters, enemies, stage art, UI, and assets are original. Do not copy MapleStory assets, names, maps, mobs, UI, silhouettes, or copyrighted designs.
-
-The first three seconds must show the genre, hero, enemy, side-scrolling stage, compact game HUD, and screenshot appeal. The HUD follows StyleSeed as a compact game overlay with one leaf/gold accent system, not dashboard slabs.
-
-## Verification
-
-Run the static gates before handoff:
-
-```bash
-npm run generate:assets
-npm run verify:visual
-npm run test
-npm run lint
-npm run build
-```
-
-For visible changes, also browser-smoke `vite preview`: verify the canvas marker exists, keyboard or Start changes state, attack damages an enemy, and console errors are zero.
+The previous 2D side-scrolling RPG state was preserved with the git tag `pre-orbit-bloom-rebuild-20260625-163721` before this rebuild.

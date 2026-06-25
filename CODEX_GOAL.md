@@ -1,64 +1,39 @@
-# CODEX GOAL - Original 2D Side-Scrolling RPG Slice
+# Codex Goal — Orbit Bloom
 
-Repo: `/home/sy/projects/roblox-game-site`
-
-Acceptance-critical direction: the previous Babylon/3D tower-defense prototype was rejected and preserved as tag `failed-3d-blockhold-31c83e3`. Rebuild forward as a 2D side-scrolling action RPG inspired by the feel of classic Korean side-scrolling MMORPGs without copying MapleStory assets, names, maps, mobs, UI, or copyrighted designs.
+Rebuild this repo as **Orbit Bloom**, a premium space-focus app prototype.
 
 ## Goal
 
-Ship a playable first slice, not a landing page:
+Create a polished interactive mobile web prototype where focus time births planets and grows a personal galaxy.
 
-- side-view forest village/field;
-- cute readable hero;
-- platforms/terrain;
-- WASD/arrow movement;
-- jump;
-- attack;
-- at least 3 enemies;
-- hit effects and damage numbers;
-- HP/MP/EXP/level HUD;
-- quest/objective;
-- coins or pickups;
-- death/respawn or win/progress feedback.
+## Must-have behaviors
 
-## Technical Direction
+1. Start/pause focus session.
+2. Progress increases while focusing.
+3. Add/boost button increases progress and reward metrics.
+4. When progress completes, a planet birth animation/state transition occurs.
+5. Newly born planet appears in the user’s galaxy list and the Three.js scene.
+6. No old Moonleaf/Roblox/Pixi/game code remains in active source.
 
-- Vite + React + TypeScript + Zustand.
-- Pixi.js renders the game scene.
-- React renders the compact HUD overlay.
-- Assets must be original vector/canvas/Pixi shapes or generated original 2D descriptors.
-- `generate:assets` may be a no-op or generate original 2D sprite metadata.
-- `verify:visual` must validate 2D markers/assets and no Babylon/Kenney/GLB/tower-defense leftovers.
+## Visual target
 
-## Visual QA
+- Dark cosmic mobile shell.
+- Saturn-like procedural planet with rings.
+- Stars, orbiting planets/moons, comet trails, energy glow.
+- Premium Korean consumer app feel: calm, collectible, rewarding.
 
-The first 3 seconds must communicate:
+## Stack
 
-- genre;
-- playable character;
-- enemy;
-- side-scrolling stage;
-- compact game HUD;
-- screenshot desire.
+Vite + React + TypeScript + Zustand + Three.js. Keep StyleSeed UI principles in all UI work.
 
-StyleSeed applies to HUD and UI: one coherent accent system, compact overlay, no dashboard slabs, no generic web landing composition.
+## Verification
 
-## Required Commands
+Run:
 
 ```bash
-npm run generate:assets
-npm run verify:visual
 npm run test
 npm run lint
 npm run build
 ```
 
-Browser smoke when feasible:
-
-- run Vite preview;
-- verify canvas exists;
-- verify Start/controls or keyboard interaction changes state;
-- verify attack damages enemy;
-- verify console errors 0.
-
-Do not commit or push; Hermes will verify and ship.
+Then browser-smoke the app and verify `window.__orbitBloomScene` state changes after user interactions.
