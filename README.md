@@ -26,6 +26,34 @@ npm run dev
 
 Open the dev server URL and verify the focus button increases progress, the plus button can birth a new planet, and the console has no JavaScript errors.
 
+## Harness
+
+This project now has a contract-first game/project harness:
+
+```text
+docs/harness/config.md
+docs/harness/state.md
+docs/harness/contract.md
+docs/harness/handoff/
+docs/harness/feedback/
+docs/harness/gotchas/
+docs/agents/
+```
+
+Run the harness gate:
+
+```bash
+npm run verify:harness
+```
+
+Run the full local verification gate:
+
+```bash
+npm run verify
+```
+
+The harness loop is: contract → generator → handoff → evaluator → visual QA → feedback → next round or human approval.
+
 ## Previous direction
 
 The previous 2D side-scrolling RPG state was preserved with the git tag `pre-orbit-bloom-rebuild-20260625-163721` before this rebuild.

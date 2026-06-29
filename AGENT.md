@@ -40,12 +40,45 @@ Golden rules:
 - Buttons must be at least 44×44px and visibly wired to state.
 - Motion should reinforce focus/growth, not distract.
 
+## Harness Operating Contract
+
+This project now uses the repo-local game harness in `docs/harness/` plus agent role briefs in `docs/agents/`.
+
+Before any non-trivial implementation, read:
+
+- `docs/harness/config.md`
+- `docs/harness/state.md`
+- `docs/harness/contract.md`
+- latest `docs/harness/feedback/*.md` if present
+- the relevant role brief in `docs/agents/`
+
+The active loop is:
+
+```text
+contract → generator → handoff → evaluator → visual QA → feedback → next round / human approval
+```
+
+Non-negotiables:
+
+- Do not call work done from code review alone.
+- Do not report success without deterministic verification and browser/play evidence when behavior changed.
+- Do not revive Moonleaf/Roblox/Pixi/game code unless the user explicitly asks to restore the backup tag.
+- Do not replace the current Orbit Bloom direction, externally deploy, or push major direction changes without human approval.
+- Visual QA is a hard gate: first-screen/product readability must have no zero scores.
+
 ## Verification Per Slice
 
 ```bash
+npm run verify:harness
 npm run test
 npm run lint
 npm run build
+```
+
+Or run the combined gate:
+
+```bash
+npm run verify
 ```
 
 For visual changes, run a local browser smoke:
@@ -57,4 +90,4 @@ For visual changes, run a local browser smoke:
 - Add focus can increase births/moons;
 - console errors are zero.
 
-Do not revive Moonleaf/Pixi/game code unless the user explicitly asks to restore the backup tag.
+Every generator round must write `docs/harness/handoff/round-N-gen.md`. Every evaluator round must write `docs/harness/feedback/round-N-qa.md`.

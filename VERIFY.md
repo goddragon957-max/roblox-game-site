@@ -3,10 +3,27 @@
 ## Static gates
 
 ```bash
+npm run verify:harness
 npm run test
 npm run lint
 npm run build
 ```
+
+Combined gate:
+
+```bash
+npm run verify
+```
+
+## Harness evaluator output
+
+After each verified round, write `docs/harness/feedback/round-N-qa.md` with:
+
+- PASS / FAIL verdict.
+- Commands run and exact results.
+- Browser/play evidence.
+- Visual QA scorecard.
+- Failed criteria and fix prompt for the next generator round.
 
 ## Browser smoke
 

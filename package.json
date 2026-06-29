@@ -4,7 +4,9 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "verify:harness": "node scripts/harness-check.mjs",
+    "verify": "npm run verify:harness && npm run test && npm run lint && npm run build"
   },
   "dependencies": {
     "@types/three": "^0.184.1",
