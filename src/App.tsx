@@ -33,6 +33,14 @@ export default function App() {
 
   const progressPct = Math.round(progress * 100);
   const nextReward = Math.max(1, Math.round(currentPlanet.minutesRequired * (1 - progress)));
+  const visualProgress = Math.max(0.08, progress);
+  const sceneEnergyStyle = {
+    '--progress': visualProgress.toFixed(3),
+    '--progress-rotation': `${Math.round(visualProgress * 220)}deg`,
+    '--energy-opacity': (0.34 + visualProgress * 0.34).toFixed(3),
+    '--aura-warm': (0.12 + visualProgress * 0.2).toFixed(3),
+    '--aura-cyan': (0.08 + visualProgress * 0.2).toFixed(3)
+  } as React.CSSProperties;
 
   return (
     <main id="app" data-ui-pass="orbit-bloom-focus-app">
@@ -44,6 +52,12 @@ export default function App() {
           currentPlanet={currentPlanet}
           galaxyCount={galaxy.length}
         />
+        <div
+          className={`scene-energy ${isFocusing ? 'is-focusing' : ''}`}
+          style={sceneEnergyStyle}
+          aria-hidden="true"
+        />
+        <div className="birth-flare" key={births} aria-hidden="true" />
         <div className="grain" />
         <div className="ring-shine" />
         <div className="vignette" />
@@ -71,6 +85,7 @@ export default function App() {
               <span className="metric-star">✦</span>
               <b>{formatEnergy(energy)}</b>
             </div>
+            <p className="planet-promise">Focus energy is forming a new orbit</p>
           </div>
 
           <div className="glass-card">
