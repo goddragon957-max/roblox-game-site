@@ -8,6 +8,7 @@ const baseRequiredFiles = [
   'docs/harness/state.md',
   'docs/harness/contract.md',
   'docs/harness/pipeline-log.md',
+  'docs/harness/flutter-flame-harness-review.md',
   'docs/harness/gotchas/web-game-gotchas.md',
   'docs/harness/gotchas/orbit-bloom-gotchas.md',
   'docs/agents/game-harness-orchestrator-agent.md',
@@ -31,6 +32,8 @@ for (const file of baseRequiredFiles) requireFile(file);
 let currentRound = null;
 let lastVerdict = null;
 let status = null;
+let nextRole = null;
+let countedRoundArtifacts = 0;
 
 if (existsSync('docs/harness/state.md')) {
   const state = read('docs/harness/state.md');
@@ -46,6 +49,12 @@ if (existsSync('docs/harness/state.md')) {
   status = statusMatch?.[1] ?? null;
   if (status && !['running', 'paused', 'completed'].includes(status)) failures.push(`state has invalid status: ${status}`);
 
+  const nextRoleMatch = state.match(/next_role:\s*([a-z_]+)/);
+  nextRole = nextRoleMatch?.[1] ?? null;
+  if (nextRole && !['generator', 'evaluator', 'visual_qa', 'human_approval', 'orchestrator', 'completed'].includes(nextRole)) {
+    failures.push(`state has unknown next_role: ${nextRole}`);
+  }
+
   const verdictMatch = state.match(/last_verdict:\s*([a-z_]+)/);
   lastVerdict = verdictMatch?.[1] ?? null;
   if (lastVerdict && !['pending', 'pass', 'fail', 'blocked'].includes(lastVerdict)) {
@@ -54,9 +63,22 @@ if (existsSync('docs/harness/state.md')) {
 }
 
 if (currentRound) {
-  requireFile(`docs/harness/handoff/round-${currentRound}-gen.md`);
-  if (lastVerdict === 'pass' || lastVerdict === 'fail' || lastVerdict === 'blocked') {
-    requireFile(`docs/harness/feedback/round-${currentRound}-qa.md`);
+  const currentHandoff = `docs/harness/handoff/round-${currentRound}-gen.md`;
+  const currentFeedback = `docs/harness/feedback/round-${currentRound}-qa.md`;
+
+  if (nextRole === 'generator') {
+    // A freshly opened generator round should not require its own handoff yet.
+    if (currentRound > 1) {
+      requireFile(`docs/harness/feedback/round-${currentRound - 1}-qa.md`);
+      countedRoundArtifacts += 1;
+    }
+  } else if (nextRole === 'evaluator' || nextRole === 'visual_qa') {
+    requireFile(currentHandoff);
+    countedRoundArtifacts += 1;
+  } else if (lastVerdict === 'pass' || lastVerdict === 'fail' || lastVerdict === 'blocked' || status === 'completed') {
+    requireFile(currentHandoff);
+    requireFile(currentFeedback);
+    countedRoundArtifacts += 2;
   }
 }
 
@@ -118,5 +140,5 @@ if (failures.length) {
   process.exit(1);
 }
 
-const checkedFiles = baseRequiredFiles.length + (currentRound ? (lastVerdict === 'pending' ? 1 : 2) : 0);
-console.log(`harness-check passed: ${checkedFiles} required files, round ${currentRound ?? 'unknown'}, verdict ${lastVerdict ?? 'unknown'}, scripts/state/contract markers OK`);
+const checkedFiles = baseRequiredFiles.length + countedRoundArtifacts;
+console.log(`harness-check passed: ${checkedFiles} required files, round ${currentRound ?? 'unknown'}, next_role ${nextRole ?? 'unknown'}, verdict ${lastVerdict ?? 'unknown'}, scripts/state/contract markers OK`);

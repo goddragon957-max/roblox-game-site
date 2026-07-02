@@ -24,7 +24,7 @@ Preserved backup: `pre-orbit-bloom-rebuild-20260625-163721`.
   - Plus/add button simulates a focus boost.
   - Completion births the next planet and appends it to the galaxy.
 - The app should clearly communicate: “집중하면 행성이 태어나고 은하가 성장한다.”
-- No copied assets from Threads, Orbis, or any third-party app. Build original visuals procedurally.
+- No copied assets from Threads, Orbis, or any third-party app. Build original visuals procedurally or with explicitly approved assets.
 
 ## StyleSeed UI Standard
 
@@ -33,6 +33,7 @@ Read https://styleseed-demo.vercel.app/llms.txt before major UI changes.
 Apply StyleSeed rules to every screen, empty/loading/success state, and motion detail.
 
 Golden rules:
+
 - Premium mobile shell first; no dashboard slabs.
 - One coherent cosmic accent system: warm gold + violet/cyan support.
 - Use semantic CSS tokens and avoid random hardcoded component colors when expanding.
@@ -42,13 +43,16 @@ Golden rules:
 
 ## Harness Operating Contract
 
-This project now uses the repo-local game harness in `docs/harness/` plus agent role briefs in `docs/agents/`.
+This project uses the repo-local game harness in `docs/harness/` plus agent role briefs in `docs/agents/`.
 
 Before any non-trivial implementation, read:
 
 - `docs/harness/config.md`
 - `docs/harness/state.md`
 - `docs/harness/contract.md`
+- `docs/harness/flutter-flame-harness-review.md`
+- `docs/harness/gotchas/web-game-gotchas.md`
+- `docs/harness/gotchas/orbit-bloom-gotchas.md`
 - latest `docs/harness/feedback/*.md` if present
 - the relevant role brief in `docs/agents/`
 
@@ -62,9 +66,16 @@ Non-negotiables:
 
 - Do not call work done from code review alone.
 - Do not report success without deterministic verification and browser/play evidence when behavior changed.
+- Do not claim visual PASS without screenshot/rendered-output inspection.
 - Do not revive Moonleaf/Roblox/Pixi/game code unless the user explicitly asks to restore the backup tag.
 - Do not replace the current Orbit Bloom direction, externally deploy, or push major direction changes without human approval.
 - Visual QA is a hard gate: first-screen/product readability must have no zero scores.
+
+## Current Round 2 Goal
+
+Round 2 is visual-first. The next generator should make Orbit Bloom’s first screen unmistakably read as a premium cosmic focus/reward game-like app.
+
+See `CODEX_GOAL.md` for the exact work order.
 
 ## Verification Per Slice
 
@@ -88,6 +99,7 @@ For visual changes, run a local browser smoke:
 - `window.__orbitBloomScene.ready === true`;
 - Start focus changes progress/focusing state;
 - Add focus can increase births/moons;
-- console errors are zero.
+- console errors are zero;
+- screenshot/rendered output supports the visual QA score.
 
 Every generator round must write `docs/harness/handoff/round-N-gen.md`. Every evaluator round must write `docs/harness/feedback/round-N-qa.md`.

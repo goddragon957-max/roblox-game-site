@@ -14,9 +14,27 @@ product_type: game_like_focus_app
 primary_language: ko
 source_thread: discord/#로블록스-게임
 harness:
-  adopted_from: flutter-flame-harness review
   mode: contract_first_generator_evaluator
   strict_visual_gate: true
+  reviewed_reference:
+    title: "GeekNews 30918 — Flutter/Flame 게임 출시 하네스"
+    url: "https://news.hada.io/topic?id=30918"
+    github: "https://github.com/tjdrhs90/flutter-flame-harness"
+    reviewed_commit: "4f25f5d"
+    reviewed_version: "0.15.0"
+    reviewed_at_utc: "2026-07-02T07:18:47Z"
+  imported_patterns:
+    - contract_before_code
+    - generator_evaluator_split
+    - file_handoff_protocol
+    - run_code_see_app_then_judge
+    - gotchas_database
+    - human_approval_gate
+    - retrospective_after_loop
+  explicitly_not_adopting:
+    - Flutter/Flame-only stack
+    - code-drawn placeholder visuals as final quality
+    - store/ads pipeline before a strong playable/visual slice exists
   human_approval_required_for:
     - external_deploy
     - project_direction_change
@@ -38,5 +56,8 @@ visual_policy:
   reference_first: true
   asset_or_style_first: true
   first_three_seconds_scorecard_required: true
+  screenshot_required_for_visual_pass: true
+  dom_snapshot_never_enough_for_visual_pass: true
   no_static_landing_page: true
+  no_placeholder_procedural_final: true
 ```
