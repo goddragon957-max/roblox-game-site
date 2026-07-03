@@ -8,7 +8,7 @@ next_role: generator
 pause_reason: "awaiting_user_review_or_round_3_goal"
 max_rounds: 3
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-02T07:41:59Z"
+updated_at: "2026-07-03T06:46:47Z"
 resume_attempts: 0
 last_verified_at: "2026-07-02T07:41:59Z"
 last_verdict: pass
@@ -21,4 +21,5 @@ last_verdict: pass
 - Round 2 generator implemented the visual-first cosmic reward/world pass.
 - Round 2 evaluator passed deterministic gates, browser smoke, interaction checks, and screenshot-based visual QA: 12/12.
 - Next role is generator only after user review or a new Round 3 goal.
+- Instruction Integrity harness layer now applies to future worker/evaluator rounds.
 - Major project direction changes, external deploys, or replacing Orbit Bloom require human approval.

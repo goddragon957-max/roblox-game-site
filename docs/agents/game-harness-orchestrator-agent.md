@@ -13,6 +13,7 @@ Keep the Orbit Bloom game/project harness moving through contract-first executio
 - `docs/harness/config.md`
 - `docs/harness/state.md`
 - `docs/harness/contract.md`
+- `docs/harness/instruction-integrity.md`
 - `docs/harness/flutter-flame-harness-review.md`
 - `docs/harness/gotchas/*.md`
 - Latest `docs/harness/handoff/*.md`
@@ -27,6 +28,7 @@ Keep the Orbit Bloom game/project harness moving through contract-first executio
 5. Stop at human approval gates for external deploys or major direction changes.
 6. Convert reusable failures into gotchas or contract updates.
 7. Make sure visual PASS claims are backed by screenshot/rendered evidence, not just DOM markers.
+8. Make sure instruction-integrity claims are backed by read files, real artifacts, and command/browser output.
 
 ## Current Round
 

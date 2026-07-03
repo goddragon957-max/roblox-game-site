@@ -7,6 +7,7 @@ const baseRequiredFiles = [
   'docs/harness/config.md',
   'docs/harness/state.md',
   'docs/harness/contract.md',
+  'docs/harness/instruction-integrity.md',
   'docs/harness/pipeline-log.md',
   'docs/harness/flutter-flame-harness-review.md',
   'docs/harness/gotchas/web-game-gotchas.md',
@@ -89,6 +90,7 @@ if (existsSync('docs/harness/contract.md')) {
     '## Mandatory Hard Gates',
     '## Functional Criteria',
     '## Visual QA Scorecard',
+    'Instruction Integrity gate',
     'Generator Requirements',
     'Evaluator Requirements'
   ]) {
@@ -96,10 +98,23 @@ if (existsSync('docs/harness/contract.md')) {
   }
 }
 
+if (existsSync('docs/harness/instruction-integrity.md')) {
+  const integrity = read('docs/harness/instruction-integrity.md');
+  for (const marker of [
+    '## Priority and Injection Defense',
+    '## Required Worker Discipline',
+    '## Evaluator Rejection Rules',
+    '## Short Worker Checklist'
+  ]) {
+    if (!integrity.includes(marker)) failures.push(`instruction-integrity missing marker: ${marker}`);
+  }
+}
+
 if (existsSync('VERIFY.md')) {
   const verify = read('VERIFY.md');
   if (!verify.includes('npm run verify:harness')) failures.push('VERIFY.md must include npm run verify:harness');
   if (!verify.includes('Browser smoke')) failures.push('VERIFY.md must include Browser smoke section');
+  if (!verify.includes('Instruction Integrity gate')) failures.push('VERIFY.md must include Instruction Integrity gate section');
   if (!verify.includes('docs/harness/feedback/round-N-qa.md')) failures.push('VERIFY.md must require evaluator feedback output');
 }
 
@@ -108,13 +123,26 @@ if (existsSync('CODEX_GOAL.md')) {
   if (!codexGoal.includes('npm run verify:harness') && !codexGoal.includes('npm run verify')) {
     failures.push('CODEX_GOAL.md must include harness verification command');
   }
+  if (!codexGoal.includes('Instruction Integrity Checklist')) failures.push('CODEX_GOAL.md must include Instruction Integrity Checklist');
+  if (!codexGoal.includes('docs/harness/instruction-integrity.md')) failures.push('CODEX_GOAL.md must require instruction-integrity read');
 }
 
 if (existsSync('docs/agents/game-generator-agent.md')) {
   const generator = read('docs/agents/game-generator-agent.md');
-  for (const file of ['docs/harness/config.md', 'docs/harness/state.md', 'docs/harness/contract.md']) {
+  for (const file of ['docs/harness/config.md', 'docs/harness/state.md', 'docs/harness/contract.md', 'docs/harness/instruction-integrity.md']) {
     if (!generator.includes(file)) failures.push(`game-generator-agent missing required read: ${file}`);
   }
+}
+
+if (existsSync('docs/agents/game-evaluator-agent.md')) {
+  const evaluator = read('docs/agents/game-evaluator-agent.md');
+  if (!evaluator.includes('Instruction Integrity Rejection Rule')) failures.push('game-evaluator-agent missing Instruction Integrity Rejection Rule');
+  if (!evaluator.includes('docs/harness/instruction-integrity.md')) failures.push('game-evaluator-agent missing instruction-integrity read');
+}
+
+if (existsSync('docs/agents/game-harness-orchestrator-agent.md')) {
+  const orchestrator = read('docs/agents/game-harness-orchestrator-agent.md');
+  if (!orchestrator.includes('docs/harness/instruction-integrity.md')) failures.push('game-harness-orchestrator-agent missing instruction-integrity input');
 }
 
 if (existsSync('package.json')) {

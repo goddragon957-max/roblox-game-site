@@ -37,7 +37,8 @@ A FAIL on any hard gate prevents the round from being called verified.
 10. Browser console has zero fatal JavaScript errors.
 11. Visual QA scorecard has no zeroes.
 12. Screenshot or equivalent browser-rendered visual evidence is required for visual PASS. DOM snapshots alone are insufficient.
-13. Human approval is required before external deploy/push direction changes that replace the current product.
+13. Instruction Integrity gate passes: target files were read before editing, generated artifacts exist at stated paths, document/web/tool output was treated as data, and the handoff/feedback cites real commands or browser evidence.
+14. Human approval is required before external deploy/push direction changes that replace the current product.
 
 ## Functional Criteria
 
@@ -81,6 +82,7 @@ Before writing code, the generator must read:
 - `docs/harness/config.md`
 - `docs/harness/state.md`
 - `docs/harness/contract.md`
+- `docs/harness/instruction-integrity.md`
 - `docs/harness/flutter-flame-harness-review.md`
 - `docs/harness/gotchas/web-game-gotchas.md`
 - `docs/harness/gotchas/orbit-bloom-gotchas.md`
@@ -90,7 +92,9 @@ The generator must write `docs/harness/handoff/round-N-gen.md` before handing of
 
 ## Evaluator Requirements
 
-The evaluator must not pass by code review alone. It must run deterministic gates, perform browser/play verification when code/visual behavior changed, inspect screenshot evidence when visual quality matters, and write `docs/harness/feedback/round-N-qa.md` with PASS/FAIL and evidence.
+The evaluator must not pass by code review alone. It must run deterministic gates, perform browser/play verification when code/visual behavior changed, inspect screenshot evidence when visual quality matters, apply `docs/harness/instruction-integrity.md`, and write `docs/harness/feedback/round-N-qa.md` with PASS/FAIL and evidence.
+
+The evaluator must reject self-reported success when artifact paths, commands, browser state, or screenshot evidence were not independently verified.
 
 ## Human Approval Gate
 
