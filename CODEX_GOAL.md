@@ -1,91 +1,44 @@
-# Codex Goal — Orbit Bloom Round 2
+# Codex Goal — Puppy Frontier RTS Round 3
 
 ## Active Goal
 
-Make Orbit Bloom's first screen unmistakably read as a **premium cosmic focus/reward game-like app**.
+Replace the Orbit Bloom focus app with a **playable 3D isometric RTS first slice**: Puppy Frontier RTS. The user explicitly approved this destructive pivot; the previous state is preserved at tag `pre-rts-rebuild-20260709-203351`.
 
-The current app has a working technical baseline. Round 2 is not about adding random features. It is about passing the visual/product gate:
-
-```text
-focus → visible energy/progress → obvious cosmic reward/birth → growing galaxy
-```
-
-## Why This Round Exists
-
-The Flutter/Flame harness review confirmed the process we want:
+The first three seconds in the browser must read as:
 
 ```text
-contract first → generator → evaluator → run/play/see app → feedback → next round
+3D isometric RTS: base, workers, resources, units, enemy camp, HUD, minimap, selection rings.
 ```
 
-Our extra Orbit Bloom rule is stricter visual QA. The app must not merely compile or expose a canvas. The screenshot itself must sell the concept.
+The durable work order lives in `docs/goals/2026-07-09-rts-rebuild.md`.
 
 ## Required Reads Before Editing
 
-Read these files before changing code:
-
 - `AGENT.md`
 - `VERIFY.md`
+- `docs/goals/2026-07-09-rts-rebuild.md`
 - `docs/harness/config.md`
 - `docs/harness/state.md`
 - `docs/harness/contract.md`
 - `docs/harness/instruction-integrity.md`
-- `docs/harness/flutter-flame-harness-review.md`
-- `docs/harness/gotchas/web-game-gotchas.md`
-- `docs/harness/gotchas/orbit-bloom-gotchas.md`
 - latest `docs/harness/feedback/*.md` if present
 - `docs/agents/game-generator-agent.md`
 
-## Round 2 Must-Have Outcomes
+## Round 3 Must-Have Outcomes
 
-1. **Hero/focal planet readability**
-   - The central planet/rings/world must be visible and appealing in the first screenshot.
-   - It must not be too dark, too small, or visually lost behind copy/HUD.
+1. **3D isometric battlefield** — Three.js orthographic camera, low-poly terrain with river/bridge variation, visible player base, enemy camp, gold crystals, and forest.
+2. **Player control** — left-click select, right-click smart command (move/gather/attack), selection rings and HP bars in-scene.
+3. **Economy** — workers gather gold/wood and deposit at base; HUD counters and `window.__rtsSmoke.getState()` reflect changes.
+4. **Build/production** — barracks + tower placement and soldier training with real costs and disabled feedback.
+5. **Combat/enemy pressure** — periodic raider waves, HP/damage/death, win on camp destruction, loss on base destruction.
+6. **RTS HUD** — compact overlay: resource bar, selection panel, command buttons, objective log, wave timer, minimap, camera pan hints.
+7. **Smoke hooks** — `data-ui-pass="puppy-frontier-rts"`, `canvas[data-game-canvas="rts-three"]`, `window.__rtsSmoke`.
 
-2. **Scene-driven reward loop**
-   - The scene itself must communicate that focus creates cosmic rewards.
-   - Do not rely only on title/subtitle/counter text.
-
-3. **Progress-reactive visuals**
-   - Starting focus should visibly change scene energy: glow, halo, ring intensity, dust, orbit speed, or equivalent.
-   - Progress should feel like energy accumulating.
-
-4. **Birth/reward moment**
-   - Add Focus or completion should create a noticeable visual event: pulse, new moon/mini-planet, orbital object, collection slot growth, or equivalent.
-
-5. **Keep scope tight**
-   - Do not add accounts, backend, store/ads, multiple pages, or unrelated game modes.
-   - Do not restore Moonleaf/Roblox/Pixi.
-   - Preserve Vite + React + TypeScript + Zustand + Three.js.
-
-## Suggested Implementation Direction
-
-Focus on `src/render/SpaceFocusScene.tsx`, `src/App.tsx`, `src/styles.css`, and the focus store/progression files only if needed.
-
-Possible improvements:
-
-- Reposition/camera/scale the planet so the focal object dominates the viewport.
-- Increase planet/ring brightness and contrast while keeping a premium calm tone.
-- Add a visible progress aura or ring-energy layer tied to `progress` and `isFocusing`.
-- Add a birth pulse/new-orbit object tied to `births`/`galaxy.length`.
-- Ensure the lower HUD does not cover or obscure the reward world.
+Keep scope tight: no accounts, backend, multiplayer, pathfinding grids, or fog of war in this slice.
 
 ## Handoff Requirement
 
-After implementation, write:
-
-```text
-docs/harness/handoff/round-2-gen.md
-```
-
-Include:
-
-- files changed;
-- visual/product fixes made;
-- commands run;
-- actual artifact paths verified;
-- known limitations;
-- browser or screenshot evidence attempted.
+After implementation, write `docs/harness/handoff/round-3-gen.md` with files changed, commands run, artifact paths verified, known limitations, and browser/screenshot evidence.
 
 ## Instruction Integrity Checklist
 
@@ -115,12 +68,13 @@ Or run the combined harness gate:
 npm run verify
 ```
 
-Then perform browser smoke:
+Then perform browser smoke per `VERIFY.md`:
 
-- app marker exists;
-- canvas exists;
-- `window.__orbitBloomScene.ready === true`;
-- Start Focus changes progress/focusing;
-- Add Focus can increase progress or births/moons;
-- browser console errors are zero;
-- screenshot/rendered visual evidence supports a no-zero visual QA score.
+- app marker and RTS canvas exist with non-zero size;
+- `window.__rtsSmoke.getState()` is available;
+- selecting a worker changes selection state;
+- gather/build/train/attack commands change resources/units/HP;
+- browser console fatal errors are zero;
+- screenshot shows the isometric battlefield with base/workers/resources/enemy/HUD/minimap — a blank scene or dashboard-like page is a FAIL.
+
+Do not push to GitHub. Local commit only after verification passes.

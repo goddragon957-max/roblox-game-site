@@ -1,0 +1,521 @@
+import type {
+  BuildableKind,
+  Building,
+  BuildingKind,
+  GameState,
+  ResourceNode,
+  ResourceType,
+  SmartTarget,
+  Unit,
+  UnitKind,
+  UnitOrder,
+  Vec2
+} from './types';
+
+export const MAP_HALF = 24;
+
+// Visual-only terrain layout shared by the 3D scene and the minimap.
+export const TERRAIN = {
+  river: { centerX: 4.5, width: 4 },
+  bridge: { centerZ: -1, length: 5 }
+};
+
+export const COSTS: Record<BuildableKind | 'soldier', { gold: number; wood: number }> = {
+  barracks: { gold: 100, wood: 60 },
+  tower: { gold: 60, wood: 80 },
+  soldier: { gold: 60, wood: 0 }
+};
+
+export const WORKER_CARRY_CAP = 10;
+export const GATHER_TIME = 2.2;
+export const DEPOSIT_RANGE = 2.4;
+export const GATHER_RANGE = 1.7;
+export const TRAIN_TIME = 4;
+export const FIRST_WAVE_AT = 35;
+export const WAVE_INTERVAL = 40;
+export const RAIDER_AGGRO_RANGE = 8;
+
+const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
+  worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
+  soldier: { maxHp: 90, speed: 4.8, attackDamage: 12, attackRange: 1.8, attackCooldown: 0.9 },
+  raider: { maxHp: 60, speed: 4.4, attackDamage: 9, attackRange: 1.6, attackCooldown: 1.0 }
+};
+
+const BUILDING_STATS: Record<BuildingKind, { maxHp: number; attackDamage: number; attackRange: number; attackCooldown: number }> = {
+  base: { maxHp: 500, attackDamage: 0, attackRange: 0, attackCooldown: 0 },
+  barracks: { maxHp: 300, attackDamage: 0, attackRange: 0, attackCooldown: 0 },
+  tower: { maxHp: 220, attackDamage: 10, attackRange: 8, attackCooldown: 1.2 },
+  enemyCamp: { maxHp: 400, attackDamage: 0, attackRange: 0, attackCooldown: 0 }
+};
+
+const BUILD_SLOTS: Vec2[] = [
+  { x: -10, z: 14.5 },
+  { x: -17.5, z: 15.5 },
+  { x: -10.5, z: 8 },
+  { x: -16.5, z: 6.5 },
+  { x: -7, z: 11.5 },
+  { x: -13, z: 17.5 }
+];
+
+function nextId(state: GameState, prefix: string): string {
+  state.seq += 1;
+  return `${prefix}-${state.seq}`;
+}
+
+export function dist(a: Vec2, b: Vec2): number {
+  return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+function makeUnit(state: GameState, kind: UnitKind, faction: Unit['faction'], pos: Vec2, order: UnitOrder = { type: 'idle' }): Unit {
+  const stats = UNIT_STATS[kind];
+  return {
+    id: nextId(state, kind),
+    kind,
+    faction,
+    pos: { ...pos },
+    hp: stats.maxHp,
+    maxHp: stats.maxHp,
+    speed: stats.speed,
+    attackDamage: stats.attackDamage,
+    attackRange: stats.attackRange,
+    attackCooldown: stats.attackCooldown,
+    cooldownLeft: 0,
+    order,
+    carry: null,
+    gatherProgress: 0,
+    lastGatherNodeId: null
+  };
+}
+
+function makeBuilding(state: GameState, kind: BuildingKind, faction: Building['faction'], pos: Vec2): Building {
+  const stats = BUILDING_STATS[kind];
+  return {
+    id: nextId(state, kind),
+    kind,
+    faction,
+    pos: { ...pos },
+    hp: stats.maxHp,
+    maxHp: stats.maxHp,
+    attackDamage: stats.attackDamage,
+    attackRange: stats.attackRange,
+    attackCooldown: stats.attackCooldown,
+    cooldownLeft: 0,
+    trainQueue: 0,
+    trainProgress: 0
+  };
+}
+
+function makeNode(state: GameState, type: ResourceType, pos: Vec2, amount: number): ResourceNode {
+  return { id: nextId(state, type), type, pos: { ...pos }, amountLeft: amount, maxAmount: amount };
+}
+
+function pushLog(state: GameState, text: string) {
+  state.log.push({ time: state.time, text });
+  if (state.log.length > 40) state.log.splice(0, state.log.length - 40);
+}
+
+export function createInitialState(): GameState {
+  const state: GameState = {
+    time: 0,
+    seq: 0,
+    gold: 120,
+    wood: 80,
+    units: [],
+    buildings: [],
+    resources: [],
+    selectedIds: [],
+    waveNumber: 0,
+    nextWaveAt: FIRST_WAVE_AT,
+    status: 'playing',
+    log: []
+  };
+
+  state.buildings.push(makeBuilding(state, 'base', 'player', { x: -13.5, z: 11.5 }));
+  state.buildings.push(makeBuilding(state, 'enemyCamp', 'enemy', { x: 16, z: -12 }));
+
+  state.units.push(makeUnit(state, 'worker', 'player', { x: -11.5, z: 13.5 }));
+  state.units.push(makeUnit(state, 'worker', 'player', { x: -15.5, z: 13 }));
+  state.units.push(makeUnit(state, 'worker', 'player', { x: -12, z: 9.5 }));
+  state.units.push(makeUnit(state, 'raider', 'enemy', { x: 14, z: -9.5 }));
+  state.units.push(makeUnit(state, 'raider', 'enemy', { x: 18, z: -10 }));
+
+  state.resources.push(makeNode(state, 'gold', { x: -19.5, z: 6.5 }, 500));
+  state.resources.push(makeNode(state, 'gold', { x: -18, z: 2.5 }, 500));
+  state.resources.push(makeNode(state, 'wood', { x: -7.5, z: 19 }, 140));
+  state.resources.push(makeNode(state, 'wood', { x: -4.5, z: 17.5 }, 140));
+  state.resources.push(makeNode(state, 'wood', { x: -6, z: 15.5 }, 140));
+  state.resources.push(makeNode(state, 'wood', { x: -2.5, z: 19.5 }, 140));
+  state.resources.push(makeNode(state, 'wood', { x: -9.5, z: 21 }, 140));
+  state.resources.push(makeNode(state, 'wood', { x: -1.5, z: 16 }, 140));
+
+  pushLog(state, '퍼피 프론티어 개척 시작 — 골드와 나무를 모으세요');
+  return state;
+}
+
+export function findUnit(state: GameState, id: string): Unit | undefined {
+  return state.units.find((unit) => unit.id === id);
+}
+
+export function findBuilding(state: GameState, id: string): Building | undefined {
+  return state.buildings.find((building) => building.id === id);
+}
+
+export function findNode(state: GameState, id: string): ResourceNode | undefined {
+  return state.resources.find((node) => node.id === id);
+}
+
+function playerBase(state: GameState): Building | undefined {
+  return state.buildings.find((building) => building.kind === 'base' && building.faction === 'player');
+}
+
+export function setSelection(state: GameState, ids: string[]) {
+  const valid = new Set([...state.units.map((u) => u.id), ...state.buildings.map((b) => b.id)]);
+  state.selectedIds = ids.filter((id) => valid.has(id));
+}
+
+export function selectedPlayerUnits(state: GameState): Unit[] {
+  return state.selectedIds
+    .map((id) => findUnit(state, id))
+    .filter((unit): unit is Unit => Boolean(unit && unit.faction === 'player'));
+}
+
+export function canAfford(state: GameState, kind: BuildableKind | 'soldier'): boolean {
+  const cost = COSTS[kind];
+  return state.gold >= cost.gold && state.wood >= cost.wood;
+}
+
+function spend(state: GameState, kind: BuildableKind | 'soldier') {
+  const cost = COSTS[kind];
+  state.gold -= cost.gold;
+  state.wood -= cost.wood;
+}
+
+function slotIsFree(state: GameState, slot: Vec2): boolean {
+  return state.buildings.every((building) => dist(building.pos, slot) > 3);
+}
+
+export function placeBuilding(state: GameState, kind: BuildableKind): Building | null {
+  if (state.status !== 'playing' || !canAfford(state, kind)) return null;
+  const slot = BUILD_SLOTS.find((candidate) => slotIsFree(state, candidate));
+  if (!slot) return null;
+  spend(state, kind);
+  const building = makeBuilding(state, kind, 'player', slot);
+  state.buildings.push(building);
+  pushLog(state, kind === 'barracks' ? '막사 건설 완료' : '방어 타워 건설 완료');
+  return building;
+}
+
+export function trainSoldier(state: GameState): boolean {
+  if (state.status !== 'playing' || !canAfford(state, 'soldier')) return false;
+  const barracks = state.buildings.find((building) => building.kind === 'barracks' && building.faction === 'player');
+  if (!barracks) return false;
+  spend(state, 'soldier');
+  barracks.trainQueue += 1;
+  pushLog(state, '병사 훈련 시작');
+  return true;
+}
+
+export function commandSmart(state: GameState, unitIds: string[], target: SmartTarget) {
+  if (state.status !== 'playing') return;
+  const units = unitIds
+    .map((id) => findUnit(state, id))
+    .filter((unit): unit is Unit => Boolean(unit && unit.faction === 'player'));
+  if (units.length === 0) return;
+
+  const node = target.entityId ? findNode(state, target.entityId) : undefined;
+  const enemyUnit = target.entityId ? findUnit(state, target.entityId) : undefined;
+  const enemyBuilding = target.entityId ? findBuilding(state, target.entityId) : undefined;
+  const hostileId =
+    enemyUnit && enemyUnit.faction === 'enemy'
+      ? enemyUnit.id
+      : enemyBuilding && enemyBuilding.faction === 'enemy'
+        ? enemyBuilding.id
+        : null;
+
+  for (const unit of units) {
+    if (node && unit.kind === 'worker') {
+      unit.order = { type: 'gather', nodeId: node.id };
+      unit.lastGatherNodeId = node.id;
+      unit.gatherProgress = 0;
+    } else if (hostileId) {
+      unit.order = { type: 'attack', targetId: hostileId };
+    } else {
+      unit.order = { type: 'move', target: { ...target.point } };
+    }
+  }
+}
+
+function clampToMap(pos: Vec2) {
+  pos.x = Math.max(-MAP_HALF + 0.5, Math.min(MAP_HALF - 0.5, pos.x));
+  pos.z = Math.max(-MAP_HALF + 0.5, Math.min(MAP_HALF - 0.5, pos.z));
+}
+
+function moveToward(unit: Unit, target: Vec2, dt: number): number {
+  const distance = dist(unit.pos, target);
+  if (distance < 1e-6) return 0;
+  const step = Math.min(distance, unit.speed * dt);
+  unit.pos.x += ((target.x - unit.pos.x) / distance) * step;
+  unit.pos.z += ((target.z - unit.pos.z) / distance) * step;
+  clampToMap(unit.pos);
+  return distance - step;
+}
+
+function findTargetEntity(state: GameState, id: string): { pos: Vec2; hp: number } | undefined {
+  return findUnit(state, id) ?? findBuilding(state, id);
+}
+
+function damageTarget(state: GameState, id: string, amount: number) {
+  const unit = findUnit(state, id);
+  if (unit) {
+    unit.hp -= amount;
+    return;
+  }
+  const building = findBuilding(state, id);
+  if (building) building.hp -= amount;
+}
+
+function nearestPlayerTarget(state: GameState, from: Vec2, maxRange: number): { id: string; distance: number } | null {
+  let best: { id: string; distance: number } | null = null;
+  for (const unit of state.units) {
+    if (unit.faction !== 'player') continue;
+    const distance = dist(from, unit.pos);
+    if (distance <= maxRange && (!best || distance < best.distance)) best = { id: unit.id, distance };
+  }
+  for (const building of state.buildings) {
+    if (building.faction !== 'player') continue;
+    const distance = dist(from, building.pos);
+    if (distance <= maxRange && (!best || distance < best.distance)) best = { id: building.id, distance };
+  }
+  return best;
+}
+
+function nearestEnemyUnit(state: GameState, from: Vec2, maxRange: number): Unit | null {
+  let best: Unit | null = null;
+  let bestDistance = Infinity;
+  for (const unit of state.units) {
+    if (unit.faction !== 'enemy') continue;
+    const distance = dist(from, unit.pos);
+    if (distance <= maxRange && distance < bestDistance) {
+      best = unit;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+function nearestNodeOfType(state: GameState, from: Vec2, type: ResourceType): ResourceNode | null {
+  let best: ResourceNode | null = null;
+  let bestDistance = Infinity;
+  for (const node of state.resources) {
+    if (node.type !== type || node.amountLeft <= 0) continue;
+    const distance = dist(from, node.pos);
+    if (distance < bestDistance) {
+      best = node;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+function stepGather(state: GameState, unit: Unit, dt: number) {
+  if (unit.order.type !== 'gather') return;
+  const node = findNode(state, unit.order.nodeId);
+  if (!node || node.amountLeft <= 0) {
+    const fallbackType = node?.type ?? (unit.carry?.type ?? 'gold');
+    const replacement = nearestNodeOfType(state, unit.pos, fallbackType);
+    if (replacement) {
+      unit.order = { type: 'gather', nodeId: replacement.id };
+      unit.lastGatherNodeId = replacement.id;
+    } else {
+      unit.order = unit.carry ? { type: 'deposit' } : { type: 'idle' };
+    }
+    return;
+  }
+  if (unit.carry && unit.carry.amount >= WORKER_CARRY_CAP) {
+    unit.order = { type: 'deposit' };
+    return;
+  }
+  if (dist(unit.pos, node.pos) > GATHER_RANGE) {
+    moveToward(unit, node.pos, dt);
+    return;
+  }
+  unit.gatherProgress += dt;
+  if (unit.gatherProgress >= GATHER_TIME) {
+    unit.gatherProgress = 0;
+    const amount = Math.min(WORKER_CARRY_CAP, node.amountLeft);
+    node.amountLeft -= amount;
+    unit.carry = { type: node.type, amount };
+    unit.lastGatherNodeId = node.id;
+    unit.order = { type: 'deposit' };
+    if (node.amountLeft <= 0) {
+      pushLog(state, node.type === 'gold' ? '금 광맥이 고갈되었습니다' : '나무가 모두 베어졌습니다');
+    }
+  }
+}
+
+function stepDeposit(state: GameState, unit: Unit, dt: number) {
+  const base = playerBase(state);
+  if (!base) {
+    unit.order = { type: 'idle' };
+    return;
+  }
+  if (!unit.carry) {
+    unit.order = { type: 'idle' };
+    return;
+  }
+  if (dist(unit.pos, base.pos) > DEPOSIT_RANGE) {
+    moveToward(unit, base.pos, dt);
+    return;
+  }
+  if (unit.carry.type === 'gold') state.gold += unit.carry.amount;
+  else state.wood += unit.carry.amount;
+  unit.carry = null;
+  const backTo = unit.lastGatherNodeId ? findNode(state, unit.lastGatherNodeId) : undefined;
+  if (backTo && backTo.amountLeft > 0) {
+    unit.order = { type: 'gather', nodeId: backTo.id };
+  } else {
+    unit.order = { type: 'idle' };
+  }
+}
+
+function stepAttack(state: GameState, unit: Unit, dt: number) {
+  if (unit.order.type !== 'attack') return;
+  const target = findTargetEntity(state, unit.order.targetId);
+  if (!target || target.hp <= 0) {
+    unit.order = unit.faction === 'enemy' ? { type: 'assault' } : { type: 'idle' };
+    return;
+  }
+  if (dist(unit.pos, target.pos) > unit.attackRange) {
+    moveToward(unit, target.pos, dt);
+    return;
+  }
+  if (unit.cooldownLeft <= 0) {
+    damageTarget(state, unit.order.targetId, unit.attackDamage);
+    unit.cooldownLeft = unit.attackCooldown;
+  }
+}
+
+function stepAssault(state: GameState, unit: Unit, dt: number) {
+  const acquired = nearestPlayerTarget(state, unit.pos, RAIDER_AGGRO_RANGE);
+  if (acquired) {
+    unit.order = { type: 'attack', targetId: acquired.id };
+    stepAttack(state, unit, dt);
+    return;
+  }
+  const base = playerBase(state);
+  if (base) {
+    moveToward(unit, base.pos, dt);
+    return;
+  }
+  const anyTarget = nearestPlayerTarget(state, unit.pos, Infinity);
+  if (anyTarget) unit.order = { type: 'attack', targetId: anyTarget.id };
+  else unit.order = { type: 'idle' };
+}
+
+function stepUnit(state: GameState, unit: Unit, dt: number) {
+  unit.cooldownLeft = Math.max(0, unit.cooldownLeft - dt);
+  switch (unit.order.type) {
+    case 'idle':
+      break;
+    case 'move': {
+      const remaining = moveToward(unit, unit.order.target, dt);
+      if (remaining < 0.15) unit.order = { type: 'idle' };
+      break;
+    }
+    case 'gather':
+      stepGather(state, unit, dt);
+      break;
+    case 'deposit':
+      stepDeposit(state, unit, dt);
+      break;
+    case 'attack':
+      stepAttack(state, unit, dt);
+      break;
+    case 'assault':
+      stepAssault(state, unit, dt);
+      break;
+  }
+}
+
+function stepBuilding(state: GameState, building: Building, dt: number) {
+  building.cooldownLeft = Math.max(0, building.cooldownLeft - dt);
+
+  if (building.kind === 'tower' && building.faction === 'player') {
+    const target = nearestEnemyUnit(state, building.pos, building.attackRange);
+    if (target && building.cooldownLeft <= 0) {
+      target.hp -= building.attackDamage;
+      building.cooldownLeft = building.attackCooldown;
+    }
+  }
+
+  if (building.kind === 'barracks' && building.trainQueue > 0) {
+    building.trainProgress += dt;
+    if (building.trainProgress >= TRAIN_TIME) {
+      building.trainProgress = 0;
+      building.trainQueue -= 1;
+      const spawnPos = { x: building.pos.x + 2.2, z: building.pos.z + 1.6 };
+      clampToMap(spawnPos);
+      state.units.push(makeUnit(state, 'soldier', 'player', spawnPos));
+      pushLog(state, '병사가 전열에 합류했습니다');
+    }
+  }
+}
+
+function spawnWave(state: GameState) {
+  const camp = state.buildings.find((building) => building.kind === 'enemyCamp' && building.hp > 0);
+  if (!camp) return;
+  state.waveNumber += 1;
+  const count = Math.min(2 + Math.floor((state.waveNumber - 1) / 2), 5);
+  for (let i = 0; i < count; i += 1) {
+    const spawnPos = { x: camp.pos.x - 2 - i * 1.4, z: camp.pos.z + 2 + (i % 2) * 1.6 };
+    clampToMap(spawnPos);
+    state.units.push(makeUnit(state, 'raider', 'enemy', spawnPos, { type: 'assault' }));
+  }
+  pushLog(state, `라쿤 습격대 ${state.waveNumber}차 웨이브 출격 (${count}기)`);
+}
+
+function removeDead(state: GameState) {
+  const deadUnits = state.units.filter((unit) => unit.hp <= 0);
+  if (deadUnits.length > 0) {
+    state.units = state.units.filter((unit) => unit.hp > 0);
+    state.selectedIds = state.selectedIds.filter((id) => !deadUnits.some((unit) => unit.id === id));
+  }
+
+  const deadBuildings = state.buildings.filter((building) => building.hp <= 0);
+  if (deadBuildings.length > 0) {
+    state.buildings = state.buildings.filter((building) => building.hp > 0);
+    state.selectedIds = state.selectedIds.filter((id) => !deadBuildings.some((building) => building.id === id));
+    for (const building of deadBuildings) {
+      if (building.kind === 'enemyCamp') {
+        state.status = 'won';
+        pushLog(state, '라쿤 캠프 파괴 — 승리!');
+      } else if (building.kind === 'base') {
+        state.status = 'lost';
+        pushLog(state, '본부가 파괴되었습니다 — 패배');
+      } else {
+        pushLog(state, building.kind === 'barracks' ? '막사가 파괴되었습니다' : '타워가 파괴되었습니다');
+      }
+    }
+  }
+}
+
+const MAX_STEP = 0.05;
+
+export function advance(state: GameState, dtTotal: number) {
+  if (state.status !== 'playing') return;
+  let remaining = dtTotal;
+  while (remaining > 1e-9 && state.status === 'playing') {
+    const dt = Math.min(MAX_STEP, remaining);
+    remaining -= dt;
+    state.time += dt;
+
+    if (state.time >= state.nextWaveAt) {
+      spawnWave(state);
+      state.nextWaveAt += WAVE_INTERVAL;
+    }
+
+    for (const unit of state.units) stepUnit(state, unit, dt);
+    for (const building of state.buildings) stepBuilding(state, building, dt);
+    removeDead(state);
+  }
+}

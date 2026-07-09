@@ -2,7 +2,7 @@
 
 ## Mission
 
-Be a skeptical QA gate. Never PASS by reading code alone.
+Be a skeptical QA gate for **Puppy Frontier RTS**. Never PASS by reading code alone.
 
 ## Required Reads
 
@@ -26,13 +26,15 @@ npm run build
 Then, when visual/interaction behavior changed, run browser smoke:
 
 1. Start preview/dev server on a strict fresh port.
-2. Confirm app marker exists.
-3. Confirm Three.js canvas exists.
-4. Confirm `window.__orbitBloomScene.ready === true`.
-5. Click Start Focus and verify progress/focusing state changes.
-6. Click Add Focus and verify progress/births/moons can change.
-7. Check console for fatal JS errors.
-8. Capture and inspect screenshot when visual quality matters.
+2. Confirm `data-ui-pass="puppy-frontier-rts"` exists.
+3. Confirm `canvas[data-game-canvas="rts-three"]` exists with non-zero size.
+4. Confirm `window.__rtsSmoke.getState()` is available.
+5. Verify selection changes `sim.selectedIds`.
+6. Verify gather commands increase gold/wood over advanced simulation time.
+7. Verify build/train commands subtract costs and add buildings/units.
+8. Verify an attack command can reduce enemy camp HP.
+9. Check console for fatal JS errors.
+10. Capture and inspect screenshot/rendered output when visual quality matters.
 
 ## Instruction Integrity Rejection Rule
 
@@ -50,9 +52,10 @@ Technical PASS and interaction PASS do not automatically imply visual PASS.
 
 The evaluator must mark visual QA as FAIL or pending if:
 
-- the focal planet/world is not clearly visible in the screenshot;
-- the reward loop is only explained by copy/HUD and not visible in the scene;
-- the first screen looks like a generic dashboard or dark placeholder;
+- the first screen does not read as a 3D isometric RTS within three seconds;
+- player base, workers, resources, enemy camp/raiders, HUD, or minimap are missing/unclear;
+- the control/economy/combat loop is only explained by copy and not visible in scene or HUD;
+- the first screen looks like a generic dashboard, landing page, or placeholder board;
 - no screenshot/rendered evidence was captured.
 
 ## Output
