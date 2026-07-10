@@ -6,10 +6,12 @@ import { useGameStore } from '../store/gameStore';
 
 interface EntityVisual {
   group: THREE.Group;
+  body: THREE.Group;
   ring: THREE.Mesh;
   hpFill: THREE.Mesh | null;
   hpBar: THREE.Group | null;
   carryCube: THREE.Mesh | null;
+  flash: THREE.Mesh | null;
 }
 
 interface NodeVisual {
@@ -205,7 +207,7 @@ export function ThreeRtsScene() {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.domElement.setAttribute('data-game-canvas', 'rts-three');
     renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
@@ -308,7 +310,8 @@ export function ThreeRtsScene() {
       if (visual) return visual;
       const group = new THREE.Group();
       group.userData.entityId = unit.id;
-      group.add(buildUnitMesh(unit));
+      const body = buildUnitMesh(unit);
+      group.add(body);
       const ring = makeRing(0.72, unit.faction === 'player' ? COLORS.ringPlayer : COLORS.ringEnemy);
       group.add(ring);
       const { bar, fill } = makeHpBar(0.9, 1.55);
@@ -318,7 +321,7 @@ export function ThreeRtsScene() {
       carryCube.visible = false;
       group.add(carryCube);
       scene.add(group);
-      visual = { group, ring, hpFill: fill, hpBar: bar, carryCube };
+      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null };
       unitVisuals.set(unit.id, visual);
       return visual;
     }
@@ -334,8 +337,18 @@ export function ThreeRtsScene() {
       group.add(ring);
       const { bar, fill } = makeHpBar(2.2, height);
       group.add(bar);
+      let flash: THREE.Mesh | null = null;
+      if (building.kind === 'tower') {
+        flash = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28, 10, 8),
+          new THREE.MeshBasicMaterial({ color: COLORS.gold, transparent: true, opacity: 0.95 })
+        );
+        flash.position.y = 3.65;
+        flash.visible = false;
+        group.add(flash);
+      }
       scene.add(group);
-      visual = { group, ring, hpFill: fill, hpBar: bar, carryCube: null };
+      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash };
       buildingVisuals.set(building.id, visual);
       return visual;
     }
@@ -372,6 +385,23 @@ export function ThreeRtsScene() {
         const visual = ensureUnitVisual(unit);
         visual.group.position.set(unit.pos.x, 0, unit.pos.z);
         visual.ring.visible = selected.has(unit.id);
+
+        // Gather feedback: workers bob while actively mining/chopping (gatherProgress only advances in range).
+        if (unit.order.type === 'gather' && unit.gatherProgress > 0) {
+          visual.body.position.y = Math.abs(Math.sin(unit.gatherProgress * Math.PI * 3)) * 0.16;
+        } else {
+          visual.body.position.y = 0;
+        }
+
+        // Attack feedback: cooldownLeft resets to attackCooldown only when a hit lands, so a
+        // freshly-reset cooldown means "struck just now" — pulse the body briefly.
+        const sinceStrike = unit.attackCooldown - unit.cooldownLeft;
+        if (unit.cooldownLeft > 0 && sinceStrike < 0.22) {
+          visual.body.scale.setScalar(1 + 0.22 * (1 - sinceStrike / 0.22));
+        } else {
+          visual.body.scale.setScalar(1);
+        }
+
         if (visual.carryCube) {
           visual.carryCube.visible = unit.kind === 'worker' && unit.carry !== null;
           if (unit.carry) {
@@ -402,6 +432,10 @@ export function ThreeRtsScene() {
         const visual = ensureBuildingVisual(building);
         visual.group.position.set(building.pos.x, 0, building.pos.z);
         visual.ring.visible = selected.has(building.id);
+        if (visual.flash) {
+          const sinceShot = building.attackCooldown - building.cooldownLeft;
+          visual.flash.visible = building.cooldownLeft > 0 && sinceShot < 0.18;
+        }
         if (visual.hpFill && visual.hpBar) {
           const ratio = Math.max(0, Math.min(1, building.hp / building.maxHp));
           visual.hpFill.scale.x = Math.max(0.001, ratio);
@@ -473,6 +507,18 @@ export function ThreeRtsScene() {
         if (!point && !entityId) return;
         const target = point ?? new THREE.Vector3();
         useGameStore.getState().smart({ point: { x: target.x, z: target.z }, entityId });
+
+        // Marker reflects the order the simulation actually applied to the selection.
+        const sim = useGameStore.getState().sim;
+        const selected = new Set(sim.selectedIds);
+        const commanded = sim.units.filter((unit) => unit.faction === 'player' && selected.has(unit.id));
+        if (commanded.length === 0 || sim.status !== 'playing') return;
+        const markerColor = commanded.some((unit) => unit.order.type === 'gather')
+          ? COLORS.gold
+          : commanded.some((unit) => unit.order.type === 'attack')
+            ? COLORS.hpBad
+            : 0xffffff;
+        (commandMarker.material as THREE.MeshBasicMaterial).color.setHex(markerColor);
         commandMarker.position.set(target.x, 0.07, target.z);
         markerAge = 0;
       }
@@ -510,10 +556,11 @@ export function ThreeRtsScene() {
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('resize', resize);
 
-    const clock = new THREE.Clock();
+    let lastFrameAt = performance.now();
     let raf = 0;
-    function loop() {
-      const dt = Math.min(0.1, clock.getDelta());
+    function loop(now: number) {
+      const dt = Math.min(0.1, Math.max(0, (now - lastFrameAt) / 1000));
+      lastFrameAt = now;
       useGameStore.getState().tick(dt);
       updatePan(dt);
 
