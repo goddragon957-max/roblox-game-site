@@ -75,8 +75,16 @@ export interface GameState {
   selectedIds: string[];
   waveNumber: number;
   nextWaveAt: number;
+  waveWarned: boolean;
   status: GameStatus;
   log: LogEntry[];
+}
+
+export interface MissionHint {
+  step: number;
+  total: number;
+  title: string;
+  detail: string;
 }
 
 export interface SmartTarget {

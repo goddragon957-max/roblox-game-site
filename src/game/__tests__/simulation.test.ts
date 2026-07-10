@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   COSTS,
+  FIRST_WAVE_AT,
+  MISSION_SOLDIER_TARGET,
+  WAVE_WARNING_LEAD,
   advance,
   commandSmart,
   createInitialState,
   dist,
+  missionHint,
   placeBuilding,
   setSelection,
-  trainSoldier
+  trainSoldier,
+  waveSize
 } from '../simulation';
 import type { GameState } from '../types';
 
@@ -176,12 +181,51 @@ describe('combat and win/loss', () => {
     expect(state.buildings.some((building) => building.kind === 'base')).toBe(false);
   });
 
-  it('spawns enemy waves that pressure the player over time', () => {
+  it('delays the first wave and keeps it small so the opening is survivable', () => {
     const state = createInitialState();
     const raidersBefore = state.units.filter((unit) => unit.kind === 'raider').length;
-    advance(state, 36);
+
+    advance(state, FIRST_WAVE_AT - 1);
+    expect(state.waveNumber).toBe(0);
+
+    advance(state, 2);
+    expect(state.waveNumber).toBe(1);
     const raidersAfter = state.units.filter((unit) => unit.kind === 'raider').length;
-    expect(state.waveNumber).toBeGreaterThanOrEqual(1);
-    expect(raidersAfter).toBeGreaterThan(raidersBefore);
+    expect(raidersAfter).toBe(raidersBefore + waveSize(1));
+    expect(waveSize(1)).toBe(1);
+  });
+
+  it('warns in the log before a wave arrives', () => {
+    const state = createInitialState();
+    advance(state, FIRST_WAVE_AT - WAVE_WARNING_LEAD + 1);
+    expect(state.waveNumber).toBe(0);
+    expect(state.log.some((entry) => entry.text.includes('라쿤 습격대가 다가옵니다'))).toBe(true);
+  });
+
+  it('scales later waves up to the cap', () => {
+    expect(waveSize(2)).toBe(2);
+    expect(waveSize(4)).toBe(3);
+    expect(waveSize(20)).toBe(5);
+  });
+});
+
+describe('mission onboarding', () => {
+  it('advances mission hints as the player progresses the core loop', () => {
+    const state = createInitialState();
+    expect(missionHint(state).step).toBe(1);
+
+    const worker = firstWorker(state);
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    if (!goldNode) throw new Error('expected gold node');
+    commandSmart(state, [worker.id], { point: { ...goldNode.pos }, entityId: goldNode.id });
+    expect(missionHint(state).step).toBe(2);
+
+    expect(placeBuilding(state, 'barracks')).not.toBeNull();
+    expect(missionHint(state).step).toBe(3);
+
+    state.gold = COSTS.soldier.gold * MISSION_SOLDIER_TARGET;
+    for (let i = 0; i < MISSION_SOLDIER_TARGET; i += 1) expect(trainSoldier(state)).toBe(true);
+    advance(state, TRAIN_ALL_SECONDS);
+    expect(missionHint(state).step).toBe(4);
   });
 });

@@ -3,6 +3,7 @@ import type {
   Building,
   BuildingKind,
   GameState,
+  MissionHint,
   ResourceNode,
   ResourceType,
   SmartTarget,
@@ -31,9 +32,11 @@ export const GATHER_TIME = 2.2;
 export const DEPOSIT_RANGE = 2.4;
 export const GATHER_RANGE = 1.7;
 export const TRAIN_TIME = 4;
-export const FIRST_WAVE_AT = 35;
+export const FIRST_WAVE_AT = 50;
 export const WAVE_INTERVAL = 40;
+export const WAVE_WARNING_LEAD = 10;
 export const RAIDER_AGGRO_RANGE = 8;
+export const MISSION_SOLDIER_TARGET = 3;
 
 const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
   worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
@@ -126,6 +129,7 @@ export function createInitialState(): GameState {
     selectedIds: [],
     waveNumber: 0,
     nextWaveAt: FIRST_WAVE_AT,
+    waveWarned: false,
     status: 'playing',
     log: []
   };
@@ -461,11 +465,18 @@ function stepBuilding(state: GameState, building: Building, dt: number) {
   }
 }
 
+// Wave 1 sends a single raider so a first-time player can survive while learning
+// the gather → build → train loop; later waves ramp up to the cap.
+export function waveSize(waveNumber: number): number {
+  return Math.min(1 + Math.floor(waveNumber / 2), 5);
+}
+
 function spawnWave(state: GameState) {
   const camp = state.buildings.find((building) => building.kind === 'enemyCamp' && building.hp > 0);
   if (!camp) return;
   state.waveNumber += 1;
-  const count = Math.min(2 + Math.floor((state.waveNumber - 1) / 2), 5);
+  state.waveWarned = false;
+  const count = waveSize(state.waveNumber);
   for (let i = 0; i < count; i += 1) {
     const spawnPos = { x: camp.pos.x - 2 - i * 1.4, z: camp.pos.z + 2 + (i % 2) * 1.6 };
     clampToMap(spawnPos);
@@ -499,6 +510,53 @@ function removeDead(state: GameState) {
   }
 }
 
+// Progressive onboarding: derive the next mission step from real simulation
+// state so the HUD hint always matches what the player can actually do.
+export function missionHint(state: GameState): MissionHint {
+  const total = 4;
+  const hasBarracks = state.buildings.some((building) => building.kind === 'barracks' && building.faction === 'player');
+  const soldiers = state.units.filter((unit) => unit.kind === 'soldier' && unit.faction === 'player').length;
+
+  if (!hasBarracks) {
+    const gathering = state.units.some(
+      (unit) =>
+        unit.kind === 'worker' &&
+        unit.faction === 'player' &&
+        (unit.order.type === 'gather' || unit.order.type === 'deposit')
+    );
+    if (!gathering) {
+      return {
+        step: 1,
+        total,
+        title: '자원 채집',
+        detail: '일꾼 퍼피를 좌클릭으로 선택하고 금광이나 나무를 우클릭하세요'
+      };
+    }
+    return {
+      step: 2,
+      total,
+      title: '막사 건설',
+      detail: `자원이 모이면 막사 건설 버튼을 누르세요 (골드 ${COSTS.barracks.gold} · 나무 ${COSTS.barracks.wood})`
+    };
+  }
+
+  if (soldiers < MISSION_SOLDIER_TARGET) {
+    return {
+      step: 3,
+      total,
+      title: '병사 훈련',
+      detail: `병사 훈련 버튼으로 병사를 모으세요 (${soldiers}/${MISSION_SOLDIER_TARGET})`
+    };
+  }
+
+  return {
+    step: 4,
+    total,
+    title: '캠프 공격',
+    detail: '병사를 선택하고 라쿤 캠프를 우클릭해 파괴하세요'
+  };
+}
+
 const MAX_STEP = 0.05;
 
 export function advance(state: GameState, dtTotal: number) {
@@ -508,6 +566,11 @@ export function advance(state: GameState, dtTotal: number) {
     const dt = Math.min(MAX_STEP, remaining);
     remaining -= dt;
     state.time += dt;
+
+    if (!state.waveWarned && state.time >= state.nextWaveAt - WAVE_WARNING_LEAD) {
+      state.waveWarned = true;
+      pushLog(state, '라쿤 습격대가 다가옵니다 — 방어를 준비하세요!');
+    }
 
     if (state.time >= state.nextWaveAt) {
       spawnWave(state);

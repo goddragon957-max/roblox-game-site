@@ -1,6 +1,7 @@
 import { Axe, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, Swords, TreePine } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-import { COSTS, MAP_HALF, TERRAIN } from '../game/simulation';
+import type { LucideIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, WAVE_WARNING_LEAD, missionHint } from '../game/simulation';
 import type { Building, GameState, Unit } from '../game/types';
 import { affordable, useGameStore } from '../store/gameStore';
 
@@ -25,6 +26,26 @@ const ORDER_LABELS: Record<Unit['order']['type'], string> = {
   attack: '공격 중',
   assault: '진격 중'
 };
+
+function ResourceChip({ icon: Icon, resource, value }: { icon: LucideIcon; resource: string; value: number }) {
+  const prev = useRef(value);
+  const [pulse, setPulse] = useState(0);
+
+  useEffect(() => {
+    if (value > prev.current) setPulse((count) => count + 1);
+    prev.current = value;
+  }, [value]);
+
+  return (
+    <div className="hud-chip resource">
+      <Icon size={15} />
+      {/* Remounting on each delivery restarts the gain-pop animation. */}
+      <b data-resource={resource} key={pulse} className={pulse > 0 ? 'gain-pop' : ''}>
+        {value}
+      </b>
+    </div>
+  );
+}
 
 function Minimap() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -130,7 +151,7 @@ function SelectionPanel({ sim }: { sim: GameState }) {
         </p>
       )}
       {building && building.kind === 'barracks' && building.trainQueue > 0 && (
-        <p className="selection-note">훈련 대기 {building.trainQueue} · 진행 {Math.round((building.trainProgress / 4) * 100)}%</p>
+        <p className="selection-note">훈련 대기 {building.trainQueue} · 진행 {Math.round((building.trainProgress / TRAIN_TIME) * 100)}%</p>
       )}
     </div>
   );
@@ -148,6 +169,11 @@ export function RtsHud() {
   const workerCount = sim.units.filter((unit) => unit.kind === 'worker' && unit.faction === 'player').length;
   const soldierCount = sim.units.filter((unit) => unit.kind === 'soldier').length;
   const waveIn = Math.max(0, Math.ceil(sim.nextWaveAt - sim.time));
+  const waveSoon = sim.status === 'playing' && waveIn <= WAVE_WARNING_LEAD;
+  const hint = missionHint(sim);
+  const training = sim.buildings.find(
+    (building) => building.kind === 'barracks' && building.faction === 'player' && building.trainQueue > 0
+  );
   const recentLog = sim.log.slice(-3).reverse();
 
   return (
@@ -157,24 +183,20 @@ export function RtsHud() {
           <Dog size={15} />
           <span>Puppy Frontier RTS</span>
         </div>
-        <div className="hud-chip resource">
-          <Coins size={15} />
-          <b data-resource="gold">{sim.gold}</b>
-        </div>
-        <div className="hud-chip resource">
-          <TreePine size={15} />
-          <b data-resource="wood">{sim.wood}</b>
-        </div>
+        <ResourceChip icon={Coins} resource="gold" value={sim.gold} />
+        <ResourceChip icon={TreePine} resource="wood" value={sim.wood} />
         <div className="hud-chip">
           <Dog size={15} />
           <span>
             일꾼 {workerCount} · 병사 {soldierCount}
           </span>
         </div>
-        <div className="hud-chip wave">
+        <div className={`hud-chip wave${waveSoon ? ' alarm' : ''}`}>
           <Swords size={15} />
           <span>
-            {sim.waveNumber === 0 ? '첫 습격까지' : `웨이브 ${sim.waveNumber} · 다음까지`} {waveIn}s
+            {waveSoon
+              ? `습격 임박! ${waveIn}s`
+              : `${sim.waveNumber === 0 ? '첫 습격까지' : `웨이브 ${sim.waveNumber} · 다음까지`} ${waveIn}s`}
           </span>
         </div>
         <div className="hud-chip objective">
@@ -182,6 +204,18 @@ export function RtsHud() {
           <span>목표: 라쿤 캠프 파괴 {camp ? `(${Math.max(0, Math.round((camp.hp / camp.maxHp) * 100))}%)` : '(완료)'}</span>
         </div>
       </header>
+
+      {sim.status === 'playing' && (
+        <div className="mission-panel" data-mission-step={hint.step} aria-label="mission hint">
+          <Flag size={14} />
+          <div className="mission-body">
+            <p className="mission-title">
+              임무 {hint.step}/{hint.total} · {hint.title}
+            </p>
+            <p className="mission-detail">{hint.detail}</p>
+          </div>
+        </div>
+      )}
 
       <aside className="hud-log" aria-label="objective log">
         {recentLog.map((entry, index) => (
@@ -229,7 +263,14 @@ export function RtsHud() {
           >
             <Swords size={16} />
             <span>병사 훈련</span>
-            <span className="cost">{COSTS.soldier.gold}g</span>
+            <span className="cost">
+              {COSTS.soldier.gold}g{training ? ` · 대기 ${training.trainQueue}` : ''}
+            </span>
+            {training && (
+              <span className="train-progress" aria-hidden="true">
+                <span style={{ width: `${Math.round((training.trainProgress / TRAIN_TIME) * 100)}%` }} />
+              </span>
+            )}
           </button>
         </div>
 
