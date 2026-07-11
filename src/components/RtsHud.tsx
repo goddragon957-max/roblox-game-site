@@ -13,6 +13,7 @@ import {
   selectionSummary,
   threatAlert,
   towerRangePreviews,
+  towerShots,
   waveForecast
 } from '../game/simulation';
 import type { Building, BuildingKind, GameState, Unit, UnitKind } from '../game/types';
@@ -133,6 +134,15 @@ function Minimap() {
         context.lineWidth = 1.5;
         context.beginPath();
         context.arc(toPx(preview.pos.x), toPx(preview.pos.z), (preview.radius / (MAP_HALF * 2)) * size, 0, Math.PI * 2);
+        context.stroke();
+      }
+
+      for (const shot of towerShots(sim)) {
+        context.strokeStyle = 'rgba(245, 197, 66, 0.9)';
+        context.lineWidth = 1.5;
+        context.beginPath();
+        context.moveTo(toPx(shot.from.x), toPx(shot.from.z));
+        context.lineTo(toPx(shot.to.x), toPx(shot.to.z));
         context.stroke();
       }
 

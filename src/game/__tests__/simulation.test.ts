@@ -5,6 +5,7 @@ import {
   MISSION_SOLDIER_TARGET,
   SOLDIER_AGGRO_RANGE,
   THREAT_ALERT_DURATION,
+  TOWER_SHOT_DURATION,
   WAVE_INTERVAL,
   WAVE_WARNING_LEAD,
   advance,
@@ -21,6 +22,7 @@ import {
   setSelection,
   threatAlert,
   towerRangePreviews,
+  towerShots,
   trainSoldier,
   waveForecast,
   waveSize
@@ -595,6 +597,72 @@ describe('tower range preview', () => {
     tower.hp = 0;
     advance(state, 0.1);
     expect(towerRangePreviews(state)).toEqual([]);
+  });
+});
+
+describe('tower shot feedback', () => {
+  function stateWithFiringTower() {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    const tower = placeBuilding(state, 'tower');
+    if (!tower) throw new Error('expected tower placement to succeed');
+    const raider = state.units.find((unit) => unit.kind === 'raider');
+    if (!raider) throw new Error('expected raider');
+    raider.pos = { x: tower.pos.x + 3, z: tower.pos.z };
+    raider.order = { type: 'idle' };
+    return { state, tower, raider };
+  }
+
+  it('records a tracer from the tower to the raider it actually hit', () => {
+    const { state, tower, raider } = stateWithFiringTower();
+    expect(towerShots(state)).toEqual([]);
+
+    advance(state, 0.1);
+    expect(raider.hp).toBe(raider.maxHp - tower.attackDamage);
+    const shots = towerShots(state);
+    expect(shots).toHaveLength(1);
+    expect(shots[0].id).toBe(tower.id);
+    expect(shots[0].from).toEqual(tower.pos);
+    expect(shots[0].to).toEqual(raider.pos);
+    expect(shots[0].age).toBeLessThanOrEqual(TOWER_SHOT_DURATION);
+  });
+
+  it('expires the tracer between shots and refreshes it on the next hit', () => {
+    const { state, tower } = stateWithFiringTower();
+    advance(state, 0.1);
+    expect(towerShots(state)).toHaveLength(1);
+
+    advance(state, TOWER_SHOT_DURATION + 0.1);
+    expect(towerShots(state)).toEqual([]);
+
+    // The tower cooldown (1.2s) elapses within the next second and it fires again.
+    advance(state, 1);
+    const shots = towerShots(state);
+    expect(shots).toHaveLength(1);
+    expect(shots[0].id).toBe(tower.id);
+    expect(shots[0].age).toBeLessThanOrEqual(TOWER_SHOT_DURATION);
+  });
+
+  it('never records a shot while every raider is out of range', () => {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    const tower = placeBuilding(state, 'tower');
+    if (!tower) throw new Error('expected tower placement to succeed');
+
+    advance(state, 2);
+    expect(towerShots(state)).toEqual([]);
+    expect(tower.lastShotAt).toBeNull();
+  });
+
+  it('clears active tracers when the match ends so nothing lingers frozen', () => {
+    const { state } = stateWithFiringTower();
+    advance(state, 0.1);
+    expect(towerShots(state)).toHaveLength(1);
+
+    state.status = 'won';
+    expect(towerShots(state)).toEqual([]);
   });
 });
 

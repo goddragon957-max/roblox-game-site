@@ -14,6 +14,7 @@ import {
   setSelection,
   threatAlert,
   towerRangePreviews,
+  towerShots,
   trainSoldier,
   waveForecast
 } from '../game/simulation';
@@ -27,6 +28,7 @@ import type {
   SelectionSummary,
   SmartTarget,
   ThreatAlert,
+  TowerShot,
   UnitKind,
   WaveForecast
 } from '../game/types';
@@ -104,6 +106,7 @@ declare global {
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
         towerRanges: () => RangePreview[];
+        towerShots: () => TowerShot[];
         rallyPoints: () => RallyPreview[];
         restart: () => void;
       };
@@ -140,6 +143,7 @@ if (typeof window !== 'undefined') {
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),
       towerRanges: () => towerRangePreviews(useGameStore.getState().sim),
+      towerShots: () => towerShots(useGameStore.getState().sim),
       rallyPoints: () => rallyPreviews(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()
     }

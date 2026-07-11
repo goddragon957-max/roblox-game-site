@@ -50,6 +50,8 @@ export interface Building {
   trainQueue: number;
   trainProgress: number;
   rallyPoint: Vec2 | null;
+  lastShotAt: number | null;
+  lastShotTarget: Vec2 | null;
 }
 
 export interface ResourceNode {
@@ -148,4 +150,11 @@ export interface RallyPreview {
   id: string;
   from: Vec2;
   point: Vec2;
+}
+
+export interface TowerShot {
+  id: string;
+  from: Vec2;
+  to: Vec2;
+  age: number;
 }

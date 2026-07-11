@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { MAP_HALF, TERRAIN, playerUnitIdsInRect } from '../game/simulation';
+import { MAP_HALF, TERRAIN, TOWER_SHOT_DURATION, playerUnitIdsInRect, towerShots } from '../game/simulation';
 import type { Building, GameState, ResourceNode, Unit } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 
@@ -12,6 +12,7 @@ interface EntityVisual {
   hpBar: THREE.Group | null;
   carryCube: THREE.Mesh | null;
   flash: THREE.Mesh | null;
+  bolt: THREE.Mesh | null;
   rangeRing: THREE.Group | null;
   rallyFlag: THREE.Group | null;
 }
@@ -323,7 +324,7 @@ export function ThreeRtsScene() {
       carryCube.visible = false;
       group.add(carryCube);
       scene.add(group);
-      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null, rangeRing: null, rallyFlag: null };
+      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null, bolt: null, rangeRing: null, rallyFlag: null };
       unitVisuals.set(unit.id, visual);
       return visual;
     }
@@ -349,6 +350,17 @@ export function ThreeRtsScene() {
         flash.position.y = 3.65;
         flash.visible = false;
         group.add(flash);
+      }
+      // Shot tracer: a gold bolt that flies from the tower top to the raider
+      // the simulation actually hit, so tower damage is readable at a glance.
+      let bolt: THREE.Mesh | null = null;
+      if (building.kind === 'tower' && building.faction === 'player') {
+        bolt = new THREE.Mesh(
+          new THREE.SphereGeometry(0.16, 8, 6),
+          new THREE.MeshBasicMaterial({ color: COLORS.gold })
+        );
+        bolt.visible = false;
+        group.add(bolt);
       }
       // Tower range preview: a flat ring + faint disc at the real attackRange,
       // shown only while the tower is selected.
@@ -396,7 +408,7 @@ export function ThreeRtsScene() {
         group.add(rallyFlag);
       }
       scene.add(group);
-      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash, rangeRing, rallyFlag };
+      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash, bolt, rangeRing, rallyFlag };
       buildingVisuals.set(building.id, visual);
       return visual;
     }
@@ -475,6 +487,7 @@ export function ThreeRtsScene() {
       }
 
       const liveBuildings = new Set<string>();
+      const shots = new Map(towerShots(sim).map((shot) => [shot.id, shot]));
       for (const building of sim.buildings) {
         liveBuildings.add(building.id);
         const visual = ensureBuildingVisual(building);
@@ -489,6 +502,23 @@ export function ThreeRtsScene() {
         if (visual.flash) {
           const sinceShot = building.attackCooldown - building.cooldownLeft;
           visual.flash.visible = building.cooldownLeft > 0 && sinceShot < 0.18;
+        }
+        if (visual.bolt) {
+          const shot = shots.get(building.id);
+          if (shot) {
+            // Bolt positions are relative to the tower group; lerp from the
+            // tower top down to torso height at the recorded impact point.
+            const t = Math.min(1, shot.age / TOWER_SHOT_DURATION);
+            visual.bolt.visible = true;
+            visual.bolt.position.set(
+              (shot.to.x - building.pos.x) * t,
+              3.4 + (0.6 - 3.4) * t,
+              (shot.to.z - building.pos.z) * t
+            );
+            visual.bolt.scale.setScalar(1 - t * 0.45);
+          } else {
+            visual.bolt.visible = false;
+          }
         }
         if (visual.hpFill && visual.hpBar) {
           const ratio = Math.max(0, Math.min(1, building.hp / building.maxHp));

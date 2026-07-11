@@ -14,6 +14,7 @@ import type {
   SelectionSummary,
   SmartTarget,
   ThreatAlert,
+  TowerShot,
   Unit,
   UnitKind,
   UnitOrder,
@@ -47,6 +48,7 @@ export const RAIDER_AGGRO_RANGE = 8;
 export const SOLDIER_AGGRO_RANGE = 10;
 export const MISSION_SOLDIER_TARGET = 3;
 export const THREAT_ALERT_DURATION = 4;
+export const TOWER_SHOT_DURATION = 0.35;
 
 const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
   worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
@@ -115,7 +117,9 @@ function makeBuilding(state: GameState, kind: BuildingKind, faction: Building['f
     cooldownLeft: 0,
     trainQueue: 0,
     trainProgress: 0,
-    rallyPoint: null
+    rallyPoint: null,
+    lastShotAt: null,
+    lastShotTarget: null
   };
 }
 
@@ -250,6 +254,22 @@ export function rallyPreviews(state: GameState): RallyPreview[] {
     previews.push({ id: building.id, from: { ...building.pos }, point: { ...building.rallyPoint } });
   }
   return previews;
+}
+
+// Combat readability: expose each player tower's most recent shot so the 3D
+// tracer and the minimap line always point at the raider that was actually
+// hit. Shots older than TOWER_SHOT_DURATION (or after the match ends) vanish.
+export function towerShots(state: GameState): TowerShot[] {
+  const shots: TowerShot[] = [];
+  if (state.status !== 'playing') return shots;
+  for (const building of state.buildings) {
+    if (building.kind !== 'tower' || building.faction !== 'player') continue;
+    if (building.lastShotAt === null || building.lastShotTarget === null) continue;
+    const age = state.time - building.lastShotAt;
+    if (age > TOWER_SHOT_DURATION) continue;
+    shots.push({ id: building.id, from: { ...building.pos }, to: { ...building.lastShotTarget }, age });
+  }
+  return shots;
 }
 
 // Economy readability: surface worker puppies that are doing nothing so the
@@ -605,6 +625,8 @@ function stepBuilding(state: GameState, building: Building, dt: number) {
     if (target && building.cooldownLeft <= 0) {
       target.hp -= building.attackDamage;
       building.cooldownLeft = building.attackCooldown;
+      building.lastShotAt = state.time;
+      building.lastShotTarget = { ...target.pos };
     }
   }
 
