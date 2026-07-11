@@ -3,6 +3,7 @@ import {
   COSTS,
   FIRST_WAVE_AT,
   MISSION_SOLDIER_TARGET,
+  SOLDIER_AGGRO_RANGE,
   THREAT_ALERT_DURATION,
   WAVE_INTERVAL,
   WAVE_WARNING_LEAD,
@@ -234,6 +235,74 @@ describe('combat and win/loss', () => {
     expect(waveSize(2)).toBe(2);
     expect(waveSize(4)).toBe(3);
     expect(waveSize(20)).toBe(5);
+  });
+});
+
+describe('soldier auto-defense', () => {
+  function stateWithSoldier() {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    expect(placeBuilding(state, 'barracks')).not.toBeNull();
+    expect(trainSoldier(state)).toBe(true);
+    advance(state, 5);
+    const soldier = state.units.find((unit) => unit.kind === 'soldier' && unit.faction === 'player');
+    if (!soldier) throw new Error('expected trained soldier');
+    expect(soldier.order.type).toBe('idle');
+    return { state, soldier };
+  }
+
+  it('engages a raider that enters aggro range and returns to idle after the kill', () => {
+    const { state, soldier } = stateWithSoldier();
+    const raider = state.units.find((unit) => unit.kind === 'raider');
+    if (!raider) throw new Error('expected raider');
+    raider.pos = { x: soldier.pos.x + SOLDIER_AGGRO_RANGE - 1, z: soldier.pos.z };
+    raider.order = { type: 'idle' };
+
+    advance(state, 0.1);
+    expect(soldier.order).toEqual({ type: 'attack', targetId: raider.id });
+
+    advance(state, 12);
+    expect(state.units.some((unit) => unit.id === raider.id)).toBe(false);
+    expect(state.stats.raidersDefeated).toBeGreaterThanOrEqual(1);
+    expect(soldier.order.type).toBe('idle');
+  });
+
+  it('protects the base from the first assault wave without an explicit attack command', () => {
+    const { state, soldier } = stateWithSoldier();
+    const defeatedBefore = state.stats.raidersDefeated;
+
+    advance(state, FIRST_WAVE_AT + 25);
+
+    expect(state.status).toBe('playing');
+    expect(state.stats.raidersDefeated).toBeGreaterThan(defeatedBefore);
+    expect(state.units.some((unit) => unit.id === soldier.id)).toBe(true);
+  });
+
+  it('stays idle while every enemy is beyond aggro range', () => {
+    const { state, soldier } = stateWithSoldier();
+    for (const raider of state.units.filter((unit) => unit.faction === 'enemy')) {
+      raider.pos = { x: soldier.pos.x + SOLDIER_AGGRO_RANGE + 2, z: soldier.pos.z };
+      raider.order = { type: 'idle' };
+    }
+    const posBefore = { ...soldier.pos };
+
+    advance(state, 1);
+    expect(soldier.order.type).toBe('idle');
+    expect(soldier.pos).toEqual(posBefore);
+  });
+
+  it('never makes idle workers auto-engage nearby raiders', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const raider = state.units.find((unit) => unit.kind === 'raider');
+    if (!raider) throw new Error('expected raider');
+    raider.pos = { x: worker.pos.x + 2, z: worker.pos.z };
+    raider.order = { type: 'idle' };
+
+    advance(state, 1);
+    expect(worker.order.type).toBe('idle');
+    expect(raider.hp).toBe(raider.maxHp);
   });
 });
 

@@ -43,6 +43,7 @@ export const FIRST_WAVE_AT = 50;
 export const WAVE_INTERVAL = 40;
 export const WAVE_WARNING_LEAD = 10;
 export const RAIDER_AGGRO_RANGE = 8;
+export const SOLDIER_AGGRO_RANGE = 10;
 export const MISSION_SOLDIER_TARGET = 3;
 export const THREAT_ALERT_DURATION = 4;
 
@@ -537,6 +538,17 @@ function stepUnit(state: GameState, unit: Unit, dt: number) {
   unit.cooldownLeft = Math.max(0, unit.cooldownLeft - dt);
   switch (unit.order.type) {
     case 'idle':
+      // Soldier auto-defense: an idle player soldier engages the nearest raider
+      // in aggro range on its own, so the standing army actually defends the
+      // base instead of watching raiders walk past. Workers never auto-engage,
+      // and only enemy units (not the camp) trigger the aggro.
+      if (unit.kind === 'soldier' && unit.faction === 'player') {
+        const threat = nearestEnemyUnit(state, unit.pos, SOLDIER_AGGRO_RANGE);
+        if (threat) {
+          unit.order = { type: 'attack', targetId: threat.id };
+          stepAttack(state, unit, dt);
+        }
+      }
       break;
     case 'move': {
       const remaining = moveToward(unit, unit.order.target, dt);
