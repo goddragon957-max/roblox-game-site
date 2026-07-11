@@ -17,7 +17,8 @@ import {
   towerRangePreviews,
   towerShots,
   trainSoldier,
-  waveForecast
+  waveForecast,
+  waveTelegraph
 } from '../game/simulation';
 import type {
   BuildableKind,
@@ -32,7 +33,8 @@ import type {
   ThreatAlert,
   TowerShot,
   UnitKind,
-  WaveForecast
+  WaveForecast,
+  WaveTelegraph
 } from '../game/types';
 
 export interface GameStore {
@@ -105,6 +107,7 @@ declare global {
         missionHint: () => MissionHint;
         matchScore: () => MatchScore;
         waveForecast: () => WaveForecast;
+        waveTelegraph: () => WaveTelegraph;
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
         towerRanges: () => RangePreview[];
@@ -143,6 +146,7 @@ if (typeof window !== 'undefined') {
       missionHint: () => missionHint(useGameStore.getState().sim),
       matchScore: () => matchScore(useGameStore.getState().sim),
       waveForecast: () => waveForecast(useGameStore.getState().sim),
+      waveTelegraph: () => waveTelegraph(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),
       towerRanges: () => towerRangePreviews(useGameStore.getState().sim),

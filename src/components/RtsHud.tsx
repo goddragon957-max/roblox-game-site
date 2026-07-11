@@ -15,7 +15,8 @@ import {
   threatAlert,
   towerRangePreviews,
   towerShots,
-  waveForecast
+  waveForecast,
+  waveTelegraph
 } from '../game/simulation';
 import type { Building, BuildingKind, GameState, Unit, UnitKind } from '../game/types';
 import { affordable, useGameStore } from '../store/gameStore';
@@ -160,6 +161,18 @@ function Minimap() {
         context.beginPath();
         context.moveTo(toPx(shot.from.x), toPx(shot.from.z));
         context.lineTo(toPx(shot.to.x), toPx(shot.to.z));
+        context.stroke();
+      }
+
+      // Enemy-orange "incoming" pulse at the spawn ground, distinct from the
+      // red "being hit" threat pulse below.
+      const telegraph = waveTelegraph(sim);
+      if (telegraph.active && telegraph.pos) {
+        const wavePhase = (sim.time % 0.9) / 0.9;
+        context.strokeStyle = `rgba(255, 138, 92, ${1 - wavePhase * 0.6})`;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.arc(toPx(telegraph.pos.x), toPx(telegraph.pos.z), 3 + wavePhase * 6, 0, Math.PI * 2);
         context.stroke();
       }
 

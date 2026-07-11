@@ -20,7 +20,8 @@ import type {
   UnitKind,
   UnitOrder,
   Vec2,
-  WaveForecast
+  WaveForecast,
+  WaveTelegraph
 } from './types';
 
 export const MAP_HALF = 24;
@@ -700,6 +701,26 @@ export function waveForecast(state: GameState): WaveForecast {
   };
 }
 
+// Shared spawn-ground math: the telegraph ring must mark the exact spot where
+// spawnWave will actually place the wave's lead raider.
+function waveSpawnPoint(camp: Building, index: number): Vec2 {
+  const pos = { x: camp.pos.x - 2 - index * 1.4, z: camp.pos.z + 2 + (index % 2) * 1.6 };
+  clampToMap(pos);
+  return pos;
+}
+
+// Raider telegraph: during the warning lead, point at the real spawn ground
+// next to the camp so the player sees where the wave will come from, not just
+// that one is coming.
+export function waveTelegraph(state: GameState): WaveTelegraph {
+  const forecast = waveForecast(state);
+  const camp = state.buildings.find((building) => building.kind === 'enemyCamp' && building.faction === 'enemy' && building.hp > 0);
+  if (!forecast.imminent || !camp) {
+    return { active: false, pos: null, secondsLeft: forecast.secondsLeft, size: forecast.size };
+  }
+  return { active: true, pos: waveSpawnPoint(camp, 0), secondsLeft: forecast.secondsLeft, size: forecast.size };
+}
+
 function spawnWave(state: GameState) {
   const camp = state.buildings.find((building) => building.kind === 'enemyCamp' && building.hp > 0);
   if (!camp) return;
@@ -707,9 +728,7 @@ function spawnWave(state: GameState) {
   state.waveWarned = false;
   const count = waveSize(state.waveNumber);
   for (let i = 0; i < count; i += 1) {
-    const spawnPos = { x: camp.pos.x - 2 - i * 1.4, z: camp.pos.z + 2 + (i % 2) * 1.6 };
-    clampToMap(spawnPos);
-    state.units.push(makeUnit(state, 'raider', 'enemy', spawnPos, { type: 'assault' }));
+    state.units.push(makeUnit(state, 'raider', 'enemy', waveSpawnPoint(camp, i), { type: 'assault' }));
   }
   pushLog(state, `라쿤 습격대 ${state.waveNumber}차 웨이브 출격 (${count}기)`);
 }

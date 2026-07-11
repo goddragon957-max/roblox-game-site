@@ -134,6 +134,13 @@ export interface WaveForecast {
   imminent: boolean;
 }
 
+export interface WaveTelegraph {
+  active: boolean;
+  pos: Vec2 | null;
+  secondsLeft: number;
+  size: number;
+}
+
 export interface ThreatAlert {
   active: boolean;
   pos: Vec2 | null;

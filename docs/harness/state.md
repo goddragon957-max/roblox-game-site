@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_18_ready
-current_round: 18
+current_phase: round_19_ready
+current_round: 19
 next_role: generator
 pause_reason: ""
 max_rounds: 20
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-11T21:33:35Z"
+updated_at: "2026-07-11T22:40:30Z"
 resume_attempts: 1
-last_verified_at: "2026-07-11T21:33:35Z"
+last_verified_at: "2026-07-11T22:40:30Z"
 last_verdict: pass
 ```
 
@@ -36,5 +36,6 @@ last_verdict: pass
 - Round 15 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): barracks rally point — `Building.rallyPoint` set by a right-click smart command on open ground while a player barracks is selected (gather/attack targets never move the rally), newly trained soldiers spawn with a move order to the rally instead of idling at the barracks door, pure `rallyPreviews(state)` drives a 3D rally flag (visible while the barracks is selected), a dashed minimap line + dot, a `data-rally-point` selection-panel note, a green command marker for rally-set clicks, `__rtsSmoke.command.rallyPoints()` smoke hook, and 5 new deterministic tests. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/rally/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-15-qa.md`.
 - Round 16 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): tower shot tracer — `stepBuilding` records `lastShotAt`/`lastShotTarget` exactly where tower damage is applied, pure `towerShots(state)` (age ≤ `TOWER_SHOT_DURATION = 0.35`, empty when the match is over) drives a gold bolt from tower top to the recorded impact point in the 3D scene, a gold tracer line on the minimap, and `__rtsSmoke.command.towerShots()`; 4 new deterministic tests cover record/expiry-refresh/out-of-range/match-end. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/train/tower shot/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-16-qa.md`.
 - Round 17 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): selected-unit order lines — pure `orderPreviews(state)` derives each selected player unit's destination (move target / gather node / deposit base / attack victim) with liveness guards and no new sim state; the 3D scene draws a color-coded ground line + destination dot per selected unit (white move, gold gather/deposit, red attack), the minimap draws matching dashed lines, `__rtsSmoke.command.orderPreviews()` exposes it, and 4 new deterministic tests cover selection scoping, gather/deposit targets, attack-target death, and idle/match-over emptiness. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (move/gather/deposit/build/train/attack order previews), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-17-qa.md`.
-- Round 18 is ready for the next scheduled generator slice under the same 48h loop authorization.
+- Round 18 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): raider wave spawn telegraph — pure `waveTelegraph(state)` (active only while `waveForecast` is imminent and a live enemy camp exists) marks the exact spawn ground of the wave's lead raider via a shared `waveSpawnPoint` helper also used by `spawnWave`; the 3D scene pulses an enemy-orange ring + hovering spike there during the warning window, the minimap pulses a matching orange circle (distinct from the red threat pulse), `__rtsSmoke.command.waveTelegraph()` exposes it, and 4 new deterministic tests cover initial inactivity, spawn-point accuracy against the real spawn, post-spawn quiet, and camp-destroyed clearing. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (wave telegraph, selection/gather/build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-18-qa.md`.
+- Round 19 is ready for the next scheduled generator slice under the same 48h loop authorization.
 - Do not include `.hermes/` in git.

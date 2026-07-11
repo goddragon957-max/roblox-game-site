@@ -26,7 +26,8 @@ import {
   towerShots,
   trainSoldier,
   waveForecast,
-  waveSize
+  waveSize,
+  waveTelegraph
 } from '../simulation';
 import type { GameState } from '../types';
 
@@ -338,6 +339,57 @@ describe('wave forecast', () => {
     expect(forecast.size).toBe(waveSize(2));
     expect(forecast.secondsLeft).toBeLessThanOrEqual(WAVE_INTERVAL);
     expect(forecast.imminent).toBe(false);
+  });
+});
+
+describe('wave telegraph', () => {
+  it('stays inactive outside the warning window', () => {
+    const state = createInitialState();
+    expect(waveTelegraph(state)).toEqual({
+      active: false,
+      pos: null,
+      secondsLeft: FIRST_WAVE_AT,
+      size: waveSize(1)
+    });
+  });
+
+  it('marks the ground where the wave lead raider actually spawns', () => {
+    const state = createInitialState();
+    const camp = enemyCamp(state);
+    advance(state, FIRST_WAVE_AT - WAVE_WARNING_LEAD + 1);
+
+    const telegraph = waveTelegraph(state);
+    expect(telegraph.active).toBe(true);
+    expect(telegraph.size).toBe(waveSize(1));
+    expect(telegraph.secondsLeft).toBeLessThanOrEqual(WAVE_WARNING_LEAD);
+    expect(telegraph.pos).toEqual({ x: camp.pos.x - 2, z: camp.pos.z + 2 });
+
+    // Advance just past the spawn moment: the lead raider must appear at the
+    // telegraphed spot (it only gets a fraction of a second to walk away).
+    const before = state.units.length;
+    advance(state, WAVE_WARNING_LEAD - 1 + 0.1);
+    const spawned = state.units.slice(before);
+    expect(spawned.length).toBe(waveSize(1));
+    expect(dist(spawned[0].pos, telegraph.pos!)).toBeLessThan(0.6);
+  });
+
+  it('goes quiet after the wave spawns until the next warning window', () => {
+    const state = createInitialState();
+    advance(state, FIRST_WAVE_AT + 1);
+    expect(state.waveNumber).toBe(1);
+    expect(waveTelegraph(state).active).toBe(false);
+    expect(waveTelegraph(state).pos).toBeNull();
+  });
+
+  it('clears when the enemy camp is destroyed', () => {
+    const state = createInitialState();
+    advance(state, FIRST_WAVE_AT - WAVE_WARNING_LEAD + 1);
+    expect(waveTelegraph(state).active).toBe(true);
+
+    enemyCamp(state).hp = 0;
+    advance(state, 0.1);
+    expect(state.status).toBe('won');
+    expect(waveTelegraph(state).active).toBe(false);
   });
 });
 

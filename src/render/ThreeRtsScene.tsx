@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { MAP_HALF, TERRAIN, TOWER_SHOT_DURATION, orderPreviews, playerUnitIdsInRect, towerShots } from '../game/simulation';
+import { MAP_HALF, TERRAIN, TOWER_SHOT_DURATION, orderPreviews, playerUnitIdsInRect, towerShots, waveTelegraph } from '../game/simulation';
 import type { Building, GameState, OrderPreviewKind, ResourceNode, Unit } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 
@@ -313,6 +313,27 @@ export function ThreeRtsScene() {
     scene.add(commandMarker);
     let markerAge = Infinity;
 
+    // Raider telegraph: a pulsing enemy-orange ring plus a hovering spike on
+    // the actual spawn ground during the wave warning window, so "incoming"
+    // has a place on the battlefield, not just a countdown chip.
+    const telegraphGroup = new THREE.Group();
+    const telegraphRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.05, 1.4, 40),
+      new THREE.MeshBasicMaterial({ color: COLORS.ringEnemy, transparent: true, opacity: 0.9 })
+    );
+    telegraphRing.rotation.x = -Math.PI / 2;
+    telegraphRing.position.y = 0.06;
+    telegraphGroup.add(telegraphRing);
+    const telegraphSpike = new THREE.Mesh(
+      new THREE.ConeGeometry(0.3, 0.8, 8),
+      new THREE.MeshBasicMaterial({ color: COLORS.ringEnemy })
+    );
+    telegraphSpike.rotation.x = Math.PI;
+    telegraphSpike.position.y = 1.5;
+    telegraphGroup.add(telegraphSpike);
+    telegraphGroup.visible = false;
+    scene.add(telegraphGroup);
+
     const unitVisuals = new Map<string, EntityVisual>();
     const buildingVisuals = new Map<string, EntityVisual>();
     const nodeVisuals = new Map<string, NodeVisual>();
@@ -607,6 +628,16 @@ export function ThreeRtsScene() {
         }
       }
 
+      const telegraph = waveTelegraph(sim);
+      telegraphGroup.visible = telegraph.active && telegraph.pos !== null;
+      if (telegraph.active && telegraph.pos) {
+        telegraphGroup.position.set(telegraph.pos.x, 0, telegraph.pos.z);
+        const phase = (sim.time % 0.9) / 0.9;
+        telegraphRing.scale.setScalar(1 + phase * 0.9);
+        (telegraphRing.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - phase * 0.75);
+        telegraphSpike.position.y = 1.5 + Math.sin(sim.time * 6) * 0.12;
+      }
+
       const liveNodes = new Set<string>();
       for (const node of sim.resources) {
         if (node.amountLeft <= 0) continue;
@@ -821,6 +852,7 @@ export function ThreeRtsScene() {
       for (const visual of buildingVisuals.values()) disposeGroup(visual.group);
       for (const visual of nodeVisuals.values()) disposeGroup(visual.group);
       for (const visual of orderVisuals.values()) disposeOrderVisual(visual);
+      disposeGroup(telegraphGroup);
       renderer.dispose();
       renderer.domElement.remove();
     };
