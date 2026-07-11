@@ -131,7 +131,14 @@ export function createInitialState(): GameState {
     nextWaveAt: FIRST_WAVE_AT,
     waveWarned: false,
     status: 'playing',
-    log: []
+    log: [],
+    stats: {
+      goldGathered: 0,
+      woodGathered: 0,
+      soldiersTrained: 0,
+      raidersDefeated: 0,
+      unitsLost: 0
+    }
   };
 
   state.buildings.push(makeBuilding(state, 'base', 'player', { x: -13.5, z: 11.5 }));
@@ -371,8 +378,13 @@ function stepDeposit(state: GameState, unit: Unit, dt: number) {
     moveToward(unit, base.pos, dt);
     return;
   }
-  if (unit.carry.type === 'gold') state.gold += unit.carry.amount;
-  else state.wood += unit.carry.amount;
+  if (unit.carry.type === 'gold') {
+    state.gold += unit.carry.amount;
+    state.stats.goldGathered += unit.carry.amount;
+  } else {
+    state.wood += unit.carry.amount;
+    state.stats.woodGathered += unit.carry.amount;
+  }
   unit.carry = null;
   const backTo = unit.lastGatherNodeId ? findNode(state, unit.lastGatherNodeId) : undefined;
   if (backTo && backTo.amountLeft > 0) {
@@ -460,6 +472,7 @@ function stepBuilding(state: GameState, building: Building, dt: number) {
       const spawnPos = { x: building.pos.x + 2.2, z: building.pos.z + 1.6 };
       clampToMap(spawnPos);
       state.units.push(makeUnit(state, 'soldier', 'player', spawnPos));
+      state.stats.soldiersTrained += 1;
       pushLog(state, '병사가 전열에 합류했습니다');
     }
   }
@@ -490,6 +503,10 @@ function removeDead(state: GameState) {
   if (deadUnits.length > 0) {
     state.units = state.units.filter((unit) => unit.hp > 0);
     state.selectedIds = state.selectedIds.filter((id) => !deadUnits.some((unit) => unit.id === id));
+    for (const unit of deadUnits) {
+      if (unit.faction === 'enemy') state.stats.raidersDefeated += 1;
+      else state.stats.unitsLost += 1;
+    }
   }
 
   const deadBuildings = state.buildings.filter((building) => building.hp <= 0);

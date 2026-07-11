@@ -260,6 +260,20 @@ button { font: inherit; }
 .endgame.won h2 { color: var(--accent); }
 .endgame.lost h2 { color: var(--danger); }
 .endgame p { margin: 0; color: var(--muted); font-size: 13px; }
+.endgame-stats {
+  margin: 4px 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(118px, 1fr));
+  gap: 6px 22px;
+  padding: 12px 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: left;
+}
+.endgame-stats > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.endgame-stats dt { color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.endgame-stats dd { margin: 0; color: var(--ink); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .endgame button {
   display: inline-flex;
   align-items: center;

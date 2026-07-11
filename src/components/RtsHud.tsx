@@ -285,6 +285,34 @@ export function RtsHud() {
         <div className={`endgame ${sim.status}`} role="dialog" aria-label="game result">
           <h2>{sim.status === 'won' ? 'Victory!' : 'Defeat'}</h2>
           <p>{sim.status === 'won' ? '라쿤 캠프를 파괴하고 프론티어를 지켜냈습니다.' : '본부가 파괴되었습니다. 다시 도전하세요.'}</p>
+          <dl className="endgame-stats" data-endgame-stats aria-label="match summary">
+            <div>
+              <dt>생존 시간</dt>
+              <dd data-endstat="time">
+                {Math.floor(sim.time / 60)}:{String(Math.floor(sim.time % 60)).padStart(2, '0')}
+              </dd>
+            </div>
+            <div>
+              <dt>웨이브 도달</dt>
+              <dd data-endstat="waves">{sim.waveNumber}</dd>
+            </div>
+            <div>
+              <dt>골드 채집</dt>
+              <dd data-endstat="gold">{sim.stats.goldGathered}</dd>
+            </div>
+            <div>
+              <dt>나무 채집</dt>
+              <dd data-endstat="wood">{sim.stats.woodGathered}</dd>
+            </div>
+            <div>
+              <dt>병사 훈련</dt>
+              <dd data-endstat="soldiers">{sim.stats.soldiersTrained}</dd>
+            </div>
+            <div>
+              <dt>라쿤 격퇴</dt>
+              <dd data-endstat="raiders">{sim.stats.raidersDefeated}</dd>
+            </div>
+          </dl>
           <button type="button" onClick={restart}>
             <RotateCcw size={16} /> 다시 시작
           </button>

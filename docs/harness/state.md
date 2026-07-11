@@ -1,16 +1,16 @@
 # Harness State
 
 ```yaml
-status: paused
-current_phase: round_5_verified
-current_round: 5
-next_role: human_approval
-pause_reason: "Round 5 verified locally; commit/push/live URL confirmation authorized by user goal."
-max_rounds: 5
+status: running
+current_phase: round_7_ready
+current_round: 7
+next_role: generator
+pause_reason: ""
+max_rounds: 10
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-10T11:58:52Z"
+updated_at: "2026-07-11T01:22:17Z"
 resume_attempts: 1
-last_verified_at: "2026-07-10T11:58:52Z"
+last_verified_at: "2026-07-11T01:22:17Z"
 last_verdict: pass
 ```
 
@@ -23,5 +23,7 @@ last_verdict: pass
 - Round 3 evaluator output: deterministic gates, browser smoke, selected-state rendered visual QA, and `docs/harness/feedback/round-3-qa.md` all passed; visual score 12/12.
 - Round 4 (work order `docs/goals/2026-07-10-rts-polish.md`): polish/maintenance pass on the verified RTS slice — removed `THREE.Clock` and `PCFSoftShadowMap` deprecated APIs from the renderer, added state-driven gather/attack/tower-fire feedback, and color-coded the smart-command marker. Evaluator verified in `docs/harness/feedback/round-4-qa.md`; Round 4 was committed and GitHub Pages deployment was enabled with the user's approval (`bbcf708`, `347f095`).
 - Round 5 (work order `docs/goals/2026-07-10-rts-goal-mode-round5.md`): mission clarity/game-feel pass — state-derived progressive mission hints (`missionHint`), wave-incoming warning (log + HUD alarm chip), resource-delivery pop feedback, train-progress feedback on the train button, and a gentler first 90 seconds (first wave at 50s with a single raider, `waveSize` ramp), all covered by new deterministic tests. Evaluator verified deterministic gates, browser smoke, visual QA, and independent review in `docs/harness/feedback/round-5-qa.md`.
-- The user's Round 5 goal explicitly authorizes commit (`feat: improve RTS mission clarity`) and push to `origin main` once verification passes; live URL to confirm: https://goddragon957-max.github.io/roblox-game-site/.
+- Round 5 was committed and pushed (`92b1eef`); the 48h loop work order `docs/goals/2026-07-11-48h-claude-goal-loop.md` authorizes continued per-session slices with commit/push after verification, so `max_rounds` was raised from 5 to 10.
+- Round 6 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): post-run match summary — `MatchStats` tracked deterministically in the sim (gold/wood gathered on deposit, soldiers trained on spawn, raiders defeated / player units lost on death) and shown as a compact scoreboard on the win/loss overlay, with 3 new deterministic tests. Evaluator verified deterministic gates, `git diff --check`, browser smoke, rendered visual QA, and restart reset behavior in `docs/harness/feedback/round-6-qa.md`; ready for authorized commit/push.
+- Round 7 is ready for the next scheduled generator slice under the same 48h loop authorization.
 - Do not include `.hermes/` in git.

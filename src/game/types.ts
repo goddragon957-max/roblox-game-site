@@ -64,6 +64,14 @@ export interface LogEntry {
   text: string;
 }
 
+export interface MatchStats {
+  goldGathered: number;
+  woodGathered: number;
+  soldiersTrained: number;
+  raidersDefeated: number;
+  unitsLost: number;
+}
+
 export interface GameState {
   time: number;
   seq: number;
@@ -78,6 +86,7 @@ export interface GameState {
   waveWarned: boolean;
   status: GameStatus;
   log: LogEntry[];
+  stats: MatchStats;
 }
 
 export interface MissionHint {

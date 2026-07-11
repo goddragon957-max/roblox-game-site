@@ -209,6 +209,51 @@ describe('combat and win/loss', () => {
   });
 });
 
+describe('match summary stats', () => {
+  it('tracks gathered gold through base deposits', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    if (!goldNode) throw new Error('expected gold node');
+    const goldBefore = state.gold;
+
+    commandSmart(state, [worker.id], { point: { ...goldNode.pos }, entityId: goldNode.id });
+    advance(state, 20);
+
+    expect(state.stats.goldGathered).toBeGreaterThan(0);
+    expect(state.stats.goldGathered).toBe(state.gold - goldBefore);
+    expect(state.stats.woodGathered).toBe(0);
+  });
+
+  it('counts soldiers as they finish training', () => {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    expect(placeBuilding(state, 'barracks')).not.toBeNull();
+    expect(trainSoldier(state)).toBe(true);
+    expect(state.stats.soldiersTrained).toBe(0);
+
+    advance(state, 5);
+    expect(state.stats.soldiersTrained).toBe(1);
+  });
+
+  it('counts defeated raiders and lost player units', () => {
+    const state = createInitialState();
+    const raider = state.units.find((unit) => unit.kind === 'raider');
+    const worker = firstWorker(state);
+    if (!raider) throw new Error('expected raider');
+
+    raider.hp = 0;
+    worker.hp = 0;
+    advance(state, 0.1);
+
+    expect(state.stats.raidersDefeated).toBe(1);
+    expect(state.stats.unitsLost).toBe(1);
+    expect(state.units.some((unit) => unit.id === raider.id)).toBe(false);
+    expect(state.units.some((unit) => unit.id === worker.id)).toBe(false);
+  });
+});
+
 describe('mission onboarding', () => {
   it('advances mission hints as the player progresses the core loop', () => {
     const state = createInitialState();
