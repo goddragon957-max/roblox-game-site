@@ -77,6 +77,18 @@ button { font: inherit; }
   background: rgba(70, 12, 10, 0.88);
   animation: wave-alarm 0.9s ease-in-out infinite;
 }
+.hud-chip.idle-workers {
+  cursor: pointer;
+  min-height: 44px;
+  color: var(--gold);
+  border-color: rgba(245, 197, 66, 0.55);
+  background: rgba(52, 40, 12, 0.85);
+}
+.hud-chip.idle-workers:hover {
+  color: #fff;
+  border-color: rgba(245, 197, 66, 0.9);
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.25), 0 8px 20px rgba(0, 0, 0, 0.3);
+}
 .hud-chip.objective { color: var(--muted); margin-left: auto; }
 
 @keyframes wave-alarm {

@@ -1,4 +1,4 @@
-import { Axe, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, ShieldAlert, Swords, TreePine } from 'lucide-react';
+import { Axe, BellRing, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, ShieldAlert, Swords, TreePine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -6,6 +6,7 @@ import {
   MAP_HALF,
   TERRAIN,
   TRAIN_TIME,
+  idleWorkerIds,
   matchScore,
   missionHint,
   selectionSummary,
@@ -212,6 +213,7 @@ export function RtsHud() {
   const build = useGameStore((store) => store.build);
   const train = useGameStore((store) => store.train);
   const restart = useGameStore((store) => store.restart);
+  const select = useGameStore((store) => store.select);
 
   const camp = sim.buildings.find((building) => building.kind === 'enemyCamp');
   const hasBarracks = sim.buildings.some((building) => building.kind === 'barracks' && building.faction === 'player');
@@ -225,6 +227,7 @@ export function RtsHud() {
   const recentLog = sim.log.slice(-3).reverse();
   const rating = sim.status !== 'playing' ? matchScore(sim) : null;
   const threat = threatAlert(sim);
+  const idleWorkers = idleWorkerIds(sim);
 
   return (
     <div className="hud">
@@ -254,6 +257,18 @@ export function RtsHud() {
             <ShieldAlert size={15} />
             <span>피격 경보! 미니맵을 확인하세요</span>
           </div>
+        )}
+        {sim.status === 'playing' && idleWorkers.length > 0 && (
+          <button
+            type="button"
+            className="hud-chip idle-workers"
+            data-idle-workers={idleWorkers.length}
+            onClick={() => select(idleWorkers)}
+            title="클릭하면 쉬는 일꾼을 모두 선택합니다"
+          >
+            <BellRing size={15} />
+            <span>쉬는 일꾼 {idleWorkers.length} · 클릭해 선택</span>
+          </button>
         )}
         <div className="hud-chip objective">
           <Flag size={15} />

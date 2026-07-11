@@ -10,6 +10,7 @@ import {
   commandSmart,
   createInitialState,
   dist,
+  idleWorkerIds,
   matchScore,
   missionHint,
   placeBuilding,
@@ -352,6 +353,56 @@ describe('drag selection', () => {
 
     setSelection(state, playerUnitIdsInRect(state, { x: 5, z: 5 }, { x: 8, z: 8 }));
     expect(state.selectedIds).toEqual([]);
+  });
+});
+
+describe('idle worker alert', () => {
+  it('flags every starting worker as idle and drops one once it gathers', () => {
+    const state = createInitialState();
+    const workers = state.units.filter((unit) => unit.kind === 'worker' && unit.faction === 'player');
+    expect(new Set(idleWorkerIds(state))).toEqual(new Set(workers.map((unit) => unit.id)));
+
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    if (!goldNode) throw new Error('expected gold node');
+    commandSmart(state, [workers[0].id], { point: { ...goldNode.pos }, entityId: goldNode.id });
+
+    const idle = idleWorkerIds(state);
+    expect(idle).not.toContain(workers[0].id);
+    expect(idle).toHaveLength(workers.length - 1);
+  });
+
+  it('never lists soldiers or enemy units even when they are idle', () => {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    expect(placeBuilding(state, 'barracks')).not.toBeNull();
+    expect(trainSoldier(state)).toBe(true);
+    advance(state, 5);
+
+    const soldier = state.units.find((unit) => unit.kind === 'soldier');
+    const raider = state.units.find((unit) => unit.kind === 'raider');
+    if (!soldier || !raider) throw new Error('expected soldier and raider');
+    expect(soldier.order.type).toBe('idle');
+    expect(raider.order.type).toBe('idle');
+
+    const idle = idleWorkerIds(state);
+    expect(idle).not.toContain(soldier.id);
+    expect(idle).not.toContain(raider.id);
+  });
+
+  it('re-lists a worker when its job ends and feeds a real selection', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    commandSmart(state, [worker.id], { point: { x: worker.pos.x + 3, z: worker.pos.z }, entityId: null });
+    expect(idleWorkerIds(state)).not.toContain(worker.id);
+
+    advance(state, 5);
+    expect(worker.order.type).toBe('idle');
+    expect(idleWorkerIds(state)).toContain(worker.id);
+
+    setSelection(state, idleWorkerIds(state));
+    expect(state.selectedIds).toEqual(idleWorkerIds(state));
+    expect(state.selectedIds.length).toBeGreaterThan(0);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   canAfford,
   commandSmart,
   createInitialState,
+  idleWorkerIds,
   matchScore,
   missionHint,
   placeBuilding,
@@ -89,6 +90,7 @@ declare global {
       command: {
         selectWorkers: () => string[];
         selectSoldiers: () => string[];
+        selectIdleWorkers: () => string[];
         selectRect: (x1: number, z1: number, x2: number, z2: number) => string[];
         smart: (x: number, z: number, entityId?: string | null) => void;
         build: (kind: BuildableKind) => boolean;
@@ -113,6 +115,12 @@ if (typeof window !== 'undefined') {
     command: {
       selectWorkers: () => selectByKind('worker'),
       selectSoldiers: () => selectByKind('soldier'),
+      selectIdleWorkers: () => {
+        const store = useGameStore.getState();
+        const ids = idleWorkerIds(store.sim);
+        store.select(ids);
+        return ids;
+      },
       selectRect: (x1, z1, x2, z2) => {
         const store = useGameStore.getState();
         const ids = playerUnitIdsInRect(store.sim, { x: x1, z: z1 }, { x: x2, z: z2 });

@@ -237,6 +237,14 @@ export function towerRangePreviews(state: GameState): RangePreview[] {
   return previews;
 }
 
+// Economy readability: surface worker puppies that are doing nothing so the
+// HUD can offer a one-click "put them back to work" selection.
+export function idleWorkerIds(state: GameState): string[] {
+  return state.units
+    .filter((unit) => unit.kind === 'worker' && unit.faction === 'player' && unit.order.type === 'idle')
+    .map((unit) => unit.id);
+}
+
 export const DRAG_SELECT_PADDING = 0.35;
 
 // Drag-select: player units inside the world-space box spanned by two ground
