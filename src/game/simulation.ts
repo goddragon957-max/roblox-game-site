@@ -6,6 +6,7 @@ import type {
   MatchGrade,
   MatchScore,
   MissionHint,
+  OrderPreview,
   RallyPreview,
   RangePreview,
   ResourceNode,
@@ -252,6 +253,40 @@ export function rallyPreviews(state: GameState): RallyPreview[] {
     const building = findBuilding(state, id);
     if (!building || building.faction !== 'player' || building.kind !== 'barracks' || !building.rallyPoint) continue;
     previews.push({ id: building.id, from: { ...building.pos }, point: { ...building.rallyPoint } });
+  }
+  return previews;
+}
+
+// Control readability: expose where each selected player unit is actually
+// headed — move target, gather node, deposit base, or attack victim — so the
+// scene and minimap can draw order lines that always match the simulation.
+export function orderPreviews(state: GameState): OrderPreview[] {
+  const previews: OrderPreview[] = [];
+  if (state.status !== 'playing') return previews;
+  for (const unit of selectedPlayerUnits(state)) {
+    const from = { ...unit.pos };
+    switch (unit.order.type) {
+      case 'move':
+        previews.push({ id: unit.id, from, to: { ...unit.order.target }, kind: 'move' });
+        break;
+      case 'gather': {
+        const node = findNode(state, unit.order.nodeId);
+        if (node && node.amountLeft > 0) previews.push({ id: unit.id, from, to: { ...node.pos }, kind: 'gather' });
+        break;
+      }
+      case 'deposit': {
+        const base = playerBase(state);
+        if (base) previews.push({ id: unit.id, from, to: { ...base.pos }, kind: 'deposit' });
+        break;
+      }
+      case 'attack': {
+        const target = findTargetEntity(state, unit.order.targetId);
+        if (target && target.hp > 0) previews.push({ id: unit.id, from, to: { ...target.pos }, kind: 'attack' });
+        break;
+      }
+      default:
+        break;
+    }
   }
   return previews;
 }

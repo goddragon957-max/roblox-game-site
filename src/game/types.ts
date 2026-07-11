@@ -158,3 +158,12 @@ export interface TowerShot {
   to: Vec2;
   age: number;
 }
+
+export type OrderPreviewKind = 'move' | 'gather' | 'deposit' | 'attack';
+
+export interface OrderPreview {
+  id: string;
+  from: Vec2;
+  to: Vec2;
+  kind: OrderPreviewKind;
+}

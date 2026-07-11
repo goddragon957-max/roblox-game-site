@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { MAP_HALF, TERRAIN, TOWER_SHOT_DURATION, playerUnitIdsInRect, towerShots } from '../game/simulation';
-import type { Building, GameState, ResourceNode, Unit } from '../game/types';
+import { MAP_HALF, TERRAIN, TOWER_SHOT_DURATION, orderPreviews, playerUnitIdsInRect, towerShots } from '../game/simulation';
+import type { Building, GameState, OrderPreviewKind, ResourceNode, Unit } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 
 interface EntityVisual {
@@ -46,6 +46,15 @@ const COLORS = {
   hpGood: 0x5ff08b,
   hpBad: 0xff6f61
 } as const;
+
+// Order lines reuse the smart-command marker color language: white move,
+// gold economy (gather/deposit), red attack.
+const ORDER_COLORS: Record<OrderPreviewKind, number> = {
+  move: 0xffffff,
+  gather: COLORS.gold,
+  deposit: COLORS.gold,
+  attack: COLORS.hpBad
+};
 
 function lambert(color: number): THREE.MeshLambertMaterial {
   return new THREE.MeshLambertMaterial({ color });
@@ -308,6 +317,49 @@ export function ThreeRtsScene() {
     const buildingVisuals = new Map<string, EntityVisual>();
     const nodeVisuals = new Map<string, NodeVisual>();
 
+    // Order lines: one line + target dot per selected player unit with an
+    // active destination, so a selected army shows where it is going.
+    interface OrderVisual {
+      line: THREE.Line;
+      dot: THREE.Mesh;
+      positions: THREE.BufferAttribute;
+    }
+    const orderVisuals = new Map<string, OrderVisual>();
+
+    function ensureOrderVisual(id: string): OrderVisual {
+      let visual = orderVisuals.get(id);
+      if (visual) return visual;
+      const positions = new THREE.BufferAttribute(new Float32Array(6), 3);
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', positions);
+      const line = new THREE.Line(
+        geometry,
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
+      );
+      // Endpoints move every frame; skip per-frame bounding-sphere upkeep.
+      line.frustumCulled = false;
+      scene.add(line);
+      const dot = new THREE.Mesh(
+        new THREE.CircleGeometry(0.24, 20),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
+      );
+      dot.rotation.x = -Math.PI / 2;
+      dot.position.y = 0.08;
+      scene.add(dot);
+      visual = { line, dot, positions };
+      orderVisuals.set(id, visual);
+      return visual;
+    }
+
+    function disposeOrderVisual(visual: OrderVisual) {
+      scene.remove(visual.line);
+      scene.remove(visual.dot);
+      visual.line.geometry.dispose();
+      (visual.line.material as THREE.Material).dispose();
+      visual.dot.geometry.dispose();
+      (visual.dot.material as THREE.Material).dispose();
+    }
+
     function ensureUnitVisual(unit: Unit): EntityVisual {
       let visual = unitVisuals.get(unit.id);
       if (visual) return visual;
@@ -536,6 +588,25 @@ export function ThreeRtsScene() {
         }
       }
 
+      const liveOrders = new Set<string>();
+      for (const preview of orderPreviews(sim)) {
+        liveOrders.add(preview.id);
+        const visual = ensureOrderVisual(preview.id);
+        visual.positions.setXYZ(0, preview.from.x, 0.09, preview.from.z);
+        visual.positions.setXYZ(1, preview.to.x, 0.09, preview.to.z);
+        visual.positions.needsUpdate = true;
+        const color = ORDER_COLORS[preview.kind];
+        (visual.line.material as THREE.LineBasicMaterial).color.setHex(color);
+        (visual.dot.material as THREE.MeshBasicMaterial).color.setHex(color);
+        visual.dot.position.set(preview.to.x, 0.08, preview.to.z);
+      }
+      for (const [id, visual] of orderVisuals) {
+        if (!liveOrders.has(id)) {
+          disposeOrderVisual(visual);
+          orderVisuals.delete(id);
+        }
+      }
+
       const liveNodes = new Set<string>();
       for (const node of sim.resources) {
         if (node.amountLeft <= 0) continue;
@@ -749,6 +820,7 @@ export function ThreeRtsScene() {
       for (const visual of unitVisuals.values()) disposeGroup(visual.group);
       for (const visual of buildingVisuals.values()) disposeGroup(visual.group);
       for (const visual of nodeVisuals.values()) disposeGroup(visual.group);
+      for (const visual of orderVisuals.values()) disposeOrderVisual(visual);
       renderer.dispose();
       renderer.domElement.remove();
     };

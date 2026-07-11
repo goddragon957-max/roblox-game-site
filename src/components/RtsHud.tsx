@@ -9,6 +9,7 @@ import {
   idleWorkerIds,
   matchScore,
   missionHint,
+  orderPreviews,
   rallyPreviews,
   selectionSummary,
   threatAlert,
@@ -112,6 +113,22 @@ function Minimap() {
         context.beginPath();
         context.arc(toPx(unit.pos.x), toPx(unit.pos.z), 1.8, 0, Math.PI * 2);
         context.fill();
+      }
+
+      for (const order of orderPreviews(sim)) {
+        context.strokeStyle =
+          order.kind === 'attack'
+            ? 'rgba(255, 111, 97, 0.85)'
+            : order.kind === 'move'
+              ? 'rgba(255, 255, 255, 0.75)'
+              : 'rgba(245, 197, 66, 0.85)';
+        context.lineWidth = 1;
+        context.setLineDash([2, 2]);
+        context.beginPath();
+        context.moveTo(toPx(order.from.x), toPx(order.from.z));
+        context.lineTo(toPx(order.to.x), toPx(order.to.z));
+        context.stroke();
+        context.setLineDash([]);
       }
 
       for (const rally of rallyPreviews(sim)) {

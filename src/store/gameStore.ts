@@ -7,6 +7,7 @@ import {
   idleWorkerIds,
   matchScore,
   missionHint,
+  orderPreviews,
   placeBuilding,
   playerUnitIdsInRect,
   rallyPreviews,
@@ -23,6 +24,7 @@ import type {
   GameState,
   MatchScore,
   MissionHint,
+  OrderPreview,
   RallyPreview,
   RangePreview,
   SelectionSummary,
@@ -108,6 +110,7 @@ declare global {
         towerRanges: () => RangePreview[];
         towerShots: () => TowerShot[];
         rallyPoints: () => RallyPreview[];
+        orderPreviews: () => OrderPreview[];
         restart: () => void;
       };
     };
@@ -145,6 +148,7 @@ if (typeof window !== 'undefined') {
       towerRanges: () => towerRangePreviews(useGameStore.getState().sim),
       towerShots: () => towerShots(useGameStore.getState().sim),
       rallyPoints: () => rallyPreviews(useGameStore.getState().sim),
+      orderPreviews: () => orderPreviews(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()
     }
   };

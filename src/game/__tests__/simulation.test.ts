@@ -15,6 +15,7 @@ import {
   idleWorkerIds,
   matchScore,
   missionHint,
+  orderPreviews,
   placeBuilding,
   playerUnitIdsInRect,
   rallyPreviews,
@@ -663,6 +664,63 @@ describe('tower shot feedback', () => {
 
     state.status = 'won';
     expect(towerShots(state)).toEqual([]);
+  });
+});
+
+describe('order previews', () => {
+  it('shows a move line only for selected player units', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const target = { x: worker.pos.x + 5, z: worker.pos.z - 3 };
+    commandSmart(state, [worker.id], { point: target, entityId: null });
+
+    expect(orderPreviews(state)).toEqual([]);
+
+    setSelection(state, [worker.id]);
+    expect(orderPreviews(state)).toEqual([{ id: worker.id, from: worker.pos, to: target, kind: 'move' }]);
+  });
+
+  it('points gather lines at the node and deposit lines at the base', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    if (!goldNode) throw new Error('expected gold node');
+    setSelection(state, [worker.id]);
+
+    commandSmart(state, state.selectedIds, { point: { ...goldNode.pos }, entityId: goldNode.id });
+    expect(orderPreviews(state)).toEqual([{ id: worker.id, from: worker.pos, to: goldNode.pos, kind: 'gather' }]);
+
+    worker.order = { type: 'deposit' };
+    worker.carry = { type: 'gold', amount: 10 };
+    expect(orderPreviews(state)).toEqual([{ id: worker.id, from: worker.pos, to: playerBase(state).pos, kind: 'deposit' }]);
+  });
+
+  it('tracks an attack target while it lives and drops the line when it dies', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const raider = state.units.find((unit) => unit.kind === 'raider');
+    if (!raider) throw new Error('expected raider');
+    setSelection(state, [worker.id]);
+    commandSmart(state, state.selectedIds, { point: { ...raider.pos }, entityId: raider.id });
+
+    expect(orderPreviews(state)).toEqual([{ id: worker.id, from: worker.pos, to: raider.pos, kind: 'attack' }]);
+
+    raider.hp = 0;
+    expect(orderPreviews(state)).toEqual([]);
+  });
+
+  it('shows nothing for idle selections or once the match is over', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    setSelection(state, [worker.id]);
+    expect(worker.order.type).toBe('idle');
+    expect(orderPreviews(state)).toEqual([]);
+
+    commandSmart(state, state.selectedIds, { point: { x: 0, z: 0 }, entityId: null });
+    expect(orderPreviews(state)).toHaveLength(1);
+
+    state.status = 'won';
+    expect(orderPreviews(state)).toEqual([]);
   });
 });
 
