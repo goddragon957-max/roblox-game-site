@@ -136,3 +136,9 @@ export interface ThreatAlert {
   pos: Vec2 | null;
   secondsAgo: number | null;
 }
+
+export interface RangePreview {
+  id: string;
+  pos: Vec2;
+  radius: number;
+}

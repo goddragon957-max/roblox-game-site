@@ -12,6 +12,7 @@ interface EntityVisual {
   hpBar: THREE.Group | null;
   carryCube: THREE.Mesh | null;
   flash: THREE.Mesh | null;
+  rangeRing: THREE.Group | null;
 }
 
 interface NodeVisual {
@@ -321,7 +322,7 @@ export function ThreeRtsScene() {
       carryCube.visible = false;
       group.add(carryCube);
       scene.add(group);
-      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null };
+      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null, rangeRing: null };
       unitVisuals.set(unit.id, visual);
       return visual;
     }
@@ -338,6 +339,7 @@ export function ThreeRtsScene() {
       const { bar, fill } = makeHpBar(2.2, height);
       group.add(bar);
       let flash: THREE.Mesh | null = null;
+      let rangeRing: THREE.Group | null = null;
       if (building.kind === 'tower') {
         flash = new THREE.Mesh(
           new THREE.SphereGeometry(0.28, 10, 8),
@@ -347,8 +349,29 @@ export function ThreeRtsScene() {
         flash.visible = false;
         group.add(flash);
       }
+      // Tower range preview: a flat ring + faint disc at the real attackRange,
+      // shown only while the tower is selected.
+      if (building.kind === 'tower' && building.faction === 'player') {
+        rangeRing = new THREE.Group();
+        const edge = new THREE.Mesh(
+          new THREE.RingGeometry(building.attackRange - 0.22, building.attackRange, 64),
+          new THREE.MeshBasicMaterial({ color: COLORS.ringPlayer, transparent: true, opacity: 0.55 })
+        );
+        edge.rotation.x = -Math.PI / 2;
+        edge.position.y = 0.05;
+        rangeRing.add(edge);
+        const area = new THREE.Mesh(
+          new THREE.CircleGeometry(building.attackRange, 64),
+          new THREE.MeshBasicMaterial({ color: COLORS.ringPlayer, transparent: true, opacity: 0.08 })
+        );
+        area.rotation.x = -Math.PI / 2;
+        area.position.y = 0.045;
+        rangeRing.add(area);
+        rangeRing.visible = false;
+        group.add(rangeRing);
+      }
       scene.add(group);
-      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash };
+      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash, rangeRing };
       buildingVisuals.set(building.id, visual);
       return visual;
     }
@@ -432,6 +455,7 @@ export function ThreeRtsScene() {
         const visual = ensureBuildingVisual(building);
         visual.group.position.set(building.pos.x, 0, building.pos.z);
         visual.ring.visible = selected.has(building.id);
+        if (visual.rangeRing) visual.rangeRing.visible = selected.has(building.id);
         if (visual.flash) {
           const sinceShot = building.attackCooldown - building.cooldownLeft;
           visual.flash.visible = building.cooldownLeft > 0 && sinceShot < 0.18;

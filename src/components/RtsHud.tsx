@@ -10,6 +10,7 @@ import {
   missionHint,
   selectionSummary,
   threatAlert,
+  towerRangePreviews,
   waveForecast
 } from '../game/simulation';
 import type { Building, BuildingKind, GameState, Unit, UnitKind } from '../game/types';
@@ -110,6 +111,14 @@ function Minimap() {
         context.fill();
       }
 
+      for (const preview of towerRangePreviews(sim)) {
+        context.strokeStyle = 'rgba(95, 240, 139, 0.85)';
+        context.lineWidth = 1.5;
+        context.beginPath();
+        context.arc(toPx(preview.pos.x), toPx(preview.pos.z), (preview.radius / (MAP_HALF * 2)) * size, 0, Math.PI * 2);
+        context.stroke();
+      }
+
       const threat = threatAlert(sim);
       if (threat.active && threat.pos) {
         const phase = (sim.time % 1) / 1;
@@ -187,6 +196,11 @@ function SelectionPanel({ sim }: { sim: GameState }) {
       )}
       {building && building.kind === 'barracks' && building.trainQueue > 0 && (
         <p className="selection-note">훈련 대기 {building.trainQueue} · 진행 {Math.round((building.trainProgress / TRAIN_TIME) * 100)}%</p>
+      )}
+      {building && building.kind === 'tower' && (
+        <p className="selection-note" data-tower-range={building.attackRange}>
+          사거리 {building.attackRange} · 범위 안 라쿤 자동 공격
+        </p>
       )}
     </div>
   );

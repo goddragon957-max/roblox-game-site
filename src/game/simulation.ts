@@ -6,6 +6,7 @@ import type {
   MatchGrade,
   MatchScore,
   MissionHint,
+  RangePreview,
   ResourceNode,
   ResourceType,
   SelectionGroup,
@@ -222,6 +223,18 @@ export function selectionSummary(state: GameState): SelectionSummary {
     }
   }
   return { count, hp, maxHp, groups };
+}
+
+// Defense readability: expose the attack radius of each selected player tower
+// so the scene and minimap range rings always match real tower stats.
+export function towerRangePreviews(state: GameState): RangePreview[] {
+  const previews: RangePreview[] = [];
+  for (const id of state.selectedIds) {
+    const building = findBuilding(state, id);
+    if (!building || building.faction !== 'player' || building.attackRange <= 0) continue;
+    previews.push({ id: building.id, pos: { ...building.pos }, radius: building.attackRange });
+  }
+  return previews;
 }
 
 export function canAfford(state: GameState, kind: BuildableKind | 'soldier'): boolean {

@@ -16,6 +16,7 @@ import {
   selectionSummary,
   setSelection,
   threatAlert,
+  towerRangePreviews,
   trainSoldier,
   waveForecast,
   waveSize
@@ -317,6 +318,46 @@ describe('threat alert', () => {
     const alert = threatAlert(state);
     expect(alert.active).toBe(false);
     expect(alert.pos).not.toBeNull();
+  });
+});
+
+describe('tower range preview', () => {
+  function stateWithTower() {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    const tower = placeBuilding(state, 'tower');
+    if (!tower) throw new Error('expected tower placement to succeed');
+    return { state, tower };
+  }
+
+  it('is empty when nothing or only non-attacking entities are selected', () => {
+    const state = createInitialState();
+    expect(towerRangePreviews(state)).toEqual([]);
+
+    setSelection(state, [playerBase(state).id, firstWorker(state).id, enemyCamp(state).id]);
+    expect(towerRangePreviews(state)).toEqual([]);
+  });
+
+  it('previews the selected tower at its position with its real attack radius', () => {
+    const { state, tower } = stateWithTower();
+    setSelection(state, [tower.id]);
+
+    expect(towerRangePreviews(state)).toEqual([{ id: tower.id, pos: tower.pos, radius: tower.attackRange }]);
+    expect(tower.attackRange).toBeGreaterThan(0);
+  });
+
+  it('keeps only towers from a mixed selection and clears when the tower falls', () => {
+    const { state, tower } = stateWithTower();
+    setSelection(state, [tower.id, playerBase(state).id, firstWorker(state).id]);
+
+    const previews = towerRangePreviews(state);
+    expect(previews).toHaveLength(1);
+    expect(previews[0].id).toBe(tower.id);
+
+    tower.hp = 0;
+    advance(state, 0.1);
+    expect(towerRangePreviews(state)).toEqual([]);
   });
 });
 

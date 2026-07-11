@@ -10,6 +10,7 @@ import {
   selectionSummary,
   setSelection,
   threatAlert,
+  towerRangePreviews,
   trainSoldier,
   waveForecast
 } from '../game/simulation';
@@ -18,6 +19,7 @@ import type {
   GameState,
   MatchScore,
   MissionHint,
+  RangePreview,
   SelectionSummary,
   SmartTarget,
   ThreatAlert,
@@ -95,6 +97,7 @@ declare global {
         waveForecast: () => WaveForecast;
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
+        towerRanges: () => RangePreview[];
         restart: () => void;
       };
     };
@@ -117,6 +120,7 @@ if (typeof window !== 'undefined') {
       waveForecast: () => waveForecast(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),
+      towerRanges: () => towerRangePreviews(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()
     }
   };
