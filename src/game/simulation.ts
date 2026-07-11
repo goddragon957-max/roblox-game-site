@@ -12,7 +12,8 @@ import type {
   Unit,
   UnitKind,
   UnitOrder,
-  Vec2
+  Vec2,
+  WaveForecast
 } from './types';
 
 export const MAP_HALF = 24;
@@ -486,6 +487,18 @@ export function waveSize(waveNumber: number): number {
   return Math.min(1 + Math.floor(waveNumber / 2), 5);
 }
 
+// Wave preview: derive the incoming wave's number, size, and countdown from
+// real state so the HUD chip and warning log telegraph the exact threat.
+export function waveForecast(state: GameState): WaveForecast {
+  const waveNumber = state.waveNumber + 1;
+  return {
+    waveNumber,
+    size: waveSize(waveNumber),
+    secondsLeft: Math.max(0, Math.ceil(state.nextWaveAt - state.time)),
+    imminent: state.status === 'playing' && state.time >= state.nextWaveAt - WAVE_WARNING_LEAD
+  };
+}
+
 function spawnWave(state: GameState) {
   const camp = state.buildings.find((building) => building.kind === 'enemyCamp' && building.hp > 0);
   if (!camp) return;
@@ -620,7 +633,7 @@ export function advance(state: GameState, dtTotal: number) {
 
     if (!state.waveWarned && state.time >= state.nextWaveAt - WAVE_WARNING_LEAD) {
       state.waveWarned = true;
-      pushLog(state, '라쿤 습격대가 다가옵니다 — 방어를 준비하세요!');
+      pushLog(state, `라쿤 습격대 ${waveSize(state.waveNumber + 1)}기가 다가옵니다 — 방어를 준비하세요!`);
     }
 
     if (state.time >= state.nextWaveAt) {

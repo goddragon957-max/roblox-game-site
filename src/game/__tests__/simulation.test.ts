@@ -3,6 +3,7 @@ import {
   COSTS,
   FIRST_WAVE_AT,
   MISSION_SOLDIER_TARGET,
+  WAVE_INTERVAL,
   WAVE_WARNING_LEAD,
   advance,
   commandSmart,
@@ -13,6 +14,7 @@ import {
   placeBuilding,
   setSelection,
   trainSoldier,
+  waveForecast,
   waveSize
 } from '../simulation';
 import type { GameState } from '../types';
@@ -196,17 +198,48 @@ describe('combat and win/loss', () => {
     expect(waveSize(1)).toBe(1);
   });
 
-  it('warns in the log before a wave arrives', () => {
+  it('warns in the log with the incoming raider count before a wave arrives', () => {
     const state = createInitialState();
     advance(state, FIRST_WAVE_AT - WAVE_WARNING_LEAD + 1);
     expect(state.waveNumber).toBe(0);
-    expect(state.log.some((entry) => entry.text.includes('라쿤 습격대가 다가옵니다'))).toBe(true);
+    expect(state.log.some((entry) => entry.text.includes(`라쿤 습격대 ${waveSize(1)}기가 다가옵니다`))).toBe(true);
   });
 
   it('scales later waves up to the cap', () => {
     expect(waveSize(2)).toBe(2);
     expect(waveSize(4)).toBe(3);
     expect(waveSize(20)).toBe(5);
+  });
+});
+
+describe('wave forecast', () => {
+  it('previews the first wave size and countdown from the start', () => {
+    const state = createInitialState();
+    expect(waveForecast(state)).toEqual({
+      waveNumber: 1,
+      size: waveSize(1),
+      secondsLeft: FIRST_WAVE_AT,
+      imminent: false
+    });
+  });
+
+  it('turns imminent inside the warning window', () => {
+    const state = createInitialState();
+    advance(state, FIRST_WAVE_AT - WAVE_WARNING_LEAD + 1);
+    const forecast = waveForecast(state);
+    expect(forecast.imminent).toBe(true);
+    expect(forecast.secondsLeft).toBeLessThanOrEqual(WAVE_WARNING_LEAD);
+  });
+
+  it('rolls over to the next wave after one spawns', () => {
+    const state = createInitialState();
+    advance(state, FIRST_WAVE_AT + 1);
+    expect(state.waveNumber).toBe(1);
+    const forecast = waveForecast(state);
+    expect(forecast.waveNumber).toBe(2);
+    expect(forecast.size).toBe(waveSize(2));
+    expect(forecast.secondsLeft).toBeLessThanOrEqual(WAVE_INTERVAL);
+    expect(forecast.imminent).toBe(false);
   });
 });
 

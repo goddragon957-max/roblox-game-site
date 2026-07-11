@@ -107,3 +107,10 @@ export interface SmartTarget {
   point: Vec2;
   entityId: string | null;
 }
+
+export interface WaveForecast {
+  waveNumber: number;
+  size: number;
+  secondsLeft: number;
+  imminent: boolean;
+}

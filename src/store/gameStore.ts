@@ -8,9 +8,10 @@ import {
   missionHint,
   placeBuilding,
   setSelection,
-  trainSoldier
+  trainSoldier,
+  waveForecast
 } from '../game/simulation';
-import type { BuildableKind, GameState, MatchScore, MissionHint, SmartTarget, UnitKind } from '../game/types';
+import type { BuildableKind, GameState, MatchScore, MissionHint, SmartTarget, UnitKind, WaveForecast } from '../game/types';
 
 export interface GameStore {
   sim: GameState;
@@ -79,6 +80,7 @@ declare global {
         advanceSeconds: (seconds: number) => void;
         missionHint: () => MissionHint;
         matchScore: () => MatchScore;
+        waveForecast: () => WaveForecast;
         restart: () => void;
       };
     };
@@ -98,6 +100,7 @@ if (typeof window !== 'undefined') {
       advanceSeconds: (seconds) => useGameStore.getState().tick(Math.max(0, Math.min(180, seconds))),
       missionHint: () => missionHint(useGameStore.getState().sim),
       matchScore: () => matchScore(useGameStore.getState().sim),
+      waveForecast: () => waveForecast(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()
     }
   };

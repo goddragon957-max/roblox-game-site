@@ -1,7 +1,7 @@
 import { Axe, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, Swords, TreePine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, WAVE_WARNING_LEAD, matchScore, missionHint } from '../game/simulation';
+import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, matchScore, missionHint, waveForecast } from '../game/simulation';
 import type { Building, GameState, Unit } from '../game/types';
 import { affordable, useGameStore } from '../store/gameStore';
 
@@ -168,8 +168,7 @@ export function RtsHud() {
   const hasBarracks = sim.buildings.some((building) => building.kind === 'barracks' && building.faction === 'player');
   const workerCount = sim.units.filter((unit) => unit.kind === 'worker' && unit.faction === 'player').length;
   const soldierCount = sim.units.filter((unit) => unit.kind === 'soldier').length;
-  const waveIn = Math.max(0, Math.ceil(sim.nextWaveAt - sim.time));
-  const waveSoon = sim.status === 'playing' && waveIn <= WAVE_WARNING_LEAD;
+  const forecast = waveForecast(sim);
   const hint = missionHint(sim);
   const training = sim.buildings.find(
     (building) => building.kind === 'barracks' && building.faction === 'player' && building.trainQueue > 0
@@ -192,12 +191,12 @@ export function RtsHud() {
             일꾼 {workerCount} · 병사 {soldierCount}
           </span>
         </div>
-        <div className={`hud-chip wave${waveSoon ? ' alarm' : ''}`}>
+        <div className={`hud-chip wave${forecast.imminent ? ' alarm' : ''}`} data-next-wave-size={forecast.size}>
           <Swords size={15} />
           <span>
-            {waveSoon
-              ? `습격 임박! ${waveIn}s`
-              : `${sim.waveNumber === 0 ? '첫 습격까지' : `웨이브 ${sim.waveNumber} · 다음까지`} ${waveIn}s`}
+            {forecast.imminent
+              ? `습격 임박! ${forecast.secondsLeft}s · 라쿤 ${forecast.size}기`
+              : `${sim.waveNumber === 0 ? '첫 습격까지' : `웨이브 ${sim.waveNumber} · 다음까지`} ${forecast.secondsLeft}s · 라쿤 ${forecast.size}기`}
           </span>
         </div>
         <div className="hud-chip objective">
