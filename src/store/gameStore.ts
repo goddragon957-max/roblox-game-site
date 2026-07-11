@@ -7,6 +7,7 @@ import {
   idleWorkerIds,
   matchScore,
   missionHint,
+  nextBuildSlot,
   orderPreviews,
   placeBuilding,
   playerUnitIdsInRect,
@@ -33,6 +34,7 @@ import type {
   ThreatAlert,
   TowerShot,
   UnitKind,
+  Vec2,
   WaveForecast,
   WaveTelegraph
 } from '../game/types';
@@ -108,6 +110,7 @@ declare global {
         matchScore: () => MatchScore;
         waveForecast: () => WaveForecast;
         waveTelegraph: () => WaveTelegraph;
+        nextBuildSlot: () => Vec2 | null;
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
         towerRanges: () => RangePreview[];
@@ -147,6 +150,7 @@ if (typeof window !== 'undefined') {
       matchScore: () => matchScore(useGameStore.getState().sim),
       waveForecast: () => waveForecast(useGameStore.getState().sim),
       waveTelegraph: () => waveTelegraph(useGameStore.getState().sim),
+      nextBuildSlot: () => nextBuildSlot(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),
       towerRanges: () => towerRangePreviews(useGameStore.getState().sim),

@@ -197,6 +197,7 @@ button { font: inherit; }
 .command-card {
   pointer-events: auto;
   display: flex;
+  align-items: stretch;
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--panel-line);
@@ -204,6 +205,19 @@ button { font: inherit; }
   background: var(--panel);
   backdrop-filter: blur(10px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+.build-slot-note {
+  display: grid;
+  place-items: center;
+  min-width: 72px;
+  max-width: 86px;
+  padding: 7px 8px;
+  border: 1px dashed rgba(95, 240, 139, 0.52);
+  border-radius: 11px;
+  background: rgba(95, 240, 139, 0.1);
+  color: var(--accent);
+  text-align: center;
+  font: 800 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .command-button {
   display: grid;

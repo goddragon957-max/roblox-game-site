@@ -15,6 +15,7 @@ import {
   idleWorkerIds,
   matchScore,
   missionHint,
+  nextBuildSlot,
   orderPreviews,
   placeBuilding,
   playerUnitIdsInRect,
@@ -137,6 +138,30 @@ describe('economy', () => {
 });
 
 describe('build and production', () => {
+  it('previews the exact slot the next build command will use', () => {
+    const state = createInitialState();
+    const firstSlot = nextBuildSlot(state);
+
+    expect(firstSlot).toEqual({ x: -10, z: 14.5 });
+    const barracks = placeBuilding(state, 'barracks');
+    expect(barracks?.pos).toEqual(firstSlot);
+    expect(nextBuildSlot(state)).toEqual({ x: -17.5, z: 15.5 });
+  });
+
+  it('clears the build preview when every build slot is occupied', () => {
+    const state = createInitialState();
+    state.gold = 10000;
+    state.wood = 10000;
+
+    for (let i = 0; i < 6; i += 1) {
+      expect(nextBuildSlot(state)).not.toBeNull();
+      expect(placeBuilding(state, i % 2 === 0 ? 'barracks' : 'tower')).not.toBeNull();
+    }
+
+    expect(nextBuildSlot(state)).toBeNull();
+    expect(placeBuilding(state, 'tower')).toBeNull();
+  });
+
   it('builds a barracks, subtracts resources, and trains a soldier over time', () => {
     const state = createInitialState();
     const goldBefore = state.gold;

@@ -9,6 +9,7 @@ import {
   idleWorkerIds,
   matchScore,
   missionHint,
+  nextBuildSlot,
   orderPreviews,
   rallyPreviews,
   selectionSummary,
@@ -164,6 +165,21 @@ function Minimap() {
         context.stroke();
       }
 
+      const buildSlot = nextBuildSlot(sim);
+      if (sim.status === 'playing' && buildSlot) {
+        const px = toPx(buildSlot.x);
+        const py = toPx(buildSlot.z);
+        context.strokeStyle = 'rgba(95, 240, 139, 0.9)';
+        context.fillStyle = 'rgba(95, 240, 139, 0.18)';
+        context.lineWidth = 1.5;
+        context.setLineDash([3, 2]);
+        context.strokeRect(px - 4.5, py - 4.5, 9, 9);
+        context.setLineDash([]);
+        context.beginPath();
+        context.arc(px, py, 2.2, 0, Math.PI * 2);
+        context.fill();
+      }
+
       // Enemy-orange "incoming" pulse at the spawn ground, distinct from the
       // red "being hit" threat pulse below.
       const telegraph = waveTelegraph(sim);
@@ -294,6 +310,7 @@ export function RtsHud() {
   const rating = sim.status !== 'playing' ? matchScore(sim) : null;
   const threat = threatAlert(sim);
   const idleWorkers = idleWorkerIds(sim);
+  const buildSlot = nextBuildSlot(sim);
 
   return (
     <div className="hud">
@@ -367,6 +384,11 @@ export function RtsHud() {
         <SelectionPanel sim={sim} />
 
         <div className="command-card" aria-label="build and production commands">
+          {buildSlot && (
+            <div className="build-slot-note" data-next-build-slot={`${Math.round(buildSlot.x)},${Math.round(buildSlot.z)}`}>
+              다음 건설 위치 {Math.round(buildSlot.x)}, {Math.round(buildSlot.z)}
+            </div>
+          )}
           <button
             type="button"
             className="command-button"

@@ -1,6 +1,15 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { MAP_HALF, TERRAIN, TOWER_SHOT_DURATION, orderPreviews, playerUnitIdsInRect, towerShots, waveTelegraph } from '../game/simulation';
+import {
+  MAP_HALF,
+  TERRAIN,
+  TOWER_SHOT_DURATION,
+  nextBuildSlot,
+  orderPreviews,
+  playerUnitIdsInRect,
+  towerShots,
+  waveTelegraph
+} from '../game/simulation';
 import type { Building, GameState, OrderPreviewKind, ResourceNode, Unit } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 
@@ -334,6 +343,26 @@ export function ThreeRtsScene() {
     telegraphGroup.visible = false;
     scene.add(telegraphGroup);
 
+    // Build-slot preview: a low, transparent footprint showing exactly where
+    // the next build button will place a structure. It is derived from the same
+    // nextBuildSlot() function that placeBuilding() uses.
+    const buildPreviewGroup = new THREE.Group();
+    const buildPreviewFootprint = new THREE.Mesh(
+      new THREE.BoxGeometry(2.8, 0.04, 2.8),
+      new THREE.MeshBasicMaterial({ color: COLORS.ringPlayer, transparent: true, opacity: 0.18 })
+    );
+    buildPreviewFootprint.position.y = 0.04;
+    buildPreviewGroup.add(buildPreviewFootprint);
+    const buildPreviewRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.65, 1.9, 40),
+      new THREE.MeshBasicMaterial({ color: COLORS.ringPlayer, transparent: true, opacity: 0.75 })
+    );
+    buildPreviewRing.rotation.x = -Math.PI / 2;
+    buildPreviewRing.position.y = 0.08;
+    buildPreviewGroup.add(buildPreviewRing);
+    buildPreviewGroup.visible = false;
+    scene.add(buildPreviewGroup);
+
     const unitVisuals = new Map<string, EntityVisual>();
     const buildingVisuals = new Map<string, EntityVisual>();
     const nodeVisuals = new Map<string, NodeVisual>();
@@ -638,6 +667,15 @@ export function ThreeRtsScene() {
         telegraphSpike.position.y = 1.5 + Math.sin(sim.time * 6) * 0.12;
       }
 
+      const buildSlot = nextBuildSlot(sim);
+      buildPreviewGroup.visible = sim.status === 'playing' && buildSlot !== null;
+      if (buildSlot) {
+        buildPreviewGroup.position.set(buildSlot.x, 0, buildSlot.z);
+        const phase = (sim.time % 1.2) / 1.2;
+        buildPreviewRing.scale.setScalar(1 + phase * 0.25);
+        (buildPreviewRing.material as THREE.MeshBasicMaterial).opacity = 0.75 * (1 - phase * 0.35);
+      }
+
       const liveNodes = new Set<string>();
       for (const node of sim.resources) {
         if (node.amountLeft <= 0) continue;
@@ -853,6 +891,7 @@ export function ThreeRtsScene() {
       for (const visual of nodeVisuals.values()) disposeGroup(visual.group);
       for (const visual of orderVisuals.values()) disposeOrderVisual(visual);
       disposeGroup(telegraphGroup);
+      disposeGroup(buildPreviewGroup);
       renderer.dispose();
       renderer.domElement.remove();
     };

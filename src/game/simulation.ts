@@ -352,9 +352,17 @@ function slotIsFree(state: GameState, slot: Vec2): boolean {
   return state.buildings.every((building) => dist(building.pos, slot) > 3);
 }
 
+// Placement readability: expose the exact ground the next build command will
+// use so the HUD ghost footprint and minimap marker never lie about where the
+// building is going to appear. Null means every slot is occupied.
+export function nextBuildSlot(state: GameState): Vec2 | null {
+  const slot = BUILD_SLOTS.find((candidate) => slotIsFree(state, candidate));
+  return slot ? { ...slot } : null;
+}
+
 export function placeBuilding(state: GameState, kind: BuildableKind): Building | null {
   if (state.status !== 'playing' || !canAfford(state, kind)) return null;
-  const slot = BUILD_SLOTS.find((candidate) => slotIsFree(state, candidate));
+  const slot = nextBuildSlot(state);
   if (!slot) return null;
   spend(state, kind);
   const building = makeBuilding(state, kind, 'player', slot);
