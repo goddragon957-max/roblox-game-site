@@ -49,6 +49,7 @@ export interface Building {
   cooldownLeft: number;
   trainQueue: number;
   trainProgress: number;
+  rallyPoint: Vec2 | null;
 }
 
 export interface ResourceNode {
@@ -141,4 +142,10 @@ export interface RangePreview {
   id: string;
   pos: Vec2;
   radius: number;
+}
+
+export interface RallyPreview {
+  id: string;
+  from: Vec2;
+  point: Vec2;
 }

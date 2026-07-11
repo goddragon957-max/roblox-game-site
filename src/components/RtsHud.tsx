@@ -9,6 +9,7 @@ import {
   idleWorkerIds,
   matchScore,
   missionHint,
+  rallyPreviews,
   selectionSummary,
   threatAlert,
   towerRangePreviews,
@@ -112,6 +113,21 @@ function Minimap() {
         context.fill();
       }
 
+      for (const rally of rallyPreviews(sim)) {
+        context.strokeStyle = 'rgba(95, 240, 139, 0.8)';
+        context.lineWidth = 1;
+        context.setLineDash([3, 3]);
+        context.beginPath();
+        context.moveTo(toPx(rally.from.x), toPx(rally.from.z));
+        context.lineTo(toPx(rally.point.x), toPx(rally.point.z));
+        context.stroke();
+        context.setLineDash([]);
+        context.fillStyle = '#5ff08b';
+        context.beginPath();
+        context.arc(toPx(rally.point.x), toPx(rally.point.z), 2.6, 0, Math.PI * 2);
+        context.fill();
+      }
+
       for (const preview of towerRangePreviews(sim)) {
         context.strokeStyle = 'rgba(95, 240, 139, 0.85)';
         context.lineWidth = 1.5;
@@ -197,6 +213,16 @@ function SelectionPanel({ sim }: { sim: GameState }) {
       )}
       {building && building.kind === 'barracks' && building.trainQueue > 0 && (
         <p className="selection-note">훈련 대기 {building.trainQueue} · 진행 {Math.round((building.trainProgress / TRAIN_TIME) * 100)}%</p>
+      )}
+      {building && building.kind === 'barracks' && (
+        <p
+          className="selection-note"
+          data-rally-point={building.rallyPoint ? `${Math.round(building.rallyPoint.x)},${Math.round(building.rallyPoint.z)}` : 'none'}
+        >
+          {building.rallyPoint
+            ? `집결 지점 (${Math.round(building.rallyPoint.x)}, ${Math.round(building.rallyPoint.z)}) — 새 병사가 이동`
+            : '우클릭으로 병사 집결 지점을 지정하세요'}
+        </p>
       )}
       {building && building.kind === 'tower' && (
         <p className="selection-note" data-tower-range={building.attackRange}>
@@ -349,7 +375,7 @@ export function RtsHud() {
       </footer>
 
       <p className="hud-hint">
-        <Axe size={13} /> 좌클릭 선택 · 드래그 부대 선택 · 우클릭 이동/채집/공격 · WASD/방향키 카메라
+        <Axe size={13} /> 좌클릭 선택 · 드래그 부대 선택 · 우클릭 이동/채집/공격/집결 · WASD/방향키 카메라
       </p>
 
       {sim.status !== 'playing' && (

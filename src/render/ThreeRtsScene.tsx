@@ -13,6 +13,7 @@ interface EntityVisual {
   carryCube: THREE.Mesh | null;
   flash: THREE.Mesh | null;
   rangeRing: THREE.Group | null;
+  rallyFlag: THREE.Group | null;
 }
 
 interface NodeVisual {
@@ -322,7 +323,7 @@ export function ThreeRtsScene() {
       carryCube.visible = false;
       group.add(carryCube);
       scene.add(group);
-      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null, rangeRing: null };
+      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null, rangeRing: null, rallyFlag: null };
       unitVisuals.set(unit.id, visual);
       return visual;
     }
@@ -370,8 +371,32 @@ export function ThreeRtsScene() {
         rangeRing.visible = false;
         group.add(rangeRing);
       }
+      // Rally flag: marks where new soldiers muster, shown only while the
+      // barracks is selected so the field stays uncluttered.
+      let rallyFlag: THREE.Group | null = null;
+      if (building.kind === 'barracks' && building.faction === 'player') {
+        rallyFlag = new THREE.Group();
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.5, 6), lambert(0x777777));
+        pole.position.y = 0.75;
+        rallyFlag.add(pole);
+        const cloth = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.7, 0.45),
+          new THREE.MeshBasicMaterial({ color: COLORS.ringPlayer, side: THREE.DoubleSide })
+        );
+        cloth.position.set(0.38, 1.28, 0);
+        rallyFlag.add(cloth);
+        const mark = new THREE.Mesh(
+          new THREE.RingGeometry(0.5, 0.66, 32),
+          new THREE.MeshBasicMaterial({ color: COLORS.ringPlayer, transparent: true, opacity: 0.6 })
+        );
+        mark.rotation.x = -Math.PI / 2;
+        mark.position.y = 0.05;
+        rallyFlag.add(mark);
+        rallyFlag.visible = false;
+        group.add(rallyFlag);
+      }
       scene.add(group);
-      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash, rangeRing };
+      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash, rangeRing, rallyFlag };
       buildingVisuals.set(building.id, visual);
       return visual;
     }
@@ -456,6 +481,11 @@ export function ThreeRtsScene() {
         visual.group.position.set(building.pos.x, 0, building.pos.z);
         visual.ring.visible = selected.has(building.id);
         if (visual.rangeRing) visual.rangeRing.visible = selected.has(building.id);
+        if (visual.rallyFlag) {
+          const rally = building.rallyPoint;
+          visual.rallyFlag.visible = rally !== null && selected.has(building.id);
+          if (rally) visual.rallyFlag.position.set(rally.x - building.pos.x, 0, rally.z - building.pos.z);
+        }
         if (visual.flash) {
           const sinceShot = building.attackCooldown - building.cooldownLeft;
           visual.flash.visible = building.cooldownLeft > 0 && sinceShot < 0.18;
@@ -563,12 +593,22 @@ export function ThreeRtsScene() {
         const sim = useGameStore.getState().sim;
         const selected = new Set(sim.selectedIds);
         const commanded = sim.units.filter((unit) => unit.faction === 'player' && selected.has(unit.id));
-        if (commanded.length === 0 || sim.status !== 'playing') return;
+        const ralliedHere = sim.buildings.some(
+          (building) =>
+            selected.has(building.id) &&
+            building.faction === 'player' &&
+            building.kind === 'barracks' &&
+            building.rallyPoint !== null &&
+            Math.hypot(building.rallyPoint.x - target.x, building.rallyPoint.z - target.z) < 1e-6
+        );
+        if ((commanded.length === 0 && !ralliedHere) || sim.status !== 'playing') return;
         const markerColor = commanded.some((unit) => unit.order.type === 'gather')
           ? COLORS.gold
           : commanded.some((unit) => unit.order.type === 'attack')
             ? COLORS.hpBad
-            : 0xffffff;
+            : commanded.length === 0
+              ? COLORS.ringPlayer
+              : 0xffffff;
         (commandMarker.material as THREE.MeshBasicMaterial).color.setHex(markerColor);
         commandMarker.position.set(target.x, 0.07, target.z);
         markerAge = 0;

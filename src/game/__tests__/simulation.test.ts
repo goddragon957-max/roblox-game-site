@@ -16,6 +16,7 @@ import {
   missionHint,
   placeBuilding,
   playerUnitIdsInRect,
+  rallyPreviews,
   selectionSummary,
   setSelection,
   threatAlert,
@@ -472,6 +473,88 @@ describe('idle worker alert', () => {
     setSelection(state, idleWorkerIds(state));
     expect(state.selectedIds).toEqual(idleWorkerIds(state));
     expect(state.selectedIds.length).toBeGreaterThan(0);
+  });
+});
+
+describe('barracks rally point', () => {
+  function stateWithBarracks() {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    const barracks = placeBuilding(state, 'barracks');
+    if (!barracks) throw new Error('expected barracks placement to succeed');
+    return { state, barracks };
+  }
+
+  it('sets the rally on a ground command and routes new soldiers there', () => {
+    const { state, barracks } = stateWithBarracks();
+    setSelection(state, [barracks.id]);
+    const rally = { x: barracks.pos.x + 6, z: barracks.pos.z - 5 };
+    commandSmart(state, state.selectedIds, { point: rally, entityId: null });
+
+    expect(barracks.rallyPoint).toEqual(rally);
+    expect(state.log.some((entry) => entry.text.includes('집결 지점 지정'))).toBe(true);
+
+    expect(trainSoldier(state)).toBe(true);
+    advance(state, 4.1);
+    const soldier = state.units.find((unit) => unit.kind === 'soldier' && unit.faction === 'player');
+    if (!soldier) throw new Error('expected trained soldier');
+    expect(soldier.order).toEqual({ type: 'move', target: rally });
+
+    advance(state, 6);
+    expect(dist(soldier.pos, rally)).toBeLessThan(0.3);
+    expect(soldier.order.type).toBe('idle');
+  });
+
+  it('does not move the rally when the command targets a node or an enemy', () => {
+    const { state, barracks } = stateWithBarracks();
+    setSelection(state, [barracks.id]);
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    const raider = state.units.find((unit) => unit.kind === 'raider');
+    if (!goldNode || !raider) throw new Error('expected gold node and raider');
+
+    commandSmart(state, state.selectedIds, { point: { ...goldNode.pos }, entityId: goldNode.id });
+    expect(barracks.rallyPoint).toBeNull();
+
+    commandSmart(state, state.selectedIds, { point: { ...raider.pos }, entityId: raider.id });
+    expect(barracks.rallyPoint).toBeNull();
+  });
+
+  it('moves selected units and sets the rally with one mixed-selection command', () => {
+    const { state, barracks } = stateWithBarracks();
+    const worker = firstWorker(state);
+    setSelection(state, [worker.id, barracks.id]);
+    const point = { x: -2, z: 6 };
+
+    commandSmart(state, state.selectedIds, { point, entityId: null });
+    expect(worker.order).toEqual({ type: 'move', target: point });
+    expect(barracks.rallyPoint).toEqual(point);
+  });
+
+  it('previews the rally only while its player barracks is selected', () => {
+    const { state, barracks } = stateWithBarracks();
+    expect(rallyPreviews(state)).toEqual([]);
+
+    setSelection(state, [barracks.id]);
+    expect(rallyPreviews(state)).toEqual([]);
+
+    const rally = { x: 0, z: 2 };
+    commandSmart(state, state.selectedIds, { point: rally, entityId: null });
+    expect(rallyPreviews(state)).toEqual([{ id: barracks.id, from: barracks.pos, point: rally }]);
+
+    setSelection(state, [playerBase(state).id]);
+    expect(rallyPreviews(state)).toEqual([]);
+  });
+
+  it('keeps spawning soldiers idle at the barracks while no rally is set', () => {
+    const { state, barracks } = stateWithBarracks();
+    expect(barracks.rallyPoint).toBeNull();
+    expect(trainSoldier(state)).toBe(true);
+
+    advance(state, 5);
+    const soldier = state.units.find((unit) => unit.kind === 'soldier' && unit.faction === 'player');
+    if (!soldier) throw new Error('expected trained soldier');
+    expect(soldier.order.type).toBe('idle');
   });
 });
 

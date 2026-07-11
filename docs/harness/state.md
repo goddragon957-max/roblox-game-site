@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_15_ready
-current_round: 15
+current_phase: round_16_ready
+current_round: 16
 next_role: generator
 pause_reason: ""
 max_rounds: 20
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-11T12:39:37Z"
+updated_at: "2026-07-11T13:17:51Z"
 resume_attempts: 1
-last_verified_at: "2026-07-11T12:39:37Z"
+last_verified_at: "2026-07-11T13:17:51Z"
 last_verdict: pass
 ```
 
@@ -33,5 +33,6 @@ last_verdict: pass
 - Round 12 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): drag-box multi-select — pure `playerUnitIdsInRect(state, a, b)` (player units only, corner-order agnostic, 0.35 edge padding), left-drag selection box overlay in the 3D scene with click-select preserved on release, `__rtsSmoke.command.selectRect()` smoke hook, updated control hint, 3 new deterministic tests. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (selectRect, real pointer drag, click-select, right-click gather, build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-12-qa.md`.
 - Round 13 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): idle-worker alert — pure `idleWorkerIds(state)` (player workers with an `idle` order), a clickable gold `쉬는 일꾼` HUD chip (`data-idle-workers`) that selects all idle workers, `__rtsSmoke.command.selectIdleWorkers()` smoke hook, 3 new deterministic tests. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (idle chip click, `selectIdleWorkers`, gather/build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-13-qa.md`.
 - Round 14 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): soldier auto-defense — idle player soldiers now auto-engage the nearest enemy unit within `SOLDIER_AGGRO_RANGE = 10` (workers never auto-engage; the enemy camp never triggers aggro, so winning stays an explicit player decision), returning to idle after the kill; 4 deterministic tests cover nearby-raider aggro, natural first-wave base protection, out-of-range idle behavior, and worker non-engagement. Claude generated the initial slice but could not run commands; evaluator found the original range 7 failed a natural browser wave smoke, raised it to 10, then verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/train/auto-defense/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-14-qa.md`.
-- Round 15 is ready for the next scheduled generator slice under the same 48h loop authorization; `max_rounds` was raised to 20 so the authorized loop does not stop just because Round 14 completed.
+- Round 15 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): barracks rally point — `Building.rallyPoint` set by a right-click smart command on open ground while a player barracks is selected (gather/attack targets never move the rally), newly trained soldiers spawn with a move order to the rally instead of idling at the barracks door, pure `rallyPreviews(state)` drives a 3D rally flag (visible while the barracks is selected), a dashed minimap line + dot, a `data-rally-point` selection-panel note, a green command marker for rally-set clicks, `__rtsSmoke.command.rallyPoints()` smoke hook, and 5 new deterministic tests. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/rally/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-15-qa.md`.
+- Round 16 is ready for the next scheduled generator slice under the same 48h loop authorization.
 - Do not include `.hermes/` in git.

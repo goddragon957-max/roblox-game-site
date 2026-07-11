@@ -9,6 +9,7 @@ import {
   missionHint,
   placeBuilding,
   playerUnitIdsInRect,
+  rallyPreviews,
   selectionSummary,
   setSelection,
   threatAlert,
@@ -21,6 +22,7 @@ import type {
   GameState,
   MatchScore,
   MissionHint,
+  RallyPreview,
   RangePreview,
   SelectionSummary,
   SmartTarget,
@@ -102,6 +104,7 @@ declare global {
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
         towerRanges: () => RangePreview[];
+        rallyPoints: () => RallyPreview[];
         restart: () => void;
       };
     };
@@ -137,6 +140,7 @@ if (typeof window !== 'undefined') {
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),
       towerRanges: () => towerRangePreviews(useGameStore.getState().sim),
+      rallyPoints: () => rallyPreviews(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()
     }
   };

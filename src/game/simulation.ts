@@ -6,6 +6,7 @@ import type {
   MatchGrade,
   MatchScore,
   MissionHint,
+  RallyPreview,
   RangePreview,
   ResourceNode,
   ResourceType,
@@ -113,7 +114,8 @@ function makeBuilding(state: GameState, kind: BuildingKind, faction: Building['f
     attackCooldown: stats.attackCooldown,
     cooldownLeft: 0,
     trainQueue: 0,
-    trainProgress: 0
+    trainProgress: 0,
+    rallyPoint: null
   };
 }
 
@@ -238,6 +240,18 @@ export function towerRangePreviews(state: GameState): RangePreview[] {
   return previews;
 }
 
+// Production readability: expose each selected player barracks' rally point so
+// the scene flag and minimap marker always match the real muster target.
+export function rallyPreviews(state: GameState): RallyPreview[] {
+  const previews: RallyPreview[] = [];
+  for (const id of state.selectedIds) {
+    const building = findBuilding(state, id);
+    if (!building || building.faction !== 'player' || building.kind !== 'barracks' || !building.rallyPoint) continue;
+    previews.push({ id: building.id, from: { ...building.pos }, point: { ...building.rallyPoint } });
+  }
+  return previews;
+}
+
 // Economy readability: surface worker puppies that are doing nothing so the
 // HUD can offer a one-click "put them back to work" selection.
 export function idleWorkerIds(state: GameState): string[] {
@@ -308,7 +322,6 @@ export function commandSmart(state: GameState, unitIds: string[], target: SmartT
   const units = unitIds
     .map((id) => findUnit(state, id))
     .filter((unit): unit is Unit => Boolean(unit && unit.faction === 'player'));
-  if (units.length === 0) return;
 
   const node = target.entityId ? findNode(state, target.entityId) : undefined;
   const enemyUnit = target.entityId ? findUnit(state, target.entityId) : undefined;
@@ -319,6 +332,20 @@ export function commandSmart(state: GameState, unitIds: string[], target: SmartT
       : enemyBuilding && enemyBuilding.faction === 'enemy'
         ? enemyBuilding.id
         : null;
+
+  // Rally point: a smart command on open ground with a barracks selected moves
+  // its muster point, so freshly trained soldiers walk to the front instead of
+  // idling at the barracks door. Gather/attack targets never move the rally.
+  if (!node && !hostileId) {
+    let rallied = false;
+    for (const id of unitIds) {
+      const building = findBuilding(state, id);
+      if (!building || building.faction !== 'player' || building.kind !== 'barracks') continue;
+      building.rallyPoint = { ...target.point };
+      rallied = true;
+    }
+    if (rallied) pushLog(state, '집결 지점 지정 — 새로 훈련된 병사가 그곳으로 이동합니다');
+  }
 
   for (const unit of units) {
     if (node && unit.kind === 'worker') {
@@ -588,7 +615,10 @@ function stepBuilding(state: GameState, building: Building, dt: number) {
       building.trainQueue -= 1;
       const spawnPos = { x: building.pos.x + 2.2, z: building.pos.z + 1.6 };
       clampToMap(spawnPos);
-      state.units.push(makeUnit(state, 'soldier', 'player', spawnPos));
+      const spawnOrder: UnitOrder = building.rallyPoint
+        ? { type: 'move', target: { ...building.rallyPoint } }
+        : { type: 'idle' };
+      state.units.push(makeUnit(state, 'soldier', 'player', spawnPos, spawnOrder));
       state.stats.soldiersTrained += 1;
       pushLog(state, '병사가 전열에 합류했습니다');
     }
