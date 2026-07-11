@@ -8,6 +8,8 @@ import type {
   MissionHint,
   ResourceNode,
   ResourceType,
+  SelectionGroup,
+  SelectionSummary,
   SmartTarget,
   Unit,
   UnitKind,
@@ -191,6 +193,31 @@ export function selectedPlayerUnits(state: GameState): Unit[] {
   return state.selectedIds
     .map((id) => findUnit(state, id))
     .filter((unit): unit is Unit => Boolean(unit && unit.faction === 'player'));
+}
+
+// Selection readability: aggregate the current selection into per-kind groups
+// with summed HP so the HUD panel can show what a mixed group actually is.
+export function selectionSummary(state: GameState): SelectionSummary {
+  const groups: SelectionGroup[] = [];
+  let hp = 0;
+  let maxHp = 0;
+  let count = 0;
+  for (const id of state.selectedIds) {
+    const entity = findUnit(state, id) ?? findBuilding(state, id);
+    if (!entity) continue;
+    count += 1;
+    hp += Math.max(0, entity.hp);
+    maxHp += entity.maxHp;
+    const group = groups.find((entry) => entry.kind === entity.kind);
+    if (group) {
+      group.count += 1;
+      group.hp += Math.max(0, entity.hp);
+      group.maxHp += entity.maxHp;
+    } else {
+      groups.push({ kind: entity.kind, count: 1, hp: Math.max(0, entity.hp), maxHp: entity.maxHp });
+    }
+  }
+  return { count, hp, maxHp, groups };
 }
 
 export function canAfford(state: GameState, kind: BuildableKind | 'soldier'): boolean {

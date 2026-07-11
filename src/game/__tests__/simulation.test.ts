@@ -12,6 +12,7 @@ import {
   matchScore,
   missionHint,
   placeBuilding,
+  selectionSummary,
   setSelection,
   trainSoldier,
   waveForecast,
@@ -73,6 +74,25 @@ describe('selection and movement', () => {
     if (!raider) throw new Error('expected raider');
     commandSmart(state, [raider.id], { point: { x: 0, z: 0 }, entityId: null });
     expect(raider.order.type).toBe('idle');
+  });
+
+  it('summarizes mixed selections by kind with aggregate HP', () => {
+    const state = createInitialState();
+    const workers = state.units.filter((unit) => unit.kind === 'worker' && unit.faction === 'player');
+    const base = playerBase(state);
+    workers[0].hp = 21;
+    base.hp = 455;
+
+    setSelection(state, [...workers.map((unit) => unit.id), base.id]);
+    const summary = selectionSummary(state);
+
+    expect(summary.count).toBe(workers.length + 1);
+    expect(summary.hp).toBe(21 + 40 + 40 + 455);
+    expect(summary.maxHp).toBe(40 * workers.length + 500);
+    expect(summary.groups).toEqual([
+      { kind: 'worker', count: workers.length, hp: 21 + 40 + 40, maxHp: 40 * workers.length },
+      { kind: 'base', count: 1, hp: 455, maxHp: 500 }
+    ]);
   });
 });
 

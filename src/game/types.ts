@@ -108,6 +108,20 @@ export interface SmartTarget {
   entityId: string | null;
 }
 
+export interface SelectionGroup {
+  kind: UnitKind | BuildingKind;
+  count: number;
+  hp: number;
+  maxHp: number;
+}
+
+export interface SelectionSummary {
+  count: number;
+  hp: number;
+  maxHp: number;
+  groups: SelectionGroup[];
+}
+
 export interface WaveForecast {
   waveNumber: number;
   size: number;

@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_9_ready
-current_round: 9
+current_phase: round_10_ready
+current_round: 10
 next_role: generator
 pause_reason: ""
 max_rounds: 10
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-11T02:23:17Z"
+updated_at: "2026-07-11T02:49:08Z"
 resume_attempts: 1
-last_verified_at: "2026-07-11T02:23:17Z"
+last_verified_at: "2026-07-11T02:49:08Z"
 last_verdict: pass
 ```
 
@@ -27,5 +27,6 @@ last_verdict: pass
 - Round 6 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): post-run match summary — `MatchStats` tracked deterministically in the sim (gold/wood gathered on deposit, soldiers trained on spawn, raiders defeated / player units lost on death) and shown as a compact scoreboard on the win/loss overlay, with 3 new deterministic tests. Evaluator verified deterministic gates, `git diff --check`, browser smoke, rendered visual QA, and restart reset behavior in `docs/harness/feedback/round-6-qa.md`; Round 6 was committed and pushed (`64dc462`).
 - Round 7 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): post-run score/rating — pure `matchScore(state)` (economy + military − losses + win/speed bonus, floored at 0) with S/A/B/C grade, shown as a grade badge plus `유닛 손실`/`종합 점수` rows on the endgame overlay, exposed via `__rtsSmoke.command.matchScore()`, covered by 3 new deterministic tests. Evaluator verified deterministic gates, `git diff --check`, browser smoke, rendered visual QA, score/loss row consistency, and restart reset behavior in `docs/harness/feedback/round-7-qa.md`.
 - Round 8 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): wave preview — pure `waveForecast(state)` (incoming wave number/size/countdown/imminence), raider count in the HUD wave chip (`data-next-wave-size`) and in the wave-warning log line, `__rtsSmoke.command.waveForecast()` smoke hook, 3 new deterministic tests (one existing warning-log test updated for the new message). Evaluator verified deterministic gates, `git diff --check`, browser smoke, rendered visual QA, wave-warning/alarm behavior, and next-wave rollover in `docs/harness/feedback/round-8-qa.md`.
-- Round 9 is ready for the next scheduled generator slice under the same 48h loop authorization.
+- Round 9 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): selection readability/status — pure `selectionSummary(state)` aggregates count, HP, and per-kind composition for the current selection; `__rtsSmoke.command.selectionSummary()` exposes it for browser smoke; the HUD selection panel now shows `선택 부대`, aggregate HP, and compact composition chips for multi-selections. Evaluator verified deterministic gates, `git diff --check`, browser smoke (selection/gather/build/train/attack), rendered visual QA, and console errors zero in `docs/harness/feedback/round-9-qa.md`.
+- Round 10 is ready for the next scheduled generator slice under the same 48h loop authorization.
 - Do not include `.hermes/` in git.

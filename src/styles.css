@@ -157,6 +157,15 @@ button { font: inherit; }
 .hp-fill.low { background: var(--danger); }
 .hp-text { color: var(--muted); font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .selection-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.selection-groups { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.selection-group {
+  padding: 4px 7px;
+  border: 1px solid rgba(95, 240, 139, 0.24);
+  border-radius: 999px;
+  background: rgba(95, 240, 139, 0.08);
+  color: var(--ink);
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
 .command-card {
   pointer-events: auto;

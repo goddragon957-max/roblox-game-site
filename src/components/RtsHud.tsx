@@ -1,8 +1,8 @@
 import { Axe, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, Swords, TreePine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, matchScore, missionHint, waveForecast } from '../game/simulation';
-import type { Building, GameState, Unit } from '../game/types';
+import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, matchScore, missionHint, selectionSummary, waveForecast } from '../game/simulation';
+import type { Building, BuildingKind, GameState, Unit, UnitKind } from '../game/types';
 import { affordable, useGameStore } from '../store/gameStore';
 
 const UNIT_NAMES: Record<Unit['kind'], string> = {
@@ -26,6 +26,11 @@ const ORDER_LABELS: Record<Unit['order']['type'], string> = {
   attack: '공격 중',
   assault: '진격 중'
 };
+
+function entityName(kind: UnitKind | BuildingKind): string {
+  if (kind === 'worker' || kind === 'soldier' || kind === 'raider') return UNIT_NAMES[kind];
+  return BUILDING_NAMES[kind];
+}
 
 function ResourceChip({ icon: Icon, resource, value }: { icon: LucideIcon; resource: string; value: number }) {
   const prev = useRef(value);
@@ -113,6 +118,7 @@ function SelectionPanel({ sim }: { sim: GameState }) {
   const selectedId = sim.selectedIds[0];
   const unit = sim.units.find((entry) => entry.id === selectedId);
   const building = sim.buildings.find((entry) => entry.id === selectedId);
+  const summary = selectionSummary(sim);
 
   if (!unit && !building) {
     return (
@@ -123,14 +129,14 @@ function SelectionPanel({ sim }: { sim: GameState }) {
     );
   }
 
-  const name = unit ? UNIT_NAMES[unit.kind] : BUILDING_NAMES[(building as Building).kind];
-  const hp = unit ? unit.hp : (building as Building).hp;
-  const maxHp = unit ? unit.maxHp : (building as Building).maxHp;
+  const name = summary.count > 1 ? '선택 부대' : unit ? UNIT_NAMES[unit.kind] : BUILDING_NAMES[(building as Building).kind];
+  const hp = summary.count > 1 ? summary.hp : unit ? unit.hp : (building as Building).hp;
+  const maxHp = summary.count > 1 ? summary.maxHp : unit ? unit.maxHp : (building as Building).maxHp;
   const ratio = Math.max(0, Math.min(1, hp / maxHp));
-  const count = sim.selectedIds.length;
+  const count = summary.count;
 
   return (
-    <div className="selection-panel">
+    <div className="selection-panel" data-selection-count={count} data-selection-hp={Math.max(0, Math.ceil(hp))}>
       <div className="selection-title">
         {unit ? unit.kind === 'raider' ? <Swords size={15} /> : <Dog size={15} /> : <Castle size={15} />}
         <strong>{name}</strong>
@@ -144,6 +150,15 @@ function SelectionPanel({ sim }: { sim: GameState }) {
           {Math.max(0, Math.ceil(hp))}/{maxHp}
         </span>
       </div>
+      {summary.count > 1 && (
+        <div className="selection-groups" aria-label="selection composition">
+          {summary.groups.map((group) => (
+            <span key={group.kind} className="selection-group" data-selection-kind={group.kind}>
+              {entityName(group.kind)} ×{group.count} · {Math.max(0, Math.ceil(group.hp))}/{group.maxHp}
+            </span>
+          ))}
+        </div>
+      )}
       {unit && (
         <p className="selection-note">
           {ORDER_LABELS[unit.order.type]}
