@@ -7,6 +7,7 @@ import {
   matchScore,
   missionHint,
   placeBuilding,
+  playerUnitIdsInRect,
   selectionSummary,
   setSelection,
   threatAlert,
@@ -88,6 +89,7 @@ declare global {
       command: {
         selectWorkers: () => string[];
         selectSoldiers: () => string[];
+        selectRect: (x1: number, z1: number, x2: number, z2: number) => string[];
         smart: (x: number, z: number, entityId?: string | null) => void;
         build: (kind: BuildableKind) => boolean;
         train: () => boolean;
@@ -111,6 +113,12 @@ if (typeof window !== 'undefined') {
     command: {
       selectWorkers: () => selectByKind('worker'),
       selectSoldiers: () => selectByKind('soldier'),
+      selectRect: (x1, z1, x2, z2) => {
+        const store = useGameStore.getState();
+        const ids = playerUnitIdsInRect(store.sim, { x: x1, z: z1 }, { x: x2, z: z2 });
+        store.select(ids);
+        return ids;
+      },
       smart: (x, z, entityId = null) => useGameStore.getState().smart({ point: { x, z }, entityId }),
       build: (kind) => useGameStore.getState().build(kind),
       train: () => useGameStore.getState().train(),

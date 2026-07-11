@@ -13,6 +13,7 @@ import {
   matchScore,
   missionHint,
   placeBuilding,
+  playerUnitIdsInRect,
   selectionSummary,
   setSelection,
   threatAlert,
@@ -318,6 +319,39 @@ describe('threat alert', () => {
     const alert = threatAlert(state);
     expect(alert.active).toBe(false);
     expect(alert.pos).not.toBeNull();
+  });
+});
+
+describe('drag selection', () => {
+  it('finds player units inside the box in either corner order', () => {
+    const state = createInitialState();
+    const workers = state.units.filter((unit) => unit.kind === 'worker' && unit.faction === 'player');
+
+    const ids = playerUnitIdsInRect(state, { x: -16, z: 14 }, { x: -11, z: 9 });
+    expect(new Set(ids)).toEqual(new Set(workers.map((unit) => unit.id)));
+
+    const flipped = playerUnitIdsInRect(state, { x: -11, z: 9 }, { x: -16, z: 14 });
+    expect(flipped).toEqual(ids);
+  });
+
+  it('excludes enemy units even when the box covers them', () => {
+    const state = createInitialState();
+    const raiders = state.units.filter((unit) => unit.kind === 'raider');
+    expect(raiders.length).toBeGreaterThan(0);
+    expect(playerUnitIdsInRect(state, { x: 12, z: -12 }, { x: 20, z: -8 })).toEqual([]);
+  });
+
+  it('feeds setSelection so a drag becomes a real multi-unit selection', () => {
+    const state = createInitialState();
+    const ids = playerUnitIdsInRect(state, { x: -16, z: 9 }, { x: -11, z: 14 });
+    expect(ids.length).toBe(3);
+
+    setSelection(state, ids);
+    expect(state.selectedIds).toEqual(ids);
+    expect(selectionSummary(state).groups).toEqual([{ kind: 'worker', count: 3, hp: 120, maxHp: 120 }]);
+
+    setSelection(state, playerUnitIdsInRect(state, { x: 5, z: 5 }, { x: 8, z: 8 }));
+    expect(state.selectedIds).toEqual([]);
   });
 });
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { MAP_HALF, TERRAIN } from '../game/simulation';
+import { MAP_HALF, TERRAIN, playerUnitIdsInRect } from '../game/simulation';
 import type { Building, GameState, ResourceNode, Unit } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 
@@ -495,6 +495,24 @@ export function ThreeRtsScene() {
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
 
+    const selectBox = document.createElement('div');
+    selectBox.className = 'drag-select-box';
+    container.appendChild(selectBox);
+
+    const DRAG_THRESHOLD_PX = 6;
+    let dragAnchor: { screenX: number; screenY: number; ground: THREE.Vector3 | null; entityId: string | null } | null = null;
+    let dragging = false;
+    let dragGroundEnd: THREE.Vector3 | null = null;
+
+    function groundPointAt(clientX: number, clientY: number): THREE.Vector3 | null {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObject(ground, false);
+      return hits.length > 0 ? hits[0].point.clone() : null;
+    }
+
     function pick(event: PointerEvent | MouseEvent): { entityId: string | null; point: THREE.Vector3 | null } {
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -522,8 +540,17 @@ export function ThreeRtsScene() {
 
     function onPointerDown(event: PointerEvent) {
       if (event.button === 0) {
+        // Selection is applied on release so a drag past the threshold becomes
+        // a box select instead of a single-entity click.
         const { entityId } = pick(event);
-        useGameStore.getState().select(entityId ? [entityId] : []);
+        dragAnchor = {
+          screenX: event.clientX,
+          screenY: event.clientY,
+          ground: groundPointAt(event.clientX, event.clientY),
+          entityId
+        };
+        dragging = false;
+        dragGroundEnd = null;
         return;
       }
       if (event.button === 2) {
@@ -552,6 +579,40 @@ export function ThreeRtsScene() {
       event.preventDefault();
     }
 
+    function onWindowPointerMove(event: PointerEvent) {
+      if (!dragAnchor) return;
+      if (!dragging) {
+        if (Math.hypot(event.clientX - dragAnchor.screenX, event.clientY - dragAnchor.screenY) < DRAG_THRESHOLD_PX) return;
+        dragging = true;
+        selectBox.style.display = 'block';
+      }
+      const rect = renderer.domElement.getBoundingClientRect();
+      selectBox.style.left = `${Math.min(event.clientX, dragAnchor.screenX) - rect.left}px`;
+      selectBox.style.top = `${Math.min(event.clientY, dragAnchor.screenY) - rect.top}px`;
+      selectBox.style.width = `${Math.abs(event.clientX - dragAnchor.screenX)}px`;
+      selectBox.style.height = `${Math.abs(event.clientY - dragAnchor.screenY)}px`;
+      dragGroundEnd = groundPointAt(event.clientX, event.clientY) ?? dragGroundEnd;
+    }
+
+    function onWindowPointerUp(event: PointerEvent) {
+      if (event.button !== 0 || !dragAnchor) return;
+      const anchor = dragAnchor;
+      const wasDragging = dragging;
+      dragAnchor = null;
+      dragging = false;
+      selectBox.style.display = 'none';
+      if (wasDragging) {
+        const end = groundPointAt(event.clientX, event.clientY) ?? dragGroundEnd;
+        if (anchor.ground && end) {
+          const sim = useGameStore.getState().sim;
+          const ids = playerUnitIdsInRect(sim, { x: anchor.ground.x, z: anchor.ground.z }, { x: end.x, z: end.z });
+          useGameStore.getState().select(ids);
+        }
+        return;
+      }
+      useGameStore.getState().select(anchor.entityId ? [anchor.entityId] : []);
+    }
+
     const keys = new Set<string>();
     function onKeyDown(event: KeyboardEvent) {
       keys.add(event.key.toLowerCase());
@@ -576,6 +637,8 @@ export function ThreeRtsScene() {
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('contextmenu', onContextMenu);
+    window.addEventListener('pointermove', onWindowPointerMove);
+    window.addEventListener('pointerup', onWindowPointerUp);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('resize', resize);
@@ -607,9 +670,12 @@ export function ThreeRtsScene() {
       cancelAnimationFrame(raf);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('contextmenu', onContextMenu);
+      window.removeEventListener('pointermove', onWindowPointerMove);
+      window.removeEventListener('pointerup', onWindowPointerUp);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('resize', resize);
+      selectBox.remove();
       for (const visual of unitVisuals.values()) disposeGroup(visual.group);
       for (const visual of buildingVisuals.values()) disposeGroup(visual.group);
       for (const visual of nodeVisuals.values()) disposeGroup(visual.group);

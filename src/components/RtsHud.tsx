@@ -334,7 +334,7 @@ export function RtsHud() {
       </footer>
 
       <p className="hud-hint">
-        <Axe size={13} /> 좌클릭 선택 · 우클릭 이동/채집/공격 · WASD/방향키 카메라
+        <Axe size={13} /> 좌클릭 선택 · 드래그 부대 선택 · 우클릭 이동/채집/공격 · WASD/방향키 카메라
       </p>
 
       {sim.status !== 'playing' && (

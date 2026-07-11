@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_12_ready
-current_round: 12
+current_phase: round_13_ready
+current_round: 13
 next_role: generator
 pause_reason: ""
 max_rounds: 14
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-11T06:53:15Z"
+updated_at: "2026-07-11T07:25:29Z"
 resume_attempts: 1
-last_verified_at: "2026-07-11T06:53:15Z"
+last_verified_at: "2026-07-11T07:25:29Z"
 last_verdict: pass
 ```
 
@@ -30,5 +30,6 @@ last_verdict: pass
 - Round 9 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): selection readability/status — pure `selectionSummary(state)` aggregates count, HP, and per-kind composition for the current selection; `__rtsSmoke.command.selectionSummary()` exposes it for browser smoke; the HUD selection panel now shows `선택 부대`, aggregate HP, and compact composition chips for multi-selections. Evaluator verified deterministic gates, `git diff --check`, browser smoke (selection/gather/build/train/attack), rendered visual QA, and console errors zero in `docs/harness/feedback/round-9-qa.md`.
 - Round 10 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): under-attack threat alert — `damageTarget` records hostile hits on player units/buildings (`lastPlayerHitAt`/`lastPlayerHitPos`), pure `threatAlert(state)` derives the alert, HUD shows a red `피격 경보` chip (`data-threat-alert`) and the minimap pulses a red ring at the hit position, one warning log per attack episode, `__rtsSmoke.command.threatAlert()` smoke hook, 4 new deterministic tests. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/train/attack/threat alert), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-10-qa.md`.
 - Round 11 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): tower range preview — pure `towerRangePreviews(state)` derives `{ id, pos, radius }` from selected player towers' real `attackRange`; the 3D scene shows a green ring + faint disc around a selected tower, the minimap draws the matching circle, the selection panel shows `사거리 8`, `__rtsSmoke.command.towerRanges()` smoke hook, 3 new deterministic tests. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/train/attack/tower range), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-11-qa.md`.
-- Round 12 is ready for the next scheduled generator slice under the same 48h loop authorization.
+- Round 12 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): drag-box multi-select — pure `playerUnitIdsInRect(state, a, b)` (player units only, corner-order agnostic, 0.35 edge padding), left-drag selection box overlay in the 3D scene with click-select preserved on release, `__rtsSmoke.command.selectRect()` smoke hook, updated control hint, 3 new deterministic tests. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (selectRect, real pointer drag, click-select, right-click gather, build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-12-qa.md`.
+- Round 13 is ready for the next scheduled generator slice under the same 48h loop authorization.
 - Do not include `.hermes/` in git.

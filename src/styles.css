@@ -25,6 +25,15 @@ button { font: inherit; }
 .scene-root { position: absolute; inset: 0; z-index: 0; }
 .scene-root canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
+.drag-select-box {
+  position: absolute;
+  display: none;
+  z-index: 1;
+  pointer-events: none;
+  border: 1px solid rgba(83, 242, 140, 0.9);
+  background: rgba(83, 242, 140, 0.12);
+}
+
 /* HUD overlays the battlefield; only its panels/buttons intercept the pointer. */
 .hud { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 

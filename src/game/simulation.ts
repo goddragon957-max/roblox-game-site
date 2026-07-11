@@ -237,6 +237,27 @@ export function towerRangePreviews(state: GameState): RangePreview[] {
   return previews;
 }
 
+export const DRAG_SELECT_PADDING = 0.35;
+
+// Drag-select: player units inside the world-space box spanned by two ground
+// points, in either corner order, padded so units right on the edge count.
+export function playerUnitIdsInRect(state: GameState, a: Vec2, b: Vec2): string[] {
+  const minX = Math.min(a.x, b.x) - DRAG_SELECT_PADDING;
+  const maxX = Math.max(a.x, b.x) + DRAG_SELECT_PADDING;
+  const minZ = Math.min(a.z, b.z) - DRAG_SELECT_PADDING;
+  const maxZ = Math.max(a.z, b.z) + DRAG_SELECT_PADDING;
+  return state.units
+    .filter(
+      (unit) =>
+        unit.faction === 'player' &&
+        unit.pos.x >= minX &&
+        unit.pos.x <= maxX &&
+        unit.pos.z >= minZ &&
+        unit.pos.z <= maxZ
+    )
+    .map((unit) => unit.id);
+}
+
 export function canAfford(state: GameState, kind: BuildableKind | 'soldier'): boolean {
   const cost = COSTS[kind];
   return state.gold >= cost.gold && state.wood >= cost.wood;
