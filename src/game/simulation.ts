@@ -11,6 +11,7 @@ import type {
   SelectionGroup,
   SelectionSummary,
   SmartTarget,
+  ThreatAlert,
   Unit,
   UnitKind,
   UnitOrder,
@@ -42,6 +43,7 @@ export const WAVE_INTERVAL = 40;
 export const WAVE_WARNING_LEAD = 10;
 export const RAIDER_AGGRO_RANGE = 8;
 export const MISSION_SOLDIER_TARGET = 3;
+export const THREAT_ALERT_DURATION = 4;
 
 const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
   worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
@@ -135,6 +137,8 @@ export function createInitialState(): GameState {
     waveNumber: 0,
     nextWaveAt: FIRST_WAVE_AT,
     waveWarned: false,
+    lastPlayerHitAt: null,
+    lastPlayerHitPos: null,
     status: 'playing',
     log: [],
     stats: {
@@ -305,14 +309,43 @@ function findTargetEntity(state: GameState, id: string): { pos: Vec2; hp: number
   return findUnit(state, id) ?? findBuilding(state, id);
 }
 
+// Under-attack telegraph: only enemy attacks reach player-faction targets, so a
+// player-faction hit here is always hostile damage worth alerting on.
+function recordPlayerHit(state: GameState, pos: Vec2, isBase: boolean) {
+  const quiet = state.lastPlayerHitAt === null || state.time - state.lastPlayerHitAt > THREAT_ALERT_DURATION;
+  if (quiet) {
+    pushLog(state, isBase ? '본부가 공격받고 있습니다 — 방어하세요!' : '아군이 공격받고 있습니다 — 미니맵을 확인하세요!');
+  }
+  state.lastPlayerHitAt = state.time;
+  state.lastPlayerHitPos = { ...pos };
+}
+
+// Threat alert: derive the HUD alarm and minimap pulse from the last hostile
+// hit so the alert always points at real, recent damage.
+export function threatAlert(state: GameState): ThreatAlert {
+  if (state.lastPlayerHitAt === null || state.lastPlayerHitPos === null) {
+    return { active: false, pos: null, secondsAgo: null };
+  }
+  const secondsAgo = Math.max(0, state.time - state.lastPlayerHitAt);
+  return {
+    active: state.status === 'playing' && secondsAgo <= THREAT_ALERT_DURATION,
+    pos: { ...state.lastPlayerHitPos },
+    secondsAgo
+  };
+}
+
 function damageTarget(state: GameState, id: string, amount: number) {
   const unit = findUnit(state, id);
   if (unit) {
     unit.hp -= amount;
+    if (unit.faction === 'player') recordPlayerHit(state, unit.pos, false);
     return;
   }
   const building = findBuilding(state, id);
-  if (building) building.hp -= amount;
+  if (building) {
+    building.hp -= amount;
+    if (building.faction === 'player') recordPlayerHit(state, building.pos, building.kind === 'base');
+  }
 }
 
 function nearestPlayerTarget(state: GameState, from: Vec2, maxRange: number): { id: string; distance: number } | null {

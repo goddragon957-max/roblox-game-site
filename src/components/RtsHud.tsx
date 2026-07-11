@@ -1,7 +1,17 @@
-import { Axe, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, Swords, TreePine } from 'lucide-react';
+import { Axe, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, ShieldAlert, Swords, TreePine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, matchScore, missionHint, selectionSummary, waveForecast } from '../game/simulation';
+import {
+  COSTS,
+  MAP_HALF,
+  TERRAIN,
+  TRAIN_TIME,
+  matchScore,
+  missionHint,
+  selectionSummary,
+  threatAlert,
+  waveForecast
+} from '../game/simulation';
 import type { Building, BuildingKind, GameState, Unit, UnitKind } from '../game/types';
 import { affordable, useGameStore } from '../store/gameStore';
 
@@ -99,6 +109,16 @@ function Minimap() {
         context.arc(toPx(unit.pos.x), toPx(unit.pos.z), 1.8, 0, Math.PI * 2);
         context.fill();
       }
+
+      const threat = threatAlert(sim);
+      if (threat.active && threat.pos) {
+        const phase = (sim.time % 1) / 1;
+        context.strokeStyle = `rgba(255, 77, 61, ${1 - phase * 0.7})`;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.arc(toPx(threat.pos.x), toPx(threat.pos.z), 4 + phase * 7, 0, Math.PI * 2);
+        context.stroke();
+      }
     }
 
     draw(useGameStore.getState().sim);
@@ -190,6 +210,7 @@ export function RtsHud() {
   );
   const recentLog = sim.log.slice(-3).reverse();
   const rating = sim.status !== 'playing' ? matchScore(sim) : null;
+  const threat = threatAlert(sim);
 
   return (
     <div className="hud">
@@ -214,6 +235,12 @@ export function RtsHud() {
               : `${sim.waveNumber === 0 ? '첫 습격까지' : `웨이브 ${sim.waveNumber} · 다음까지`} ${forecast.secondsLeft}s · 라쿤 ${forecast.size}기`}
           </span>
         </div>
+        {threat.active && (
+          <div className="hud-chip threat alarm" data-threat-alert>
+            <ShieldAlert size={15} />
+            <span>피격 경보! 미니맵을 확인하세요</span>
+          </div>
+        )}
         <div className="hud-chip objective">
           <Flag size={15} />
           <span>목표: 라쿤 캠프 파괴 {camp ? `(${Math.max(0, Math.round((camp.hp / camp.maxHp) * 100))}%)` : '(완료)'}</span>

@@ -84,6 +84,8 @@ export interface GameState {
   waveNumber: number;
   nextWaveAt: number;
   waveWarned: boolean;
+  lastPlayerHitAt: number | null;
+  lastPlayerHitPos: Vec2 | null;
   status: GameStatus;
   log: LogEntry[];
   stats: MatchStats;
@@ -127,4 +129,10 @@ export interface WaveForecast {
   size: number;
   secondsLeft: number;
   imminent: boolean;
+}
+
+export interface ThreatAlert {
+  active: boolean;
+  pos: Vec2 | null;
+  secondsAgo: number | null;
 }

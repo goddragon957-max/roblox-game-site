@@ -3,6 +3,7 @@ import {
   COSTS,
   FIRST_WAVE_AT,
   MISSION_SOLDIER_TARGET,
+  THREAT_ALERT_DURATION,
   WAVE_INTERVAL,
   WAVE_WARNING_LEAD,
   advance,
@@ -14,6 +15,7 @@ import {
   placeBuilding,
   selectionSummary,
   setSelection,
+  threatAlert,
   trainSoldier,
   waveForecast,
   waveSize
@@ -260,6 +262,61 @@ describe('wave forecast', () => {
     expect(forecast.size).toBe(waveSize(2));
     expect(forecast.secondsLeft).toBeLessThanOrEqual(WAVE_INTERVAL);
     expect(forecast.imminent).toBe(false);
+  });
+});
+
+describe('threat alert', () => {
+  function stateWithRaidersAtBase() {
+    const state = createInitialState();
+    const base = playerBase(state);
+    // Remove player units so raiders hit the base itself.
+    state.units = state.units.filter((unit) => unit.faction !== 'player');
+    for (const raider of state.units) {
+      raider.pos = { x: base.pos.x + 1, z: base.pos.z };
+      raider.order = { type: 'attack', targetId: base.id };
+    }
+    return { state, base };
+  }
+
+  it('stays inactive until something of the player takes damage', () => {
+    const state = createInitialState();
+    expect(threatAlert(state)).toEqual({ active: false, pos: null, secondsAgo: null });
+
+    advance(state, 5);
+    expect(threatAlert(state).active).toBe(false);
+  });
+
+  it('activates at the hit position when raiders damage the base', () => {
+    const { state, base } = stateWithRaidersAtBase();
+    advance(state, 2);
+
+    expect(base.hp).toBeLessThan(base.maxHp);
+    const alert = threatAlert(state);
+    expect(alert.active).toBe(true);
+    expect(alert.pos).toEqual(base.pos);
+    expect(alert.secondsAgo).toBeLessThanOrEqual(THREAT_ALERT_DURATION);
+    expect(state.log.some((entry) => entry.text.includes('본부가 공격받고 있습니다'))).toBe(true);
+  });
+
+  it('logs one warning per attack episode, not one per hit', () => {
+    const { state } = stateWithRaidersAtBase();
+    advance(state, 10);
+
+    const warnings = state.log.filter((entry) => entry.text.includes('공격받고 있습니다'));
+    expect(warnings.length).toBe(1);
+  });
+
+  it('expires once the damage stops', () => {
+    const { state } = stateWithRaidersAtBase();
+    advance(state, 2);
+    expect(threatAlert(state).active).toBe(true);
+
+    for (const raider of state.units) raider.hp = 0;
+    advance(state, THREAT_ALERT_DURATION + 1);
+
+    const alert = threatAlert(state);
+    expect(alert.active).toBe(false);
+    expect(alert.pos).not.toBeNull();
   });
 });
 

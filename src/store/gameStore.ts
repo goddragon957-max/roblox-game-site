@@ -9,6 +9,7 @@ import {
   placeBuilding,
   selectionSummary,
   setSelection,
+  threatAlert,
   trainSoldier,
   waveForecast
 } from '../game/simulation';
@@ -19,6 +20,7 @@ import type {
   MissionHint,
   SelectionSummary,
   SmartTarget,
+  ThreatAlert,
   UnitKind,
   WaveForecast
 } from '../game/types';
@@ -92,6 +94,7 @@ declare global {
         matchScore: () => MatchScore;
         waveForecast: () => WaveForecast;
         selectionSummary: () => SelectionSummary;
+        threatAlert: () => ThreatAlert;
         restart: () => void;
       };
     };
@@ -113,6 +116,7 @@ if (typeof window !== 'undefined') {
       matchScore: () => matchScore(useGameStore.getState().sim),
       waveForecast: () => waveForecast(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
+      threatAlert: () => threatAlert(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()
     }
   };
