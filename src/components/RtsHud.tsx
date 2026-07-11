@@ -1,7 +1,7 @@
 import { Axe, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, Swords, TreePine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, WAVE_WARNING_LEAD, missionHint } from '../game/simulation';
+import { COSTS, MAP_HALF, TERRAIN, TRAIN_TIME, WAVE_WARNING_LEAD, matchScore, missionHint } from '../game/simulation';
 import type { Building, GameState, Unit } from '../game/types';
 import { affordable, useGameStore } from '../store/gameStore';
 
@@ -175,6 +175,7 @@ export function RtsHud() {
     (building) => building.kind === 'barracks' && building.faction === 'player' && building.trainQueue > 0
   );
   const recentLog = sim.log.slice(-3).reverse();
+  const rating = sim.status !== 'playing' ? matchScore(sim) : null;
 
   return (
     <div className="hud">
@@ -285,6 +286,12 @@ export function RtsHud() {
         <div className={`endgame ${sim.status}`} role="dialog" aria-label="game result">
           <h2>{sim.status === 'won' ? 'Victory!' : 'Defeat'}</h2>
           <p>{sim.status === 'won' ? '라쿤 캠프를 파괴하고 프론티어를 지켜냈습니다.' : '본부가 파괴되었습니다. 다시 도전하세요.'}</p>
+          {rating && (
+            <div className="endgame-grade" data-endgame-grade={rating.grade} aria-label="match grade">
+              <span className="grade-letter">{rating.grade}</span>
+              <span className="grade-label">전투 평가</span>
+            </div>
+          )}
           <dl className="endgame-stats" data-endgame-stats aria-label="match summary">
             <div>
               <dt>생존 시간</dt>
@@ -311,6 +318,14 @@ export function RtsHud() {
             <div>
               <dt>라쿤 격퇴</dt>
               <dd data-endstat="raiders">{sim.stats.raidersDefeated}</dd>
+            </div>
+            <div>
+              <dt>유닛 손실</dt>
+              <dd data-endstat="losses">{sim.stats.unitsLost}</dd>
+            </div>
+            <div>
+              <dt>종합 점수</dt>
+              <dd data-endstat="score">{rating ? rating.score : 0}</dd>
             </div>
           </dl>
           <button type="button" onClick={restart}>

@@ -8,6 +8,7 @@ import {
   commandSmart,
   createInitialState,
   dist,
+  matchScore,
   missionHint,
   placeBuilding,
   setSelection,
@@ -251,6 +252,45 @@ describe('match summary stats', () => {
     expect(state.stats.unitsLost).toBe(1);
     expect(state.units.some((unit) => unit.id === raider.id)).toBe(false);
     expect(state.units.some((unit) => unit.id === worker.id)).toBe(false);
+  });
+});
+
+describe('match score rating', () => {
+  it('rates an untouched run as zero with the lowest grade', () => {
+    const state = createInitialState();
+    expect(matchScore(state)).toEqual({ score: 0, grade: 'C' });
+  });
+
+  it('rewards wins with a speed bonus so faster wins outscore slower ones', () => {
+    const state = createInitialState();
+    state.stats = { goldGathered: 200, woodGathered: 100, soldiersTrained: 3, raidersDefeated: 4, unitsLost: 1 };
+
+    state.status = 'lost';
+    const lost = matchScore(state);
+
+    state.status = 'won';
+    state.time = 120;
+    const fastWin = matchScore(state);
+    state.time = 400;
+    const slowWin = matchScore(state);
+
+    expect(fastWin.score).toBeGreaterThan(slowWin.score);
+    expect(slowWin.score).toBeGreaterThan(lost.score);
+    expect(fastWin.grade).toBe('S');
+    expect(lost.grade).toBe('B');
+  });
+
+  it('penalizes lost units without dropping the score below zero', () => {
+    const state = createInitialState();
+    state.stats.goldGathered = 50;
+    state.stats.unitsLost = 1;
+    const light = matchScore(state);
+    expect(light.score).toBe(20);
+
+    state.stats.unitsLost = 50;
+    const heavy = matchScore(state);
+    expect(heavy.score).toBe(0);
+    expect(heavy.grade).toBe('C');
   });
 });
 

@@ -4,12 +4,13 @@ import {
   canAfford,
   commandSmart,
   createInitialState,
+  matchScore,
   missionHint,
   placeBuilding,
   setSelection,
   trainSoldier
 } from '../game/simulation';
-import type { BuildableKind, GameState, MissionHint, SmartTarget, UnitKind } from '../game/types';
+import type { BuildableKind, GameState, MatchScore, MissionHint, SmartTarget, UnitKind } from '../game/types';
 
 export interface GameStore {
   sim: GameState;
@@ -77,6 +78,7 @@ declare global {
         train: () => boolean;
         advanceSeconds: (seconds: number) => void;
         missionHint: () => MissionHint;
+        matchScore: () => MatchScore;
         restart: () => void;
       };
     };
@@ -95,6 +97,7 @@ if (typeof window !== 'undefined') {
       train: () => useGameStore.getState().train(),
       advanceSeconds: (seconds) => useGameStore.getState().tick(Math.max(0, Math.min(180, seconds))),
       missionHint: () => missionHint(useGameStore.getState().sim),
+      matchScore: () => matchScore(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()
     }
   };

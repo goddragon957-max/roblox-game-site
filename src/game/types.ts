@@ -89,6 +89,13 @@ export interface GameState {
   stats: MatchStats;
 }
 
+export type MatchGrade = 'S' | 'A' | 'B' | 'C';
+
+export interface MatchScore {
+  score: number;
+  grade: MatchGrade;
+}
+
 export interface MissionHint {
   step: number;
   total: number;

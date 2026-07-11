@@ -3,6 +3,8 @@ import type {
   Building,
   BuildingKind,
   GameState,
+  MatchGrade,
+  MatchScore,
   MissionHint,
   ResourceNode,
   ResourceType,
@@ -572,6 +574,38 @@ export function missionHint(state: GameState): MissionHint {
     title: '캠프 공격',
     detail: '병사를 선택하고 라쿤 캠프를 우클릭해 파괴하세요'
   };
+}
+
+// Post-run rating: score the whole run from MatchStats so the endgame overlay
+// can show a number and grade that stay comparable across attempts.
+export const SCORE_WEIGHTS = {
+  resource: 1,
+  soldierTrained: 40,
+  raiderDefeated: 60,
+  unitLost: 30,
+  winBonus: 500,
+  winSpeedWindow: 600
+};
+
+export const GRADE_THRESHOLDS: Record<Exclude<MatchGrade, 'C'>, number> = {
+  S: 1200,
+  A: 800,
+  B: 400
+};
+
+export function matchScore(state: GameState): MatchScore {
+  const { stats } = state;
+  const economy = (stats.goldGathered + stats.woodGathered) * SCORE_WEIGHTS.resource;
+  const military = stats.soldiersTrained * SCORE_WEIGHTS.soldierTrained + stats.raidersDefeated * SCORE_WEIGHTS.raiderDefeated;
+  const penalty = stats.unitsLost * SCORE_WEIGHTS.unitLost;
+  const winBonus =
+    state.status === 'won'
+      ? SCORE_WEIGHTS.winBonus + Math.max(0, SCORE_WEIGHTS.winSpeedWindow - Math.floor(state.time))
+      : 0;
+  const score = Math.max(0, Math.round(economy + military - penalty + winBonus));
+  const grade: MatchGrade =
+    score >= GRADE_THRESHOLDS.S ? 'S' : score >= GRADE_THRESHOLDS.A ? 'A' : score >= GRADE_THRESHOLDS.B ? 'B' : 'C';
+  return { score, grade };
 }
 
 const MAX_STEP = 0.05;
