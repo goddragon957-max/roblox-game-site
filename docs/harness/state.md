@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_23_ready
-current_round: 23
+current_phase: round_24_ready
+current_round: 24
 next_role: generator
 pause_reason: ""
 max_rounds: 25
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-12T03:07:39Z"
+updated_at: "2026-07-12T07:34:30Z"
 resume_attempts: 1
-last_verified_at: "2026-07-12T03:07:39Z"
+last_verified_at: "2026-07-12T07:34:30Z"
 last_verdict: pass
 ```
 
@@ -42,5 +42,6 @@ last_verdict: pass
 - After Round 20, Round 21 was queued for the next scheduled generator slice under the same 48h loop authorization; `max_rounds` was raised to 25 so the authorized loop does not stop just because Round 20 reached the previous cap.
 - Round 21 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): wave-cleared reward feedback — spawned wave raider ids are tracked in `activeWaveRaiderIds`, pure `waveClear(state)` derives a 5s celebration window, the HUD shows a green `웨이브 N 격퇴!` chip (`data-wave-cleared`), one log line records the clear, and `__rtsSmoke.command.waveClear()` exposes it. Claude generated the initial slice but could not run commands; evaluator found/corrected the guard-alive regression so clearing an active wave celebrates even while pre-wave camp guards remain, then verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/train/attack/wave-clear chip appears and expires), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-21-qa.md`.
 - Round 22 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): delivery streak/combo feedback — `stepDeposit` tracks `lastDepositAt`/`deliveryStreakCount` (deposits within `DELIVERY_STREAK_WINDOW = 8`s chain the combo, a stall restarts it at 1, x5 logs one celebration line), pure `deliveryStreak(state)` derives the HUD state, the HUD shows a gold `배달 콤보 xN` chip (`data-delivery-streak`), `__rtsSmoke.command.deliveryStreak()` exposes it, and 3 new deterministic tests cover build/expiry-restart/x5-log-once + match-end quiet. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (delivery combo reaches x5, chip appears and expires, build/train/attack still work), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-22-qa.md`.
-- Round 23 is ready for the next scheduled generator slice under the same 48h loop authorization.
+- Round 23 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): renewable lumber / wood-regrowth feedback — depleted wood nodes set `regrowAt`, pure `nodeRegrowth(state)` exposes progress for browser smoke/minimap/scene, regrowing trees render as small saplings until they refill, gold remains finite, and idle woodcutters can resume gathering when their last node returns. Claude's visible output was a Fable usage-limit line but it left a useful dirty source diff; evaluator verified `npm run verify`, `git diff --check`, browser smoke (wood depletion/regrowth/refill plus gather/build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-23-qa.md`.
+- Round 24 is ready for the next scheduled generator slice under the same 48h loop authorization.
 - Do not include `.hermes/` in git.

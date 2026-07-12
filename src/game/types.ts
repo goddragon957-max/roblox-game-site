@@ -60,6 +60,14 @@ export interface ResourceNode {
   pos: Vec2;
   amountLeft: number;
   maxAmount: number;
+  regrowAt: number | null;
+}
+
+export interface NodeRegrowth {
+  id: string;
+  pos: Vec2;
+  secondsLeft: number;
+  progress: number;
 }
 
 export interface LogEntry {

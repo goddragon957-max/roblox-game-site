@@ -7,6 +7,7 @@ import type {
   MatchGrade,
   MatchScore,
   MissionHint,
+  NodeRegrowth,
   OrderPreview,
   RallyPreview,
   RangePreview,
@@ -58,6 +59,7 @@ export const WAVE_CLEAR_FEEDBACK_DURATION = 5;
 export const DELIVERY_STREAK_WINDOW = 8;
 export const DELIVERY_STREAK_MIN = 2;
 export const DELIVERY_STREAK_CELEBRATE_AT = 5;
+export const WOOD_REGROW_TIME = 40;
 
 const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
   worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
@@ -133,7 +135,7 @@ function makeBuilding(state: GameState, kind: BuildingKind, faction: Building['f
 }
 
 function makeNode(state: GameState, type: ResourceType, pos: Vec2, amount: number): ResourceNode {
-  return { id: nextId(state, type), type, pos: { ...pos }, amountLeft: amount, maxAmount: amount };
+  return { id: nextId(state, type), type, pos: { ...pos }, amountLeft: amount, maxAmount: amount, regrowAt: null };
 }
 
 function pushLog(state: GameState, text: string) {
@@ -343,6 +345,24 @@ export function workerCarrySummary(state: GameState): WorkerCarrySummary {
     else wood += unit.carry.amount;
   }
   return { count, gold, wood, total: gold + wood };
+}
+
+// Economy readability: expose depleted-but-regrowing wood nodes so the scene
+// can grow a sapling back where the tree fell and the minimap can show where
+// wood will return. Empty once every regrowing node has finished.
+export function nodeRegrowth(state: GameState): NodeRegrowth[] {
+  const entries: NodeRegrowth[] = [];
+  for (const node of state.resources) {
+    if (node.regrowAt === null) continue;
+    const secondsLeft = Math.max(0, node.regrowAt - state.time);
+    entries.push({
+      id: node.id,
+      pos: { ...node.pos },
+      secondsLeft,
+      progress: Math.max(0, Math.min(1, 1 - secondsLeft / WOOD_REGROW_TIME))
+    });
+  }
+  return entries;
 }
 
 // Economy readability: derive the active delivery combo from the last real
@@ -612,7 +632,14 @@ function stepGather(state: GameState, unit: Unit, dt: number) {
     unit.lastGatherNodeId = node.id;
     unit.order = { type: 'deposit' };
     if (node.amountLeft <= 0) {
-      pushLog(state, node.type === 'gold' ? '금 광맥이 고갈되었습니다' : '나무가 모두 베어졌습니다');
+      // Wood is renewable: a felled tree grows back after a cooldown, so the
+      // lumber economy never dead-ends. Gold stays finite by design.
+      if (node.type === 'wood') {
+        node.regrowAt = state.time + WOOD_REGROW_TIME;
+        pushLog(state, '나무가 모두 베어졌습니다 — 잠시 후 다시 자랍니다');
+      } else {
+        pushLog(state, '금 광맥이 고갈되었습니다');
+      }
     }
   }
 }
@@ -795,6 +822,24 @@ export function waveTelegraph(state: GameState): WaveTelegraph {
   return { active: true, pos: waveSpawnPoint(camp, 0), secondsLeft: forecast.secondsLeft, size: forecast.size };
 }
 
+// Renewable lumber: a regrown tree refills completely, and idle woodcutters
+// that were working that exact node walk back on their own. Workers busy on
+// another order are never interrupted.
+function stepRegrowth(state: GameState) {
+  for (const node of state.resources) {
+    if (node.regrowAt === null || state.time < node.regrowAt) continue;
+    node.amountLeft = node.maxAmount;
+    node.regrowAt = null;
+    pushLog(state, '나무가 다시 자랐습니다 — 벌목을 재개하세요');
+    for (const unit of state.units) {
+      if (unit.kind !== 'worker' || unit.faction !== 'player') continue;
+      if (unit.order.type !== 'idle' || unit.lastGatherNodeId !== node.id) continue;
+      unit.order = { type: 'gather', nodeId: node.id };
+      unit.gatherProgress = 0;
+    }
+  }
+}
+
 function spawnWave(state: GameState) {
   const camp = state.buildings.find((building) => building.kind === 'enemyCamp' && building.hp > 0);
   if (!camp) return;
@@ -954,6 +999,7 @@ export function advance(state: GameState, dtTotal: number) {
       state.nextWaveAt += WAVE_INTERVAL;
     }
 
+    stepRegrowth(state);
     for (const unit of state.units) stepUnit(state, unit, dt);
     for (const building of state.buildings) stepBuilding(state, building, dt);
     removeDead(state);

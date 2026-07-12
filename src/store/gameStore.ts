@@ -9,6 +9,7 @@ import {
   matchScore,
   missionHint,
   nextBuildSlot,
+  nodeRegrowth,
   orderPreviews,
   placeBuilding,
   playerUnitIdsInRect,
@@ -30,6 +31,7 @@ import type {
   GameState,
   MatchScore,
   MissionHint,
+  NodeRegrowth,
   OrderPreview,
   RallyPreview,
   RangePreview,
@@ -120,6 +122,7 @@ declare global {
         workerCarrySummary: () => WorkerCarrySummary;
         deliveryStreak: () => DeliveryStreak;
         nextBuildSlot: () => Vec2 | null;
+        nodeRegrowth: () => NodeRegrowth[];
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
         towerRanges: () => RangePreview[];
@@ -163,6 +166,7 @@ if (typeof window !== 'undefined') {
       workerCarrySummary: () => workerCarrySummary(useGameStore.getState().sim),
       deliveryStreak: () => deliveryStreak(useGameStore.getState().sim),
       nextBuildSlot: () => nextBuildSlot(useGameStore.getState().sim),
+      nodeRegrowth: () => nodeRegrowth(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),
       towerRanges: () => towerRangePreviews(useGameStore.getState().sim),

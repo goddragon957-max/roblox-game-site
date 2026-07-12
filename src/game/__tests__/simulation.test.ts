@@ -3,6 +3,7 @@ import {
   COSTS,
   DELIVERY_STREAK_WINDOW,
   FIRST_WAVE_AT,
+  GATHER_TIME,
   MISSION_SOLDIER_TARGET,
   SOLDIER_AGGRO_RANGE,
   THREAT_ALERT_DURATION,
@@ -10,6 +11,7 @@ import {
   WAVE_CLEAR_FEEDBACK_DURATION,
   WAVE_INTERVAL,
   WAVE_WARNING_LEAD,
+  WOOD_REGROW_TIME,
   advance,
   commandSmart,
   createInitialState,
@@ -19,6 +21,7 @@ import {
   matchScore,
   missionHint,
   nextBuildSlot,
+  nodeRegrowth,
   orderPreviews,
   placeBuilding,
   playerUnitIdsInRect,
@@ -1030,6 +1033,76 @@ describe('match score rating', () => {
     const heavy = matchScore(state);
     expect(heavy.score).toBe(0);
     expect(heavy.grade).toBe('C');
+  });
+});
+
+describe('wood regrowth', () => {
+  it('regrows a felled wood node after the cooldown and reports progress meanwhile', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const woodNode = state.resources.find((node) => node.type === 'wood');
+    if (!woodNode) throw new Error('expected wood node');
+    woodNode.amountLeft = 10;
+    worker.pos = { ...woodNode.pos };
+    commandSmart(state, [worker.id], { point: { ...woodNode.pos }, entityId: woodNode.id });
+
+    advance(state, GATHER_TIME + 0.2);
+    expect(woodNode.amountLeft).toBe(0);
+    expect(woodNode.regrowAt).not.toBeNull();
+    expect(state.log.some((entry) => entry.text.includes('다시 자랍니다'))).toBe(true);
+
+    const regrowing = nodeRegrowth(state);
+    expect(regrowing).toHaveLength(1);
+    expect(regrowing[0].id).toBe(woodNode.id);
+    expect(regrowing[0].progress).toBeGreaterThanOrEqual(0);
+    expect(regrowing[0].progress).toBeLessThan(0.1);
+    expect(regrowing[0].secondsLeft).toBeGreaterThan(WOOD_REGROW_TIME - 1);
+
+    advance(state, WOOD_REGROW_TIME + 1);
+    expect(woodNode.amountLeft).toBe(woodNode.maxAmount);
+    expect(woodNode.regrowAt).toBeNull();
+    expect(nodeRegrowth(state)).toEqual([]);
+    expect(state.log.some((entry) => entry.text.includes('다시 자랐습니다'))).toBe(true);
+  });
+
+  it('keeps gold finite: a depleted gold vein never regrows', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    if (!goldNode) throw new Error('expected gold node');
+    goldNode.amountLeft = 10;
+    worker.pos = { ...goldNode.pos };
+    commandSmart(state, [worker.id], { point: { ...goldNode.pos }, entityId: goldNode.id });
+
+    advance(state, GATHER_TIME + 0.2);
+    expect(goldNode.amountLeft).toBe(0);
+    expect(goldNode.regrowAt).toBeNull();
+    expect(nodeRegrowth(state)).toEqual([]);
+
+    advance(state, WOOD_REGROW_TIME + 1);
+    expect(goldNode.amountLeft).toBe(0);
+  });
+
+  it('sends idle woodcutters back to their regrown node without interrupting busy workers', () => {
+    const state = createInitialState();
+    const workers = state.units.filter((unit) => unit.kind === 'worker' && unit.faction === 'player');
+    const cutter = workers[0];
+    const miner = workers[1];
+    const woodNode = state.resources.find((node) => node.type === 'wood');
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    if (!woodNode || !goldNode) throw new Error('expected wood and gold nodes');
+
+    woodNode.amountLeft = 10;
+    cutter.pos = { ...woodNode.pos };
+    commandSmart(state, [cutter.id], { point: { ...woodNode.pos }, entityId: woodNode.id });
+    commandSmart(state, [miner.id], { point: { ...goldNode.pos }, entityId: goldNode.id });
+
+    advance(state, WOOD_REGROW_TIME + GATHER_TIME + 1);
+
+    expect(woodNode.amountLeft).toBe(woodNode.maxAmount);
+    expect(cutter.order).toEqual({ type: 'gather', nodeId: woodNode.id });
+    expect(miner.order.type).not.toBe('idle');
+    if (miner.order.type === 'gather') expect(miner.order.nodeId).not.toBe(woodNode.id);
   });
 });
 

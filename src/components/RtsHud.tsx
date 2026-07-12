@@ -11,6 +11,7 @@ import {
   matchScore,
   missionHint,
   nextBuildSlot,
+  nodeRegrowth,
   orderPreviews,
   rallyPreviews,
   selectionSummary,
@@ -104,6 +105,16 @@ function Minimap() {
         context.beginPath();
         context.arc(toPx(node.pos.x), toPx(node.pos.z), 2.4, 0, Math.PI * 2);
         context.fill();
+      }
+
+      // Regrowing wood: a hollow ring that brightens as the tree returns, so
+      // the player can plan the next lumber run from the map.
+      for (const regrow of nodeRegrowth(sim)) {
+        context.strokeStyle = `rgba(47, 122, 61, ${(0.35 + 0.55 * regrow.progress).toFixed(2)})`;
+        context.lineWidth = 1;
+        context.beginPath();
+        context.arc(toPx(regrow.pos.x), toPx(regrow.pos.z), 2.4, 0, Math.PI * 2);
+        context.stroke();
       }
 
       for (const building of sim.buildings) {

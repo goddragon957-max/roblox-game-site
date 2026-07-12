@@ -5,6 +5,7 @@ import {
   TERRAIN,
   TOWER_SHOT_DURATION,
   nextBuildSlot,
+  nodeRegrowth,
   orderPreviews,
   playerUnitIdsInRect,
   towerShots,
@@ -677,12 +678,17 @@ export function ThreeRtsScene() {
       }
 
       const liveNodes = new Set<string>();
+      const regrowth = new Map(nodeRegrowth(sim).map((entry) => [entry.id, entry]));
       for (const node of sim.resources) {
-        if (node.amountLeft <= 0) continue;
+        const regrow = regrowth.get(node.id);
+        if (node.amountLeft <= 0 && !regrow) continue;
         liveNodes.add(node.id);
         const visual = ensureNodeVisual(node);
-        const ratio = Math.max(0.35, node.amountLeft / node.maxAmount);
-        visual.scalable.scale.setScalar(ratio);
+        // A regrowing tree reads as a sapling scaling back up, then pops to
+        // full size when it becomes gatherable again; live nodes shrink with
+        // their remaining amount so depletion stays readable at a glance.
+        const scale = regrow ? 0.15 + 0.65 * regrow.progress : Math.max(0.35, node.amountLeft / node.maxAmount);
+        visual.scalable.scale.setScalar(scale);
       }
       for (const [id, visual] of nodeVisuals) {
         if (!liveNodes.has(id)) {
