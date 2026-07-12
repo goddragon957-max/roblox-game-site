@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_22_ready
-current_round: 22
+current_phase: round_23_ready
+current_round: 23
 next_role: generator
 pause_reason: ""
 max_rounds: 25
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-12T02:35:49Z"
+updated_at: "2026-07-12T03:07:39Z"
 resume_attempts: 1
-last_verified_at: "2026-07-12T02:35:49Z"
+last_verified_at: "2026-07-12T03:07:39Z"
 last_verdict: pass
 ```
 
@@ -41,5 +41,6 @@ last_verdict: pass
 - Round 20 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): worker carried-resource HUD feedback — pure `workerCarrySummary(state)` summarizes player worker bundles currently in transit, the HUD shows a frontier-gold `운반 중 ...` chip with `data-carrying-workers`/`data-carrying-gold`/`data-carrying-wood`, `__rtsSmoke.command.workerCarrySummary()` exposes it, and 2 deterministic tests cover manual aggregation plus real gather/deposit clearing. Claude returned a session-limit line during this scheduled tick; evaluator found/completed the dirty partial slice, fixed a failing timing assertion, verified `npm run verify`, `git diff --check`, browser smoke (carry chip appears/clears, build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-20-qa.md`.
 - After Round 20, Round 21 was queued for the next scheduled generator slice under the same 48h loop authorization; `max_rounds` was raised to 25 so the authorized loop does not stop just because Round 20 reached the previous cap.
 - Round 21 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): wave-cleared reward feedback — spawned wave raider ids are tracked in `activeWaveRaiderIds`, pure `waveClear(state)` derives a 5s celebration window, the HUD shows a green `웨이브 N 격퇴!` chip (`data-wave-cleared`), one log line records the clear, and `__rtsSmoke.command.waveClear()` exposes it. Claude generated the initial slice but could not run commands; evaluator found/corrected the guard-alive regression so clearing an active wave celebrates even while pre-wave camp guards remain, then verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/train/attack/wave-clear chip appears and expires), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-21-qa.md`.
-- Round 22 is ready for the next scheduled generator slice under the same 48h loop authorization.
+- Round 22 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): delivery streak/combo feedback — `stepDeposit` tracks `lastDepositAt`/`deliveryStreakCount` (deposits within `DELIVERY_STREAK_WINDOW = 8`s chain the combo, a stall restarts it at 1, x5 logs one celebration line), pure `deliveryStreak(state)` derives the HUD state, the HUD shows a gold `배달 콤보 xN` chip (`data-delivery-streak`), `__rtsSmoke.command.deliveryStreak()` exposes it, and 3 new deterministic tests cover build/expiry-restart/x5-log-once + match-end quiet. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (delivery combo reaches x5, chip appears and expires, build/train/attack still work), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-22-qa.md`.
+- Round 23 is ready for the next scheduled generator slice under the same 48h loop authorization.
 - Do not include `.hermes/` in git.

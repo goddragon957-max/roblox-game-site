@@ -82,6 +82,12 @@ export interface WorkerCarrySummary {
   total: number;
 }
 
+export interface DeliveryStreak {
+  active: boolean;
+  count: number;
+  secondsLeft: number;
+}
+
 export interface GameState {
   time: number;
   seq: number;
@@ -99,6 +105,8 @@ export interface GameState {
   lastWaveClearedNumber: number;
   lastPlayerHitAt: number | null;
   lastPlayerHitPos: Vec2 | null;
+  lastDepositAt: number | null;
+  deliveryStreakCount: number;
   status: GameStatus;
   log: LogEntry[];
   stats: MatchStats;

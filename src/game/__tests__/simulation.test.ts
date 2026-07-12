@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   COSTS,
+  DELIVERY_STREAK_WINDOW,
   FIRST_WAVE_AT,
   MISSION_SOLDIER_TARGET,
   SOLDIER_AGGRO_RANGE,
@@ -12,6 +13,7 @@ import {
   advance,
   commandSmart,
   createInitialState,
+  deliveryStreak,
   dist,
   idleWorkerIds,
   matchScore,
@@ -169,6 +171,62 @@ describe('economy', () => {
     commandSmart(state, [worker.id], { point: { ...woodNode.pos }, entityId: woodNode.id });
     advance(state, 20);
     expect(state.wood).toBeGreaterThan(woodBefore);
+  });
+});
+
+describe('delivery streak', () => {
+  // Reuses the first worker for an instant real deposit at the base, so the
+  // streak is driven by the same stepDeposit path the live game uses.
+  function instantDeposit(state: GameState) {
+    const base = playerBase(state);
+    const worker = firstWorker(state);
+    worker.pos = { ...base.pos };
+    worker.carry = { type: 'gold', amount: 10 };
+    worker.order = { type: 'deposit' };
+    advance(state, 0.05);
+  }
+
+  it('builds a combo when deposits land within the streak window', () => {
+    const state = createInitialState();
+    expect(deliveryStreak(state)).toEqual({ active: false, count: 0, secondsLeft: 0 });
+
+    instantDeposit(state);
+    expect(deliveryStreak(state).active).toBe(false);
+    expect(deliveryStreak(state).count).toBe(1);
+
+    instantDeposit(state);
+    const streak = deliveryStreak(state);
+    expect(streak.active).toBe(true);
+    expect(streak.count).toBe(2);
+    expect(streak.secondsLeft).toBeGreaterThan(0);
+    expect(streak.secondsLeft).toBeLessThanOrEqual(DELIVERY_STREAK_WINDOW);
+  });
+
+  it('expires past the window and restarts the combo at one', () => {
+    const state = createInitialState();
+    instantDeposit(state);
+    instantDeposit(state);
+    expect(deliveryStreak(state).active).toBe(true);
+
+    advance(state, DELIVERY_STREAK_WINDOW + 1);
+    expect(deliveryStreak(state)).toEqual({ active: false, count: 2, secondsLeft: 0 });
+
+    instantDeposit(state);
+    expect(deliveryStreak(state)).toEqual({ active: false, count: 1, secondsLeft: 0 });
+  });
+
+  it('celebrates x5 in the log once and goes quiet after the match ends', () => {
+    const state = createInitialState();
+    for (let i = 0; i < 5; i += 1) instantDeposit(state);
+    expect(deliveryStreak(state).count).toBe(5);
+    expect(state.log.filter((entry) => entry.text.includes('배달 콤보')).length).toBe(1);
+
+    instantDeposit(state);
+    expect(deliveryStreak(state).count).toBe(6);
+    expect(state.log.filter((entry) => entry.text.includes('배달 콤보')).length).toBe(1);
+
+    state.status = 'won';
+    expect(deliveryStreak(state).active).toBe(false);
   });
 });
 

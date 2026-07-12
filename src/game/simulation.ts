@@ -2,6 +2,7 @@ import type {
   BuildableKind,
   Building,
   BuildingKind,
+  DeliveryStreak,
   GameState,
   MatchGrade,
   MatchScore,
@@ -54,6 +55,9 @@ export const MISSION_SOLDIER_TARGET = 3;
 export const THREAT_ALERT_DURATION = 4;
 export const TOWER_SHOT_DURATION = 0.35;
 export const WAVE_CLEAR_FEEDBACK_DURATION = 5;
+export const DELIVERY_STREAK_WINDOW = 8;
+export const DELIVERY_STREAK_MIN = 2;
+export const DELIVERY_STREAK_CELEBRATE_AT = 5;
 
 const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
   worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
@@ -155,6 +159,8 @@ export function createInitialState(): GameState {
     lastWaveClearedNumber: 0,
     lastPlayerHitAt: null,
     lastPlayerHitPos: null,
+    lastDepositAt: null,
+    deliveryStreakCount: 0,
     status: 'playing',
     log: [],
     stats: {
@@ -337,6 +343,19 @@ export function workerCarrySummary(state: GameState): WorkerCarrySummary {
     else wood += unit.carry.amount;
   }
   return { count, gold, wood, total: gold + wood };
+}
+
+// Economy readability: derive the active delivery combo from the last real
+// deposit so the HUD chip rewards an uninterrupted supply line and quietly
+// disappears once deliveries stall past the window or the match ends.
+export function deliveryStreak(state: GameState): DeliveryStreak {
+  const count = state.deliveryStreakCount;
+  if (state.status !== 'playing' || state.lastDepositAt === null || count < DELIVERY_STREAK_MIN) {
+    return { active: false, count, secondsLeft: 0 };
+  }
+  const secondsLeft = DELIVERY_STREAK_WINDOW - (state.time - state.lastDepositAt);
+  if (secondsLeft <= 0) return { active: false, count, secondsLeft: 0 };
+  return { active: true, count, secondsLeft };
 }
 
 export const DRAG_SELECT_PADDING = 0.35;
@@ -618,6 +637,16 @@ function stepDeposit(state: GameState, unit: Unit, dt: number) {
   } else {
     state.wood += unit.carry.amount;
     state.stats.woodGathered += unit.carry.amount;
+  }
+  // Delivery combo: back-to-back deposits inside the window keep the streak
+  // alive; a stalled supply line restarts it at 1 on the next delivery.
+  state.deliveryStreakCount =
+    state.lastDepositAt !== null && state.time - state.lastDepositAt <= DELIVERY_STREAK_WINDOW
+      ? state.deliveryStreakCount + 1
+      : 1;
+  state.lastDepositAt = state.time;
+  if (state.deliveryStreakCount === DELIVERY_STREAK_CELEBRATE_AT) {
+    pushLog(state, `배달 콤보 x${DELIVERY_STREAK_CELEBRATE_AT} — 보급로가 활발하게 돌아갑니다!`);
   }
   unit.carry = null;
   const backTo = unit.lastGatherNodeId ? findNode(state, unit.lastGatherNodeId) : undefined;

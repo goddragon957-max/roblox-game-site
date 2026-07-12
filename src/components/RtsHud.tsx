@@ -1,4 +1,4 @@
-import { Axe, BellRing, Castle, Coins, Dog, Flag, Hammer, PartyPopper, RotateCcw, Shield, ShieldAlert, Swords, TreePine } from 'lucide-react';
+import { Axe, BellRing, Castle, Coins, Dog, Flag, Hammer, PartyPopper, RotateCcw, Shield, ShieldAlert, Swords, TreePine, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -6,6 +6,7 @@ import {
   MAP_HALF,
   TERRAIN,
   TRAIN_TIME,
+  deliveryStreak,
   idleWorkerIds,
   matchScore,
   missionHint,
@@ -315,6 +316,7 @@ export function RtsHud() {
   const buildSlot = nextBuildSlot(sim);
   const carry = workerCarrySummary(sim);
   const cleared = waveClear(sim);
+  const streak = deliveryStreak(sim);
 
   return (
     <div className="hud">
@@ -376,6 +378,13 @@ export function RtsHud() {
               {carry.gold > 0 && carry.wood > 0 ? ' · ' : ''}
               {carry.wood > 0 ? `나무 ${carry.wood}` : ''}
             </span>
+          </div>
+        )}
+        {streak.active && (
+          // Remounting on each combo step restarts the pop animation.
+          <div key={streak.count} className="hud-chip streak" data-delivery-streak={streak.count}>
+            <Zap size={15} />
+            <span>배달 콤보 x{streak.count}</span>
           </div>
         )}
         <div className="hud-chip objective">

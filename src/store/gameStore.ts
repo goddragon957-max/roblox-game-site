@@ -4,6 +4,7 @@ import {
   canAfford,
   commandSmart,
   createInitialState,
+  deliveryStreak,
   idleWorkerIds,
   matchScore,
   missionHint,
@@ -25,6 +26,7 @@ import {
 } from '../game/simulation';
 import type {
   BuildableKind,
+  DeliveryStreak,
   GameState,
   MatchScore,
   MissionHint,
@@ -116,6 +118,7 @@ declare global {
         waveTelegraph: () => WaveTelegraph;
         waveClear: () => WaveClear;
         workerCarrySummary: () => WorkerCarrySummary;
+        deliveryStreak: () => DeliveryStreak;
         nextBuildSlot: () => Vec2 | null;
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
@@ -158,6 +161,7 @@ if (typeof window !== 'undefined') {
       waveTelegraph: () => waveTelegraph(useGameStore.getState().sim),
       waveClear: () => waveClear(useGameStore.getState().sim),
       workerCarrySummary: () => workerCarrySummary(useGameStore.getState().sim),
+      deliveryStreak: () => deliveryStreak(useGameStore.getState().sim),
       nextBuildSlot: () => nextBuildSlot(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),
