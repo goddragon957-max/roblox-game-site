@@ -12,10 +12,15 @@ The first three seconds in the browser must read as:
 
 The durable work order lives in `docs/goals/2026-07-09-rts-rebuild.md`.
 
+## Design Standard
+
+Read `DESIGN.md` before any UI/renderer/HUD/game-feedback work. Design quality is part of the acceptance bar: keep the battlefield fullscreen and primary, preserve the cute low-poly puppy frontier RTS identity, and reject dashboard-like HUD slabs or unreadable abstract units.
+
 ## Required Reads Before Editing
 
 - `AGENT.md`
 - `VERIFY.md`
+- `DESIGN.md`
 - `docs/goals/2026-07-09-rts-rebuild.md`
 - `docs/harness/config.md`
 - `docs/harness/state.md`

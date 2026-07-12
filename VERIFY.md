@@ -53,6 +53,8 @@ After each verified round, write `docs/harness/feedback/round-N-qa.md` with:
 
 ## Visual bar
 
+Apply `DESIGN.md` first. The user explicitly asked that design be cared for, so visual QA must judge taste/readability, not only whether DOM/state markers exist.
+
 Within the first three seconds the screen should read as:
 
 - a 3D isometric RTS battlefield, not a dashboard or landing page;
@@ -72,3 +74,4 @@ Score each criterion 0/1/2. Any 0 is a hard fail:
 | Screenshot desirability | screenshot makes the game worth trying |
 
 DOM snapshots alone are insufficient for visual PASS.
+If a slice adds a mechanic but the visible result is dashboard-like, cluttered, unreadable, or not cute/tactical enough for Puppy Frontier RTS, mark it as a design FAIL and send the next generator a concrete art/HUD correction.

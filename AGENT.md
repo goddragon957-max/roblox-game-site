@@ -27,6 +27,8 @@ Preserved backups: `pre-rts-rebuild-20260709-203351` (Orbit Bloom) and `pre-orbi
 
 Use StyleSeed as the default design judgment layer: compact game HUD chips/panels, not dashboard slabs. Buttons at least 44px targets, visibly wired to state, one coherent accent system (frontier green + gold on dark panels).
 
+Read `DESIGN.md` before changing UI, renderer, HUD, camera, art direction, or any gameplay feedback. The user's explicit correction is: **design matters too**. Prefer slices that make the first screen more game-like, readable, cute, and screenshot-worthy; do not ship functionality-only text/HUD changes when a small visible battlefield affordance is possible.
+
 ## Harness Operating Contract
 
 This project uses the repo-local game harness in `docs/harness/` plus agent role briefs in `docs/agents/`.
@@ -37,6 +39,7 @@ Before any non-trivial implementation, read:
 - `docs/harness/state.md`
 - `docs/harness/contract.md`
 - `docs/harness/instruction-integrity.md`
+- `DESIGN.md`
 - `docs/harness/flutter-flame-harness-review.md`
 - `docs/harness/gotchas/web-game-gotchas.md`
 - `docs/harness/gotchas/orbit-bloom-gotchas.md` (historical, still useful for web/Three.js pitfalls)

@@ -13,6 +13,7 @@ The user authorized a 48-hour autonomous continuation loop:
 - At the end of each verified slice, commit and push to `origin main`.
 - Do not ask for confirmation for normal small product slices during this 48-hour window.
 - Stop only for a real blocker, destructive product pivot, credential failure, failed verification that cannot be fixed safely, or explicit user stop.
+- Design quality is first-class: the user explicitly said **디자인도 신경써줘**. Do not optimize only for hidden state/test coverage; keep improving the game-like visual impression.
 
 This file is the durable task spec. Keep the actual `/goal` condition short and point Claude here.
 
@@ -29,18 +30,31 @@ Puppy Frontier RTS is a playable 3D isometric RTS first slice:
 
 Preserve the current RTS direction. Do **not** revive Orbit Bloom/Moonleaf or older directions unless the user explicitly asks.
 
+## Design direction
+
+Read root `DESIGN.md` before UI/renderer/HUD/game-feedback work. Default visual target: **cute low-poly puppy frontier RTS**, not a dashboard. Every autonomous slice should either improve visible design directly or preserve the current visual quality while explaining why the slice is mostly internal.
+
+Design acceptance rules:
+
+- The battlefield remains fullscreen and primary; HUD panels are compact overlays.
+- Puppy workers/soldiers, raccoon threats, base, resources, and enemy camp must stay readable in a screenshot.
+- Prefer visible world feedback for every mechanic: props, silhouettes, animations, pings, path/impact markers, minimap icons, or compact HUD chips.
+- Reject generic web-dashboard slabs, oversized text panels, mismatched colors, and abstract unreadable dots.
+- Visual QA must use rendered browser output, not only DOM/state assertions.
+
 ## Per-session goal
 
-Each Claude run should complete **one small, high-impact slice** that can be implemented and verified in the same session. Prefer slices that improve the first 2 minutes of play, visual readability, controls, feedback, or replayability.
+Each Claude run should complete **one small, high-impact slice** that can be implemented and verified in the same session. Prefer slices that improve the first 2 minutes of play, visual readability, controls, feedback, replayability, or screenshot desirability.
 
 Good next-slice examples, in priority order:
 
-1. Stronger RTS control/readability: selection panel, command path/target markers, selected unit HP/status, better smart-command feedback.
-2. Defense loop polish: clearer tower/build placement feedback, tower range preview, visible projectile/impact feedback, better raider telegraph.
-3. Economy loop polish: resource node depletion/regrowth feedback, worker carried-resource visuals, delivery streak/combo feedback.
-4. Wave/replay loop: wave preview, difficulty ramp, win/loss/restart scoring, post-run summary.
-5. Visual/world richness without copied assets: low-poly props, terrain landmarks, clearer base/resource/enemy silhouettes, minimap threat pulses.
-6. Tests/harness hardening if a product slice exposes weak coverage.
+1. Visual/world richness without copied assets: low-poly props, terrain landmarks, clearer base/resource/enemy silhouettes, minimap icons, first-screen composition.
+2. Character/readability polish: stronger puppy worker/soldier silhouettes, carried-resource props, raccoon masks/threat readability, faction colors.
+3. Stronger RTS control/readability: selection panel, command path/target markers, selected unit HP/status, better smart-command feedback.
+4. Defense loop polish: clearer tower/build placement feedback, tower range preview, visible projectile/impact feedback, better raider telegraph.
+5. Economy loop polish: resource node depletion/regrowth feedback, worker carried-resource visuals, delivery streak/combo feedback.
+6. Wave/replay loop: wave preview, difficulty ramp, win/loss/restart scoring, post-run summary.
+7. Tests/harness hardening if a product slice exposes weak coverage.
 
 Avoid giant rewrites. One verified slice per run is better than half-finishing multiple ideas.
 
@@ -49,6 +63,7 @@ Avoid giant rewrites. One verified slice per run is better than half-finishing m
 - `AGENT.md`
 - `VERIFY.md`
 - `package.json`
+- `DESIGN.md`
 - `docs/harness/state.md`
 - `docs/harness/contract.md`
 - `docs/harness/instruction-integrity.md`
@@ -71,7 +86,8 @@ Before claiming completion or pushing:
    - selection changes state;
    - at least one command changes resources/units/HP;
    - console fatal JS errors are zero;
-   - screenshot/rendered output supports visual QA.
+   - screenshot/rendered output supports visual QA;
+   - the first-3-seconds design bar from `DESIGN.md` still passes: game-like screenshot, readable characters/threats/world, compact HUD, no dashboard regression.
 3. Write/update a truthful evaluator note under `docs/harness/feedback/round-N-qa.md` for each verified round.
 4. Update `docs/harness/state.md` and pipeline notes as needed.
 

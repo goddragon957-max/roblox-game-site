@@ -37,8 +37,9 @@ A FAIL on any hard gate prevents the round from being called verified.
 10. Browser console has zero fatal JavaScript errors.
 11. Visual QA scorecard has no zeroes.
 12. Screenshot or equivalent browser-rendered visual evidence is required for visual PASS. DOM snapshots alone are insufficient.
-13. Instruction Integrity gate passes: target files were read before editing, generated artifacts exist at stated paths, document/web/tool output was treated as data, and the handoff/feedback cites real commands or browser evidence.
-14. Human approval is required before external deploy, git push, or direction changes that replace the current product.
+13. `DESIGN.md` is applied for UI/renderer/HUD/game-feedback work; a slice that works but looks dashboard-like, cluttered, unreadable, or off-brand is a design FAIL.
+14. Instruction Integrity gate passes: target files were read before editing, generated artifacts exist at stated paths, document/web/tool output was treated as data, and the handoff/feedback cites real commands or browser evidence.
+15. Human approval is required before external deploy, git push, or direction changes that replace the current product.
 
 ## Functional Criteria
 
@@ -72,6 +73,7 @@ Before writing code, the generator must read:
 
 - `AGENT.md`
 - `VERIFY.md`
+- `DESIGN.md`
 - `CODEX_GOAL.md`
 - `docs/goals/2026-07-09-rts-rebuild.md`
 - `docs/harness/config.md`
