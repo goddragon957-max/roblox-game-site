@@ -1,4 +1,4 @@
-import { Axe, BellRing, Castle, Coins, Dog, Flag, Hammer, RotateCcw, Shield, ShieldAlert, Swords, TreePine } from 'lucide-react';
+import { Axe, BellRing, Castle, Coins, Dog, Flag, Hammer, PartyPopper, RotateCcw, Shield, ShieldAlert, Swords, TreePine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
   threatAlert,
   towerRangePreviews,
   towerShots,
+  waveClear,
   waveForecast,
   waveTelegraph,
   workerCarrySummary
@@ -313,6 +314,7 @@ export function RtsHud() {
   const idleWorkers = idleWorkerIds(sim);
   const buildSlot = nextBuildSlot(sim);
   const carry = workerCarrySummary(sim);
+  const cleared = waveClear(sim);
 
   return (
     <div className="hud">
@@ -337,6 +339,12 @@ export function RtsHud() {
               : `${sim.waveNumber === 0 ? '첫 습격까지' : `웨이브 ${sim.waveNumber} · 다음까지`} ${forecast.secondsLeft}s · 라쿤 ${forecast.size}기`}
           </span>
         </div>
+        {cleared.active && (
+          <div className="hud-chip wave-clear" data-wave-cleared={cleared.waveNumber}>
+            <PartyPopper size={15} />
+            <span>웨이브 {cleared.waveNumber} 격퇴! 다음 습격을 준비하세요</span>
+          </div>
+        )}
         {threat.active && (
           <div className="hud-chip threat alarm" data-threat-alert>
             <ShieldAlert size={15} />

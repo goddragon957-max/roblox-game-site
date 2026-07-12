@@ -18,6 +18,7 @@ import {
   towerRangePreviews,
   towerShots,
   trainSoldier,
+  waveClear,
   waveForecast,
   waveTelegraph,
   workerCarrySummary
@@ -36,6 +37,7 @@ import type {
   TowerShot,
   UnitKind,
   Vec2,
+  WaveClear,
   WaveForecast,
   WaveTelegraph,
   WorkerCarrySummary
@@ -112,6 +114,7 @@ declare global {
         matchScore: () => MatchScore;
         waveForecast: () => WaveForecast;
         waveTelegraph: () => WaveTelegraph;
+        waveClear: () => WaveClear;
         workerCarrySummary: () => WorkerCarrySummary;
         nextBuildSlot: () => Vec2 | null;
         selectionSummary: () => SelectionSummary;
@@ -153,6 +156,7 @@ if (typeof window !== 'undefined') {
       matchScore: () => matchScore(useGameStore.getState().sim),
       waveForecast: () => waveForecast(useGameStore.getState().sim),
       waveTelegraph: () => waveTelegraph(useGameStore.getState().sim),
+      waveClear: () => waveClear(useGameStore.getState().sim),
       workerCarrySummary: () => workerCarrySummary(useGameStore.getState().sim),
       nextBuildSlot: () => nextBuildSlot(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),

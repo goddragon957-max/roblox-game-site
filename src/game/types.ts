@@ -94,6 +94,9 @@ export interface GameState {
   waveNumber: number;
   nextWaveAt: number;
   waveWarned: boolean;
+  activeWaveRaiderIds: string[];
+  lastWaveClearedAt: number | null;
+  lastWaveClearedNumber: number;
   lastPlayerHitAt: number | null;
   lastPlayerHitPos: Vec2 | null;
   status: GameStatus;
@@ -151,6 +154,12 @@ export interface WaveTelegraph {
 export interface ThreatAlert {
   active: boolean;
   pos: Vec2 | null;
+  secondsAgo: number | null;
+}
+
+export interface WaveClear {
+  active: boolean;
+  waveNumber: number;
   secondsAgo: number | null;
 }
 

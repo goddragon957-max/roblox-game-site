@@ -20,6 +20,7 @@ import type {
   UnitKind,
   UnitOrder,
   Vec2,
+  WaveClear,
   WaveForecast,
   WaveTelegraph,
   WorkerCarrySummary
@@ -52,6 +53,7 @@ export const SOLDIER_AGGRO_RANGE = 10;
 export const MISSION_SOLDIER_TARGET = 3;
 export const THREAT_ALERT_DURATION = 4;
 export const TOWER_SHOT_DURATION = 0.35;
+export const WAVE_CLEAR_FEEDBACK_DURATION = 5;
 
 const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
   worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
@@ -148,6 +150,9 @@ export function createInitialState(): GameState {
     waveNumber: 0,
     nextWaveAt: FIRST_WAVE_AT,
     waveWarned: false,
+    activeWaveRaiderIds: [],
+    lastWaveClearedAt: null,
+    lastWaveClearedNumber: 0,
     lastPlayerHitAt: null,
     lastPlayerHitPos: null,
     status: 'playing',
@@ -486,6 +491,20 @@ export function threatAlert(state: GameState): ThreatAlert {
   };
 }
 
+// Wave-clear feedback: surface the just-wiped raider wave so the HUD can
+// celebrate a successful defense instead of silently ticking to the next wave.
+export function waveClear(state: GameState): WaveClear {
+  if (state.lastWaveClearedAt === null) {
+    return { active: false, waveNumber: state.lastWaveClearedNumber, secondsAgo: null };
+  }
+  const secondsAgo = Math.max(0, state.time - state.lastWaveClearedAt);
+  return {
+    active: state.status === 'playing' && secondsAgo <= WAVE_CLEAR_FEEDBACK_DURATION,
+    waveNumber: state.lastWaveClearedNumber,
+    secondsAgo
+  };
+}
+
 function damageTarget(state: GameState, id: string, amount: number) {
   const unit = findUnit(state, id);
   if (unit) {
@@ -754,7 +773,9 @@ function spawnWave(state: GameState) {
   state.waveWarned = false;
   const count = waveSize(state.waveNumber);
   for (let i = 0; i < count; i += 1) {
-    state.units.push(makeUnit(state, 'raider', 'enemy', waveSpawnPoint(camp, i), { type: 'assault' }));
+    const raider = makeUnit(state, 'raider', 'enemy', waveSpawnPoint(camp, i), { type: 'assault' });
+    state.units.push(raider);
+    state.activeWaveRaiderIds.push(raider.id);
   }
   pushLog(state, `라쿤 습격대 ${state.waveNumber}차 웨이브 출격 (${count}기)`);
 }
@@ -762,11 +783,28 @@ function spawnWave(state: GameState) {
 function removeDead(state: GameState) {
   const deadUnits = state.units.filter((unit) => unit.hp <= 0);
   if (deadUnits.length > 0) {
+    const activeWaveIdsBefore = new Set(state.activeWaveRaiderIds);
+    const activeWaveRaiderDied = deadUnits.some((unit) => activeWaveIdsBefore.has(unit.id));
     state.units = state.units.filter((unit) => unit.hp > 0);
     state.selectedIds = state.selectedIds.filter((id) => !deadUnits.some((unit) => unit.id === id));
+    const liveIds = new Set(state.units.map((unit) => unit.id));
+    state.activeWaveRaiderIds = state.activeWaveRaiderIds.filter((id) => liveIds.has(id));
     for (const unit of deadUnits) {
       if (unit.faction === 'enemy') state.stats.raidersDefeated += 1;
       else state.stats.unitsLost += 1;
+    }
+
+    // Wave-clear reward moment: the current wave's spawned raiders are gone,
+    // even if the pre-wave camp guards are still alive across the map. Guards
+    // never enter activeWaveRaiderIds, so clearing them before a wave is quiet.
+    if (
+      state.waveNumber > state.lastWaveClearedNumber &&
+      activeWaveRaiderDied &&
+      state.activeWaveRaiderIds.length === 0
+    ) {
+      state.lastWaveClearedNumber = state.waveNumber;
+      state.lastWaveClearedAt = state.time;
+      pushLog(state, `라쿤 습격대 ${state.waveNumber}차 웨이브 격퇴 — 프론티어를 지켜냈습니다!`);
     }
   }
 

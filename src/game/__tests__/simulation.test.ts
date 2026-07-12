@@ -6,6 +6,7 @@ import {
   SOLDIER_AGGRO_RANGE,
   THREAT_ALERT_DURATION,
   TOWER_SHOT_DURATION,
+  WAVE_CLEAR_FEEDBACK_DURATION,
   WAVE_INTERVAL,
   WAVE_WARNING_LEAD,
   advance,
@@ -26,6 +27,7 @@ import {
   towerRangePreviews,
   towerShots,
   trainSoldier,
+  waveClear,
   waveForecast,
   waveSize,
   waveTelegraph,
@@ -503,6 +505,61 @@ describe('threat alert', () => {
     const alert = threatAlert(state);
     expect(alert.active).toBe(false);
     expect(alert.pos).not.toBeNull();
+  });
+});
+
+describe('wave clear feedback', () => {
+  function wipeInitialEnemies(state: GameState) {
+    for (const unit of state.units) {
+      if (unit.faction === 'enemy') unit.hp = 0;
+    }
+    advance(state, 0.1);
+  }
+
+  function wipeCurrentWave(state: GameState) {
+    const waveIds = new Set(state.activeWaveRaiderIds);
+    for (const unit of state.units) {
+      if (waveIds.has(unit.id)) unit.hp = 0;
+    }
+    advance(state, 0.1);
+  }
+
+  it('celebrates once the spawned wave raiders are down while camp guards remain', () => {
+    const state = createInitialState();
+    const campGuardIds = state.units.filter((unit) => unit.faction === 'enemy').map((unit) => unit.id);
+    advance(state, FIRST_WAVE_AT + 1);
+    expect(state.waveNumber).toBe(1);
+    expect(state.activeWaveRaiderIds).toHaveLength(waveSize(1));
+    expect(waveClear(state).active).toBe(false);
+
+    wipeCurrentWave(state);
+    const clear = waveClear(state);
+    expect(clear.active).toBe(true);
+    expect(clear.waveNumber).toBe(1);
+    expect(clear.secondsAgo).toBeLessThanOrEqual(WAVE_CLEAR_FEEDBACK_DURATION);
+    expect(campGuardIds.every((id) => state.units.some((unit) => unit.id === id && unit.hp > 0))).toBe(true);
+    expect(state.log.some((entry) => entry.text.includes('1차 웨이브 격퇴'))).toBe(true);
+  });
+
+  it('ignores the pre-wave camp guards', () => {
+    const state = createInitialState();
+    wipeInitialEnemies(state);
+    expect(state.units.some((unit) => unit.faction === 'enemy')).toBe(false);
+    expect(waveClear(state)).toEqual({ active: false, waveNumber: 0, secondsAgo: null });
+    expect(state.log.some((entry) => entry.text.includes('격퇴'))).toBe(false);
+  });
+
+  it('expires after the feedback window and never re-fires for the same wave', () => {
+    const state = createInitialState();
+    advance(state, FIRST_WAVE_AT + 1);
+    wipeCurrentWave(state);
+    expect(waveClear(state).active).toBe(true);
+
+    advance(state, WAVE_CLEAR_FEEDBACK_DURATION + 1);
+    const clear = waveClear(state);
+    expect(clear.active).toBe(false);
+    expect(clear.waveNumber).toBe(1);
+    expect(state.log.filter((entry) => entry.text.includes('웨이브 격퇴')).length).toBe(1);
   });
 });
 
