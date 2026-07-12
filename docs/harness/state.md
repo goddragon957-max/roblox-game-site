@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_20_ready
-current_round: 20
+current_phase: round_21_ready
+current_round: 21
 next_role: generator
 pause_reason: ""
-max_rounds: 20
+max_rounds: 25
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-11T23:09:28Z"
+updated_at: "2026-07-12T00:23:55Z"
 resume_attempts: 1
-last_verified_at: "2026-07-11T23:09:28Z"
+last_verified_at: "2026-07-12T00:23:55Z"
 last_verdict: pass
 ```
 
@@ -38,5 +38,6 @@ last_verdict: pass
 - Round 17 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): selected-unit order lines — pure `orderPreviews(state)` derives each selected player unit's destination (move target / gather node / deposit base / attack victim) with liveness guards and no new sim state; the 3D scene draws a color-coded ground line + destination dot per selected unit (white move, gold gather/deposit, red attack), the minimap draws matching dashed lines, `__rtsSmoke.command.orderPreviews()` exposes it, and 4 new deterministic tests cover selection scoping, gather/deposit targets, attack-target death, and idle/match-over emptiness. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (move/gather/deposit/build/train/attack order previews), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-17-qa.md`.
 - Round 18 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): raider wave spawn telegraph — pure `waveTelegraph(state)` (active only while `waveForecast` is imminent and a live enemy camp exists) marks the exact spawn ground of the wave's lead raider via a shared `waveSpawnPoint` helper also used by `spawnWave`; the 3D scene pulses an enemy-orange ring + hovering spike there during the warning window, the minimap pulses a matching orange circle (distinct from the red threat pulse), `__rtsSmoke.command.waveTelegraph()` exposes it, and 4 new deterministic tests cover initial inactivity, spawn-point accuracy against the real spawn, post-spawn quiet, and camp-destroyed clearing. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (wave telegraph, selection/gather/build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-18-qa.md`.
 - Round 19 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): next build-slot preview — pure `nextBuildSlot(state)` exposes the exact slot that `placeBuilding` will consume, the 3D scene shows a pulsing green ghost footprint, the minimap and command card show the matching `data-next-build-slot`, `__rtsSmoke.command.nextBuildSlot()` exposes it, and 2 deterministic tests cover placement matching and full-slot clearing. Claude hit a session limit after a partial sim diff; evaluator completed the slice and verified `npm run verify`, `git diff --check`, browser smoke (next slot, gather/build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-19-qa.md`.
-- Round 20 is ready for the next scheduled generator slice under the same 48h loop authorization.
+- Round 20 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): worker carried-resource HUD feedback — pure `workerCarrySummary(state)` summarizes player worker bundles currently in transit, the HUD shows a frontier-gold `운반 중 ...` chip with `data-carrying-workers`/`data-carrying-gold`/`data-carrying-wood`, `__rtsSmoke.command.workerCarrySummary()` exposes it, and 2 deterministic tests cover manual aggregation plus real gather/deposit clearing. Claude returned a session-limit line during this scheduled tick; evaluator found/completed the dirty partial slice, fixed a failing timing assertion, verified `npm run verify`, `git diff --check`, browser smoke (carry chip appears/clears, build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-20-qa.md`.
+- Round 21 is ready for the next scheduled generator slice under the same 48h loop authorization; `max_rounds` was raised to 25 so the authorized loop does not stop just because Round 20 reached the previous cap.
 - Do not include `.hermes/` in git.

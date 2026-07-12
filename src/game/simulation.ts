@@ -21,7 +21,8 @@ import type {
   UnitOrder,
   Vec2,
   WaveForecast,
-  WaveTelegraph
+  WaveTelegraph,
+  WorkerCarrySummary
 } from './types';
 
 export const MAP_HALF = 24;
@@ -314,6 +315,23 @@ export function idleWorkerIds(state: GameState): string[] {
   return state.units
     .filter((unit) => unit.kind === 'worker' && unit.faction === 'player' && unit.order.type === 'idle')
     .map((unit) => unit.id);
+}
+
+// Economy readability: summarize resource bundles currently carried by worker
+// puppies so the HUD can show in-transit income before the bank counters pop.
+export function workerCarrySummary(state: GameState): WorkerCarrySummary {
+  if (state.status !== 'playing') return { count: 0, gold: 0, wood: 0, total: 0 };
+
+  let count = 0;
+  let gold = 0;
+  let wood = 0;
+  for (const unit of state.units) {
+    if (unit.kind !== 'worker' || unit.faction !== 'player' || !unit.carry) continue;
+    count += 1;
+    if (unit.carry.type === 'gold') gold += unit.carry.amount;
+    else wood += unit.carry.amount;
+  }
+  return { count, gold, wood, total: gold + wood };
 }
 
 export const DRAG_SELECT_PADDING = 0.35;

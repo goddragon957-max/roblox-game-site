@@ -19,7 +19,8 @@ import {
   towerShots,
   trainSoldier,
   waveForecast,
-  waveTelegraph
+  waveTelegraph,
+  workerCarrySummary
 } from '../game/simulation';
 import type {
   BuildableKind,
@@ -36,7 +37,8 @@ import type {
   UnitKind,
   Vec2,
   WaveForecast,
-  WaveTelegraph
+  WaveTelegraph,
+  WorkerCarrySummary
 } from '../game/types';
 
 export interface GameStore {
@@ -110,6 +112,7 @@ declare global {
         matchScore: () => MatchScore;
         waveForecast: () => WaveForecast;
         waveTelegraph: () => WaveTelegraph;
+        workerCarrySummary: () => WorkerCarrySummary;
         nextBuildSlot: () => Vec2 | null;
         selectionSummary: () => SelectionSummary;
         threatAlert: () => ThreatAlert;
@@ -150,6 +153,7 @@ if (typeof window !== 'undefined') {
       matchScore: () => matchScore(useGameStore.getState().sim),
       waveForecast: () => waveForecast(useGameStore.getState().sim),
       waveTelegraph: () => waveTelegraph(useGameStore.getState().sim),
+      workerCarrySummary: () => workerCarrySummary(useGameStore.getState().sim),
       nextBuildSlot: () => nextBuildSlot(useGameStore.getState().sim),
       selectionSummary: () => selectionSummary(useGameStore.getState().sim),
       threatAlert: () => threatAlert(useGameStore.getState().sim),

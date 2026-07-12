@@ -28,7 +28,8 @@ import {
   trainSoldier,
   waveForecast,
   waveSize,
-  waveTelegraph
+  waveTelegraph,
+  workerCarrySummary
 } from '../simulation';
 import type { GameState } from '../types';
 
@@ -109,6 +110,38 @@ describe('selection and movement', () => {
 });
 
 describe('economy', () => {
+  it('summarizes worker resources currently in transit', () => {
+    const state = createInitialState();
+    const workers = state.units.filter((unit) => unit.kind === 'worker' && unit.faction === 'player');
+    expect(workerCarrySummary(state)).toEqual({ count: 0, gold: 0, wood: 0, total: 0 });
+
+    workers[0].carry = { type: 'gold', amount: 10 };
+    workers[1].carry = { type: 'wood', amount: 7 };
+    expect(workerCarrySummary(state)).toEqual({ count: 2, gold: 10, wood: 7, total: 17 });
+
+    state.status = 'won';
+    expect(workerCarrySummary(state)).toEqual({ count: 0, gold: 0, wood: 0, total: 0 });
+  });
+
+  it('shows carried gold after mining and clears it after deposit', () => {
+    const state = createInitialState();
+    const worker = firstWorker(state);
+    const goldNode = state.resources.find((node) => node.type === 'gold');
+    if (!goldNode) throw new Error('expected gold node');
+    const goldBefore = state.gold;
+
+    commandSmart(state, [worker.id], { point: { ...goldNode.pos }, entityId: goldNode.id });
+    goldNode.amountLeft = 10;
+    advance(state, 4.6);
+    expect(workerCarrySummary(state)).toEqual({ count: 1, gold: 10, wood: 0, total: 10 });
+
+    advance(state, 6);
+    expect(workerCarrySummary(state)).toEqual({ count: 0, gold: 0, wood: 0, total: 0 });
+    expect(state.gold).toBe(130);
+    expect(state.gold).toBe(goldBefore + 10);
+    expect(workerCarrySummary(state)).toEqual({ count: 0, gold: 0, wood: 0, total: 0 });
+  });
+
   it('gathers gold with a worker and deposits it at the base', () => {
     const state = createInitialState();
     const worker = firstWorker(state);

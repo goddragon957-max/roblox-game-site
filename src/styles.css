@@ -89,6 +89,11 @@ button { font: inherit; }
   border-color: rgba(245, 197, 66, 0.9);
   box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.25), 0 8px 20px rgba(0, 0, 0, 0.3);
 }
+.hud-chip.carrying {
+  color: var(--gold);
+  border-color: rgba(245, 197, 66, 0.5);
+  background: rgba(45, 35, 10, 0.78);
+}
 .hud-chip.objective { color: var(--muted); margin-left: auto; }
 
 @keyframes wave-alarm {

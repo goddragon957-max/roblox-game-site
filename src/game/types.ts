@@ -75,6 +75,13 @@ export interface MatchStats {
   unitsLost: number;
 }
 
+export interface WorkerCarrySummary {
+  count: number;
+  gold: number;
+  wood: number;
+  total: number;
+}
+
 export interface GameState {
   time: number;
   seq: number;

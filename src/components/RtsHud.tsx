@@ -17,7 +17,8 @@ import {
   towerRangePreviews,
   towerShots,
   waveForecast,
-  waveTelegraph
+  waveTelegraph,
+  workerCarrySummary
 } from '../game/simulation';
 import type { Building, BuildingKind, GameState, Unit, UnitKind } from '../game/types';
 import { affordable, useGameStore } from '../store/gameStore';
@@ -311,6 +312,7 @@ export function RtsHud() {
   const threat = threatAlert(sim);
   const idleWorkers = idleWorkerIds(sim);
   const buildSlot = nextBuildSlot(sim);
+  const carry = workerCarrySummary(sim);
 
   return (
     <div className="hud">
@@ -352,6 +354,21 @@ export function RtsHud() {
             <BellRing size={15} />
             <span>쉬는 일꾼 {idleWorkers.length} · 클릭해 선택</span>
           </button>
+        )}
+        {sim.status === 'playing' && carry.count > 0 && (
+          <div
+            className="hud-chip carrying"
+            data-carrying-workers={carry.count}
+            data-carrying-gold={carry.gold}
+            data-carrying-wood={carry.wood}
+          >
+            <Axe size={15} />
+            <span>
+              운반 중 {carry.gold > 0 ? `골드 ${carry.gold}` : ''}
+              {carry.gold > 0 && carry.wood > 0 ? ' · ' : ''}
+              {carry.wood > 0 ? `나무 ${carry.wood}` : ''}
+            </span>
+          </div>
         )}
         <div className="hud-chip objective">
           <Flag size={15} />
