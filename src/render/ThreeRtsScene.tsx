@@ -50,6 +50,11 @@ const COLORS = {
   gold: 0xf5c542,
   trunk: 0x8a6238,
   leaves: 0x3f8f4e,
+  frontierGreen: 0x3f7e52,
+  leather: 0x76502f,
+  steel: 0xe8edf4,
+  cream: 0xfff3d6,
+  raiderDark: 0x23272e,
   ringPlayer: 0x53f28c,
   ringEnemy: 0xff8a5c,
   hpBack: 0x27303a,
@@ -120,20 +125,121 @@ function buildUnitMesh(unit: Unit): THREE.Group {
   earRight.position.set(0.16, 1.18, 0);
   body.add(earRight);
 
-  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), lambert(unit.kind === 'raider' ? 0x2c3138 : 0xffffff));
+  const snout = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 10, 8),
+    lambert(unit.kind === 'raider' ? 0xc6c8c9 : COLORS.cream)
+  );
   snout.position.set(0, 0.9, 0.24);
   body.add(snout);
 
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), lambert(COLORS.raiderDark));
+  nose.position.set(0, 0.92, 0.33);
+  body.add(nose);
+
+  // Chunky paws and face points keep every unit reading as an animal at the
+  // distant isometric camera scale, rather than as a colored game-piece dot.
+  for (const x of [-0.18, 0.18]) {
+    const paw = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), lambert(color)));
+    paw.scale.set(1, 0.65, 1.15);
+    paw.position.set(x, 0.12, 0.07);
+    body.add(paw);
+  }
+
   if (unit.kind === 'soldier') {
-    const blade = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.14), lambert(0xe8edf4)));
+    const helmet = shadowed(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(0.31, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        lambert(0x3559ad)
+      )
+    );
+    helmet.position.y = 0.98;
+    body.add(helmet);
+
+    const plume = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.24, 8), lambert(COLORS.gold)));
+    plume.position.y = 1.35;
+    body.add(plume);
+
+    const shield = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.1, 12), lambert(COLORS.frontierGreen))
+    );
+    shield.position.set(-0.38, 0.56, 0.12);
+    shield.rotation.x = Math.PI / 2;
+    body.add(shield);
+    const shieldBoss = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), lambert(COLORS.gold));
+    shieldBoss.position.set(-0.38, 0.56, 0.2);
+    body.add(shieldBoss);
+
+    const blade = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.14), lambert(COLORS.steel)));
     blade.position.set(0.42, 0.62, 0);
     blade.rotation.z = -0.35;
     body.add(blade);
-  }
-  if (unit.kind === 'raider') {
-    const mask = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.12, 0.2), lambert(0x23272e));
+    const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 0.16), lambert(COLORS.gold));
+    hilt.position.set(0.3, 0.3, 0);
+    hilt.rotation.z = -0.35;
+    body.add(hilt);
+  } else if (unit.kind === 'worker') {
+    const cap = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.29, 0.1, 12), lambert(COLORS.frontierGreen))
+    );
+    cap.position.y = 1.17;
+    body.add(cap);
+    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.05, 0.2), lambert(COLORS.frontierGreen));
+    brim.position.set(0, 1.16, 0.17);
+    body.add(brim);
+
+    const backpack = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.48, 0.22), lambert(COLORS.leather)));
+    backpack.position.set(0, 0.58, -0.31);
+    body.add(backpack);
+    const bedroll = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8), lambert(0x5f9664))
+    );
+    bedroll.position.set(0, 0.87, -0.32);
+    bedroll.rotation.z = Math.PI / 2;
+    body.add(bedroll);
+
+    const axeHandle = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.65, 8), lambert(COLORS.trunk))
+    );
+    axeHandle.position.set(0.4, 0.56, 0.02);
+    axeHandle.rotation.z = -0.28;
+    body.add(axeHandle);
+    const axeHead = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.09), lambert(COLORS.steel)));
+    axeHead.position.set(0.49, 0.86, 0.02);
+    axeHead.rotation.z = -0.28;
+    body.add(axeHead);
+  } else {
+    const mask = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.16, 0.18), lambert(COLORS.raiderDark));
     mask.position.set(0, 0.98, 0.18);
     body.add(mask);
+
+    for (const x of [-0.11, 0.11]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), lambert(COLORS.ringEnemy));
+      eye.position.set(x, 1, 0.29);
+      body.add(eye);
+    }
+
+    const tailParts: Array<[number, number, number, number, number]> = [
+      [-0.28, 0.49, -0.2, 0.16, COLORS.raiderDark],
+      [-0.4, 0.42, -0.26, 0.15, 0xa3a8ad],
+      [-0.5, 0.34, -0.3, 0.135, COLORS.raiderDark],
+      [-0.57, 0.26, -0.32, 0.11, 0xa3a8ad]
+    ];
+    for (const [x, y, z, size, tailColor] of tailParts) {
+      const tailPart = shadowed(new THREE.Mesh(new THREE.SphereGeometry(size, 10, 8), lambert(tailColor)));
+      tailPart.scale.set(1.2, 0.9, 1);
+      tailPart.position.set(x, y, z);
+      body.add(tailPart);
+    }
+
+    const clubHandle = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.62, 8), lambert(COLORS.trunk))
+    );
+    clubHandle.position.set(0.4, 0.52, 0.02);
+    clubHandle.rotation.z = -0.3;
+    body.add(clubHandle);
+    const clubHead = shadowed(new THREE.Mesh(new THREE.DodecahedronGeometry(0.18), lambert(0x4a3a31)));
+    clubHead.position.set(0.5, 0.82, 0.02);
+    body.add(clubHead);
   }
   return body;
 }

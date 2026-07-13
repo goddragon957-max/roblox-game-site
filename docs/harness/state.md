@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_24_ready
-current_round: 24
+current_phase: round_25_ready
+current_round: 25
 next_role: generator
 pause_reason: ""
 max_rounds: 25
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-13T07:55:54Z"
+updated_at: "2026-07-13T08:41:44Z"
 resume_attempts: 1
-last_verified_at: "2026-07-12T07:34:30Z"
+last_verified_at: "2026-07-13T08:41:44Z"
 last_verdict: pass
 ```
 
@@ -43,6 +43,7 @@ last_verdict: pass
 - Round 21 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): wave-cleared reward feedback — spawned wave raider ids are tracked in `activeWaveRaiderIds`, pure `waveClear(state)` derives a 5s celebration window, the HUD shows a green `웨이브 N 격퇴!` chip (`data-wave-cleared`), one log line records the clear, and `__rtsSmoke.command.waveClear()` exposes it. Claude generated the initial slice but could not run commands; evaluator found/corrected the guard-alive regression so clearing an active wave celebrates even while pre-wave camp guards remain, then verified `npm run verify`, `git diff --check`, browser smoke (selection/gather/build/train/attack/wave-clear chip appears and expires), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-21-qa.md`.
 - Round 22 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): delivery streak/combo feedback — `stepDeposit` tracks `lastDepositAt`/`deliveryStreakCount` (deposits within `DELIVERY_STREAK_WINDOW = 8`s chain the combo, a stall restarts it at 1, x5 logs one celebration line), pure `deliveryStreak(state)` derives the HUD state, the HUD shows a gold `배달 콤보 xN` chip (`data-delivery-streak`), `__rtsSmoke.command.deliveryStreak()` exposes it, and 3 new deterministic tests cover build/expiry-restart/x5-log-once + match-end quiet. Claude generated the slice but could not run commands; evaluator verified `npm run verify`, `git diff --check`, browser smoke (delivery combo reaches x5, chip appears and expires, build/train/attack still work), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-22-qa.md`.
 - Round 23 (work order `docs/goals/2026-07-11-48h-claude-goal-loop.md`): renewable lumber / wood-regrowth feedback — depleted wood nodes set `regrowAt`, pure `nodeRegrowth(state)` exposes progress for browser smoke/minimap/scene, regrowing trees render as small saplings until they refill, gold remains finite, and idle woodcutters can resume gathering when their last node returns. Claude's visible output was a Fable usage-limit line but it left a useful dirty source diff; evaluator verified `npm run verify`, `git diff --check`, browser smoke (wood depletion/regrowth/refill plus gather/build/train/attack), rendered visual QA, and console fatal errors zero in `docs/harness/feedback/round-23-qa.md`.
-- Round 24 is ready for the next scheduled generator slice under the same 48h loop authorization.
+- Round 24 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): character silhouette/readability polish — procedural worker caps/backpacks/bedrolls/axes, soldier helmets/plumes/shields/sword hilts, and raccoon masks/eyes/striped tails/clubs make roles and factions more readable at the isometric camera. Codex `gpt-5.6-sol` + ultra implemented the renderer diff and passed its deterministic gate before the bounded run timed out during preview; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-24-qa.md`.
+- Round 25 is ready for the next scheduled Codex generator slice under the same 48h loop authorization.
 - 2026-07-13 operator reassignment: the user moved all active Claude/Fable generator appointments to Codex. Future scheduled generator slices should use `docs/goals/2026-07-13-48h-codex-goal-loop.md` with Codex `gpt-5.6-sol` + ultra reasoning, not the exhausted Claude/Fable loop.
 - Do not include `.hermes/` in git.
