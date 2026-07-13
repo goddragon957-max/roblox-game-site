@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_27_ready
-current_round: 27
+current_phase: round_28_ready
+current_round: 28
 next_role: generator
 pause_reason: ""
 max_rounds: 30
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-13T10:05:40Z"
+updated_at: "2026-07-13T10:36:58Z"
 resume_attempts: 1
-last_verified_at: "2026-07-13T10:05:40Z"
+last_verified_at: "2026-07-13T10:36:58Z"
 last_verdict: pass
 ```
 
@@ -46,6 +46,7 @@ last_verdict: pass
 - Round 24 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): character silhouette/readability polish — procedural worker caps/backpacks/bedrolls/axes, soldier helmets/plumes/shields/sword hilts, and raccoon masks/eyes/striped tails/clubs make roles and factions more readable at the isometric camera. Codex `gpt-5.6-sol` + ultra implemented the renderer diff and passed its deterministic gate before the bounded run timed out during preview; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-24-qa.md`.
 - Round 25 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): opening camera composition — retargeted the default isometric frame toward the battlefield midpoint and added a capped aspect-aware view size so the puppy outpost, resources, bridge/river, raccoon camp, and threats remain visible together at 1440×900, 1280×720, and 1024×768. Codex passed deterministic gates before timing out during preview startup; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-25-qa.md`.
 - Round 26 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): low-poly frontier bridge world-richness — replaced the flat crossing plane with nine warm wood planks, dark support beams, chunky side rails, and posts while preserving the existing terrain dimensions and simulation/pathing. Codex passed deterministic gates before timing out during browser evidence; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-26-qa.md`.
-- Round 27 is ready for the next scheduled Codex generator slice under the same 48h loop authorization; `max_rounds` remains 30.
+- Round 27 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): raccoon raider-camp world-richness — added a stone-ring campfire, banded supply crates with gold loot, and two pointed wooden barricades around the enemy tent so the objective reads as a defended headquarters. Codex produced the coherent renderer diff before timing out during browser evidence; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-27-qa.md`.
+- Round 28 is ready for the next scheduled Codex generator slice under the same 48h loop authorization; `max_rounds` remains 30.
 - 2026-07-13 operator reassignment: the user moved all active Claude/Fable generator appointments to Codex. Future scheduled generator slices should use `docs/goals/2026-07-13-48h-codex-goal-loop.md` with Codex `gpt-5.6-sol` + ultra reasoning, not the exhausted Claude/Fable loop.
 - Do not include `.hermes/` in git.

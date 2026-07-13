@@ -48,6 +48,9 @@ const COLORS = {
   tower: 0xb9bdc4,
   camp: 0x5a4470,
   campRoof: 0x8a5fae,
+  ember: 0xff6f3d,
+  flame: 0xffd166,
+  charcoal: 0x342b28,
   gold: 0xf5c542,
   trunk: 0x8a6238,
   leaves: 0x3f8f4e,
@@ -291,6 +294,109 @@ function buildBuildingMesh(building: Building): { mesh: THREE.Group; height: num
   const banner = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.45), new THREE.MeshBasicMaterial({ color: COLORS.ringEnemy, side: THREE.DoubleSide }));
   banner.position.set(0.4, 3.4, 0);
   group.add(banner);
+
+  // The raccoon headquarters should read as a defended raider camp in the
+  // opening frame, not as a lone purple tent. Chunky props stay inside the
+  // existing camp footprint and move/dispose with the building.
+  const campfire = new THREE.Group();
+  const fireStoneGeometry = new THREE.DodecahedronGeometry(0.16);
+  const fireStoneMaterial = lambert(0x777579);
+  for (let index = 0; index < 7; index += 1) {
+    const angle = (index / 7) * Math.PI * 2;
+    const stone = shadowed(new THREE.Mesh(fireStoneGeometry, fireStoneMaterial));
+    stone.position.set(Math.cos(angle) * 0.5, 0.12, Math.sin(angle) * 0.5);
+    campfire.add(stone);
+  }
+  const fireLogGeometry = new THREE.CylinderGeometry(0.09, 0.11, 0.9, 8);
+  const fireLogMaterial = lambert(COLORS.charcoal);
+  const fireLogA = shadowed(new THREE.Mesh(fireLogGeometry, fireLogMaterial));
+  fireLogA.position.y = 0.18;
+  fireLogA.rotation.z = Math.PI / 2;
+  fireLogA.rotation.y = Math.PI / 4;
+  campfire.add(fireLogA);
+  const fireLogB = shadowed(new THREE.Mesh(fireLogGeometry, fireLogMaterial));
+  fireLogB.position.y = 0.18;
+  fireLogB.rotation.z = Math.PI / 2;
+  fireLogB.rotation.y = -Math.PI / 4;
+  campfire.add(fireLogB);
+  const outerFlame = new THREE.Mesh(
+    new THREE.ConeGeometry(0.36, 0.8, 7),
+    new THREE.MeshBasicMaterial({ color: COLORS.ember })
+  );
+  outerFlame.position.y = 0.62;
+  outerFlame.rotation.z = 0.08;
+  campfire.add(outerFlame);
+  const innerFlame = new THREE.Mesh(
+    new THREE.ConeGeometry(0.2, 0.58, 7),
+    new THREE.MeshBasicMaterial({ color: COLORS.flame })
+  );
+  innerFlame.position.set(-0.06, 0.66, 0.04);
+  innerFlame.rotation.z = -0.12;
+  campfire.add(innerFlame);
+  campfire.position.set(-2.35, 0, -0.7);
+  group.add(campfire);
+
+  const crateMaterial = lambert(COLORS.bridge);
+  const crateBandMaterial = lambert(COLORS.trunk);
+  const crateGeometry = new THREE.BoxGeometry(0.72, 0.64, 0.72);
+  const crateBandGeometry = new THREE.BoxGeometry(0.1, 0.67, 0.75);
+  for (const [x, z, scale, rotation] of [
+    [2.15, -0.65, 1, -0.1],
+    [2.7, -1.2, 0.78, 0.16]
+  ] as Array<[number, number, number, number]>) {
+    const crate = new THREE.Group();
+    const box = shadowed(new THREE.Mesh(crateGeometry, crateMaterial));
+    box.position.y = 0.32;
+    crate.add(box);
+    for (const bandX of [-0.2, 0.2]) {
+      const band = shadowed(new THREE.Mesh(crateBandGeometry, crateBandMaterial));
+      band.position.set(bandX, 0.32, 0);
+      crate.add(band);
+    }
+    crate.position.set(x, 0, z);
+    crate.rotation.y = rotation;
+    crate.scale.setScalar(scale);
+    group.add(crate);
+  }
+  for (const [x, z, size] of [
+    [2.05, -0.55, 0.18],
+    [2.35, -0.75, 0.13]
+  ] as Array<[number, number, number]>) {
+    const loot = shadowed(new THREE.Mesh(new THREE.OctahedronGeometry(size), lambert(COLORS.gold)));
+    loot.position.set(x, 0.78, z);
+    group.add(loot);
+  }
+
+  const barricadeWood = lambert(0x4a3a31);
+  const stakeGeometry = new THREE.CylinderGeometry(0.1, 0.13, 0.78, 7);
+  const stakeTipGeometry = new THREE.ConeGeometry(0.13, 0.28, 7);
+  const barricadeRailGeometry = new THREE.BoxGeometry(1.75, 0.13, 0.13);
+  for (const [x, z, rotation] of [
+    [-1.35, -2.55, -0.18],
+    [1.35, -2.55, 0.18]
+  ] as Array<[number, number, number]>) {
+    const barricade = new THREE.Group();
+    for (const stakeX of [-0.65, 0, 0.65]) {
+      const stake = shadowed(new THREE.Mesh(stakeGeometry, barricadeWood));
+      stake.position.set(stakeX, 0.39, 0);
+      barricade.add(stake);
+      const tip = shadowed(new THREE.Mesh(stakeTipGeometry, barricadeWood));
+      tip.position.set(stakeX, 0.92, 0);
+      barricade.add(tip);
+    }
+    for (const [railY, railRotation] of [
+      [0.35, 0.1],
+      [0.65, -0.1]
+    ] as Array<[number, number]>) {
+      const rail = shadowed(new THREE.Mesh(barricadeRailGeometry, barricadeWood));
+      rail.position.y = railY;
+      rail.rotation.z = railRotation;
+      barricade.add(rail);
+    }
+    barricade.position.set(x, 0, z);
+    barricade.rotation.y = rotation;
+    group.add(barricade);
+  }
   return { mesh: group, height: 4, ringRadius: 2.6 };
 }
 
