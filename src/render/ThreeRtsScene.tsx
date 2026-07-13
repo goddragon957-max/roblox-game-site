@@ -429,9 +429,81 @@ function buildBuildingMesh(building: Building): { mesh: THREE.Group; height: num
     const shaft = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.95, 2.6, 10), lambert(COLORS.tower)));
     shaft.position.y = 1.3;
     group.add(shaft);
-    const top = shadowed(new THREE.Mesh(new THREE.ConeGeometry(1, 0.9, 10), lambert(COLORS.roof)));
+
+    // Make the defense building read as a puppy frontier watchtower rather
+    // than a generic stone cone. The timber bands and lookout balcony stay
+    // within the existing footprint and leave range/shot behavior untouched.
+    const timberMaterial = lambert(COLORS.trunk);
+    for (const [y, radius] of [
+      [0.58, 0.91],
+      [1.38, 0.84],
+      [2.18, 0.77]
+    ] as Array<[number, number]>) {
+      const band = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.14, 10), timberMaterial));
+      band.position.y = y;
+      group.add(band);
+    }
+
+    const balcony = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(1.16, 1.16, 0.18, 10), lambert(COLORS.bridgeLight))
+    );
+    balcony.position.y = 2.58;
+    group.add(balcony);
+    const railPostGeometry = new THREE.CylinderGeometry(0.045, 0.055, 0.5, 6);
+    for (let index = 0; index < 10; index += 1) {
+      const angle = (index / 10) * Math.PI * 2;
+      const post = shadowed(new THREE.Mesh(railPostGeometry, timberMaterial));
+      post.position.set(Math.cos(angle) * 1.03, 2.84, Math.sin(angle) * 1.03);
+      group.add(post);
+    }
+    const balconyRail = shadowed(new THREE.Mesh(new THREE.TorusGeometry(1.03, 0.055, 6, 10), timberMaterial));
+    balconyRail.rotation.x = Math.PI / 2;
+    balconyRail.position.y = 3.05;
+    group.add(balconyRail);
+
+    // A chunky green-and-gold paw shield ties the tower to the friendly
+    // headquarters and stays readable from the default +x/+z camera angle.
+    const shield = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.09, 10), lambert(COLORS.frontierGreen))
+    );
+    shield.rotation.x = Math.PI / 2;
+    shield.position.set(0, 1.45, 0.86);
+    group.add(shield);
+    const pawMaterial = lambert(COLORS.gold);
+    const pawPad = new THREE.Mesh(new THREE.SphereGeometry(0.12, 9, 7), pawMaterial);
+    pawPad.scale.set(1.15, 0.85, 0.3);
+    pawPad.position.set(0, 1.4, 0.94);
+    group.add(pawPad);
+    for (const [x, y] of [
+      [-0.14, 1.55],
+      [0, 1.6],
+      [0.14, 1.55]
+    ] as Array<[number, number]>) {
+      const toe = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), pawMaterial);
+      toe.scale.z = 0.3;
+      toe.position.set(x, y, 0.95);
+      group.add(toe);
+    }
+
+    const top = shadowed(new THREE.Mesh(new THREE.ConeGeometry(1, 0.9, 10), lambert(COLORS.frontierGreen)));
     top.position.y = 3.05;
     group.add(top);
+
+    // The roof-mounted launcher gives the existing gold flash/bolt a visible
+    // world-space origin without moving the simulation-driven tracer.
+    const launcherPivot = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.15, 9, 7), lambert(COLORS.gold)));
+    launcherPivot.position.y = 3.56;
+    group.add(launcherPivot);
+    const launcherBarrel = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.09, 0.72, 8), lambert(COLORS.steel))
+    );
+    launcherBarrel.rotation.x = Math.PI / 2;
+    launcherBarrel.position.set(0, 3.56, 0.34);
+    group.add(launcherBarrel);
+    const launcherTip = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.26, 8), lambert(COLORS.gold)));
+    launcherTip.rotation.x = Math.PI / 2;
+    launcherTip.position.set(0, 3.56, 0.78);
+    group.add(launcherTip);
     return { mesh: group, height: 4, ringRadius: 1.5 };
   }
   const tent = shadowed(new THREE.Mesh(new THREE.ConeGeometry(2.3, 2.6, 6), lambert(COLORS.camp)));
