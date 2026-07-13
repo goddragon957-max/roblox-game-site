@@ -343,9 +343,11 @@ export function ThreeRtsScene() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(COLORS.sky);
 
-    const camTarget = new THREE.Vector3(-6, 0, 4);
+    // Frame both frontier headquarters on load without zooming out the puppy
+    // silhouettes that were tuned for the current isometric gameplay scale.
+    const camTarget = new THREE.Vector3(1.25, 0, -0.25);
     const camOffset = new THREE.Vector3(17, 21, 17);
-    const viewSize = 15;
+    const defaultViewSize = 15;
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 
     function applyCamera() {
@@ -357,6 +359,9 @@ export function ThreeRtsScene() {
       const width = container!.clientWidth || window.innerWidth;
       const height = container!.clientHeight || window.innerHeight;
       const aspect = width / Math.max(1, height);
+      // Preserve enough horizontal world span on squarer desktop/tablet
+      // viewports to keep both camps in frame, with a conservative zoom cap.
+      const viewSize = Math.min(18, Math.max(defaultViewSize, 22 / aspect));
       camera.left = -viewSize * aspect;
       camera.right = viewSize * aspect;
       camera.top = viewSize;
