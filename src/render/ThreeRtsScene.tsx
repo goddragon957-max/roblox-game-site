@@ -37,6 +37,7 @@ const COLORS = {
   grass: 0x7cb85f,
   river: 0x4f9fd8,
   bridge: 0xc9a36a,
+  bridgeLight: 0xe0bd79,
   dirt: 0xb08d57,
   worker: 0xf2c368,
   soldier: 0x6e8ef5,
@@ -325,6 +326,49 @@ function buildNodeMesh(node: ResourceNode): NodeVisual {
   return { group, scalable };
 }
 
+function buildFrontierBridge(): THREE.Group {
+  const group = new THREE.Group();
+  const span = TERRAIN.river.width + 1.2;
+  const deckWidth = TERRAIN.bridge.length;
+  const plankCount = 9;
+  const plankStep = span / plankCount;
+  const plankGeometry = new THREE.BoxGeometry(plankStep * 0.94, 0.08, deckWidth - 0.18);
+  const plankMaterials = [lambert(COLORS.bridge), lambert(COLORS.bridgeLight)];
+
+  // Crosswise boards and tiny height/color changes make the river crossing
+  // read as a hand-built toy bridge instead of a flat terrain rectangle.
+  for (let index = 0; index < plankCount; index += 1) {
+    const plank = shadowed(new THREE.Mesh(plankGeometry, plankMaterials[index % plankMaterials.length]));
+    plank.position.set(-span / 2 + plankStep * (index + 0.5), index % 3 === 1 ? 0.015 : 0, 0);
+    plank.rotation.y = index % 2 === 0 ? -0.008 : 0.008;
+    group.add(plank);
+  }
+
+  const railZ = deckWidth / 2 - 0.06;
+  const beamGeometry = new THREE.BoxGeometry(span + 0.16, 0.16, 0.22);
+  const railGeometry = new THREE.BoxGeometry(span - 0.18, 0.1, 0.1);
+  const postGeometry = new THREE.CylinderGeometry(0.1, 0.13, 0.76, 8);
+  const darkWood = lambert(COLORS.trunk);
+
+  for (const side of [-1, 1]) {
+    const beam = shadowed(new THREE.Mesh(beamGeometry, darkWood));
+    beam.position.set(0, -0.08, side * (railZ - 0.16));
+    group.add(beam);
+
+    const rail = shadowed(new THREE.Mesh(railGeometry, darkWood));
+    rail.position.set(0, 0.61, side * railZ);
+    group.add(rail);
+
+    for (const x of [-span / 2 + 0.18, 0, span / 2 - 0.18]) {
+      const post = shadowed(new THREE.Mesh(postGeometry, darkWood));
+      post.position.set(x, 0.32, side * railZ);
+      group.add(post);
+    }
+  }
+
+  return group;
+}
+
 export function ThreeRtsScene() {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -395,9 +439,8 @@ export function ThreeRtsScene() {
     river.position.set(TERRAIN.river.centerX, 0.02, 0);
     scene.add(river);
 
-    const bridge = new THREE.Mesh(new THREE.PlaneGeometry(TERRAIN.river.width + 1.2, TERRAIN.bridge.length), lambert(COLORS.bridge));
-    bridge.rotation.x = -Math.PI / 2;
-    bridge.position.set(TERRAIN.river.centerX, 0.035, TERRAIN.bridge.centerZ);
+    const bridge = buildFrontierBridge();
+    bridge.position.set(TERRAIN.river.centerX, 0.055, TERRAIN.bridge.centerZ);
     scene.add(bridge);
 
     for (const [x, z, radius] of [
