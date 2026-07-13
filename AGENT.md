@@ -52,6 +52,8 @@ The active loop is:
 contract → generator → handoff → evaluator → visual QA → feedback → next round / human approval
 ```
 
+Active autonomous generator assignment: use Codex (`gpt-5.6-sol` with ultra reasoning) via `docs/goals/2026-07-13-48h-codex-goal-loop.md`. Do not launch Claude/Fable for this loop unless the user explicitly reassigns it.
+
 Non-negotiables:
 
 - Do not call work done from code review alone.
