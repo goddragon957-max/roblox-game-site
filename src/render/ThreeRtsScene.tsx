@@ -354,6 +354,75 @@ function buildBuildingMesh(building: Building): { mesh: THREE.Group; height: num
     roof.position.y = 1.95;
     roof.rotation.y = Math.PI / 4;
     group.add(roof);
+
+    // Turn the first production building into a readable puppy training post
+    // instead of a plain cabin. The entry, crest, and compact gear rack stay
+    // inside the existing selection footprint and do not affect simulation.
+    const door = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.7, 1, 0.1), lambert(COLORS.leather)));
+    door.position.set(0, 0.51, 1.14);
+    group.add(door);
+    const frameMaterial = lambert(COLORS.bridgeLight);
+    const framePostGeometry = new THREE.BoxGeometry(0.1, 1.12, 0.1);
+    for (const x of [-0.42, 0.42]) {
+      const post = shadowed(new THREE.Mesh(framePostGeometry, frameMaterial));
+      post.position.set(x, 0.56, 1.2);
+      group.add(post);
+    }
+    const lintel = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.12, 0.1), frameMaterial));
+    lintel.position.set(0, 1.1, 1.2);
+    group.add(lintel);
+    const step = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.12, 0.48), frameMaterial));
+    step.position.set(0, 0.06, 1.38);
+    group.add(step);
+
+    // A frontier-green shield with crossed steel practice swords connects the
+    // building to the soldiers' equipment without adding another HUD label.
+    const crest = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.09, 10), lambert(COLORS.frontierGreen))
+    );
+    crest.rotation.x = Math.PI / 2;
+    crest.position.set(0, 1.5, 1.2);
+    group.add(crest);
+    for (const rotation of [-0.68, 0.68]) {
+      const sword = new THREE.Group();
+      const blade = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.48, 0.055), lambert(COLORS.steel)));
+      blade.position.y = 0.08;
+      sword.add(blade);
+      const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.055, 0.07), lambert(COLORS.gold));
+      hilt.position.y = -0.17;
+      sword.add(hilt);
+      sword.position.set(0, 1.5, 1.27);
+      sword.rotation.z = rotation;
+      group.add(sword);
+    }
+
+    // The side rack makes the train-soldier milestone visible in the world.
+    // Its chunky shields and practice blades remain legible at RTS camera scale.
+    const gearRack = new THREE.Group();
+    const rackMaterial = lambert(COLORS.trunk);
+    const rackPostGeometry = new THREE.CylinderGeometry(0.055, 0.07, 1, 7);
+    for (const x of [-0.42, 0.42]) {
+      const post = shadowed(new THREE.Mesh(rackPostGeometry, rackMaterial));
+      post.position.set(x, 0.5, 0);
+      gearRack.add(post);
+    }
+    const rackBeam = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1, 0.11, 0.11), rackMaterial));
+    rackBeam.position.y = 0.88;
+    gearRack.add(rackBeam);
+    for (const x of [-0.24, 0.24]) {
+      const shield = shadowed(
+        new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.07, 10), lambert(COLORS.frontierGreen))
+      );
+      shield.rotation.x = Math.PI / 2;
+      shield.position.set(x, 0.58, 0.08);
+      gearRack.add(shield);
+      const boss = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), lambert(COLORS.gold));
+      boss.position.set(x, 0.58, 0.14);
+      gearRack.add(boss);
+    }
+    gearRack.position.set(1.7, 0, 0.18);
+    gearRack.rotation.y = -0.12;
+    group.add(gearRack);
     return { mesh: group, height: 3.2, ringRadius: 2.2 };
   }
   if (building.kind === 'tower') {
