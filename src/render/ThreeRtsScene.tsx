@@ -686,19 +686,59 @@ function buildNodeMesh(node: ResourceNode): NodeVisual {
   const scalable = new THREE.Group();
   group.add(scalable);
   if (node.type === 'gold') {
+    const oreMaterial = new THREE.MeshLambertMaterial({
+      color: COLORS.gold,
+      emissive: 0x5a3700,
+      emissiveIntensity: 0.42
+    });
     const offsets: Array<[number, number, number, number]> = [
-      [0, 0.45, 0, 0.55],
-      [-0.5, 0.3, 0.35, 0.36],
-      [0.45, 0.28, -0.3, 0.32]
+      [0, 0.55, 0, 0.7],
+      [-0.58, 0.34, 0.32, 0.43],
+      [0.52, 0.32, -0.3, 0.39],
+      [0.58, 0.2, 0.36, 0.22]
     ];
     for (const [x, y, z, size] of offsets) {
-      const crystal = shadowed(new THREE.Mesh(new THREE.OctahedronGeometry(size), lambert(COLORS.gold)));
+      const crystal = shadowed(new THREE.Mesh(new THREE.OctahedronGeometry(size), oreMaterial));
       crystal.position.set(x, y, z);
+      crystal.rotation.y = x * 0.4;
       scalable.add(crystal);
     }
-    const rock = shadowed(new THREE.Mesh(new THREE.DodecahedronGeometry(0.6), lambert(0x8f8f94)));
-    rock.position.set(0.1, 0.2, 0.5);
-    group.add(rock);
+
+    // Gold is a frontier prospecting claim rather than an isolated yellow
+    // game-piece. Bedrock and the timber claim frame remain after the finite
+    // crystals are exhausted, making depletion readable in the world.
+    const bedrockMaterial = lambert(0x74777e);
+    for (const [x, y, z, size] of [
+      [0.12, 0.2, 0.55, 0.62],
+      [-0.5, 0.13, -0.2, 0.42],
+      [0.52, 0.12, 0.18, 0.38]
+    ] as Array<[number, number, number, number]>) {
+      const rock = shadowed(new THREE.Mesh(new THREE.DodecahedronGeometry(size), bedrockMaterial));
+      rock.scale.y = 0.72;
+      rock.position.set(x, y, z);
+      group.add(rock);
+    }
+
+    const claimWood = lambert(COLORS.trunk);
+    const postGeometry = new THREE.CylinderGeometry(0.075, 0.1, 1.45, 7);
+    for (const x of [-0.9, 0.9]) {
+      const post = shadowed(new THREE.Mesh(postGeometry, claimWood));
+      post.position.set(x, 0.72, 0.3);
+      group.add(post);
+    }
+    const crossbar = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.13, 0.13), claimWood));
+    crossbar.position.set(0, 1.38, 0.3);
+    crossbar.rotation.z = -0.035;
+    group.add(crossbar);
+
+    const claimBoard = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.42, 0.1), lambert(COLORS.leather)));
+    claimBoard.position.set(0, 1.08, 0.34);
+    claimBoard.rotation.z = 0.025;
+    group.add(claimBoard);
+    const claimNugget = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), oreMaterial);
+    claimNugget.position.set(0, 1.08, 0.42);
+    claimNugget.rotation.z = Math.PI / 4;
+    group.add(claimNugget);
   } else {
     const trunk = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.8, 8), lambert(COLORS.trunk)));
     trunk.position.y = 0.4;
@@ -1292,12 +1332,16 @@ export function ThreeRtsScene() {
       const regrowth = new Map(nodeRegrowth(sim).map((entry) => [entry.id, entry]));
       for (const node of sim.resources) {
         const regrow = regrowth.get(node.id);
-        if (node.amountLeft <= 0 && !regrow) continue;
+        const exhaustedGold = node.type === 'gold' && node.amountLeft <= 0;
+        if (node.amountLeft <= 0 && !regrow && !exhaustedGold) continue;
         liveNodes.add(node.id);
         const visual = ensureNodeVisual(node);
+        visual.group.userData.entityId = exhaustedGold ? undefined : node.id;
+        visual.scalable.visible = !exhaustedGold;
         // A regrowing tree reads as a sapling scaling back up, then pops to
-        // full size when it becomes gatherable again; live nodes shrink with
-        // their remaining amount so depletion stays readable at a glance.
+        // full size when it becomes gatherable again; active nodes shrink with
+        // their remaining amount. A spent gold claim keeps only its bedrock
+        // and timber shell, so it no longer looks gatherable or simply vanish.
         const scale = regrow ? 0.15 + 0.65 * regrow.progress : Math.max(0.35, node.amountLeft / node.maxAmount);
         visual.scalable.scale.setScalar(scale);
       }
