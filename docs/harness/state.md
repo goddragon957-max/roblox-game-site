@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_34_ready
-current_round: 34
+current_phase: round_35_ready
+current_round: 35
 next_role: generator
 pause_reason: ""
 max_rounds: 35
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-13T14:27:57Z"
+updated_at: "2026-07-13T15:01:22Z"
 resume_attempts: 1
-last_verified_at: "2026-07-13T14:27:57Z"
+last_verified_at: "2026-07-13T15:01:22Z"
 last_verdict: pass
 ```
 
@@ -53,6 +53,7 @@ last_verdict: pass
 - Round 31 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): worker carried-resource model/readability — replaced the generic recolored carry cube with a tied leather pouch and exposed gold nuggets for gold deliveries plus a rope-bound three-log bundle for wood deliveries. Codex produced the coherent renderer diff and short-lived carry probes before timing out; evaluator independently reran `npm run verify`, `git diff --check`, isolated gold/wood carry browser smokes, gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-31-qa.md`.
 - Round 32 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): worn frontier-road world landmark — a segmented low-poly dirt route with lighter worn centers, darker shoulders, and paired wagon ruts now joins the puppy headquarters clearing to the authored bridge and continues to the defended raccoon camp. Codex selected the slice from a rendered baseline but both broad and narrowed runs stalled read-only before tracked edits; the evaluator completed the safe renderer-only slice, then verified `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-32-qa.md`.
 - Round 33 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): gold prospecting-claim resource identity — gold nodes now use bright ore clusters set into gray bedrock with timber claim frames, signs, and nugget emblems; exhausted finite-gold nodes retain a non-gatherable bedrock/timber shell while hiding the ore. Codex produced the coherent renderer diff and transient live/exhausted probes before exiting `124` during verification; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, isolated exhausted-node visual QA, and console checks in `docs/harness/feedback/round-33-qa.md`.
-- Round 34 is ready for the next scheduled Codex generator slice under the same 48h loop authorization; `max_rounds` remains 35.
+- Round 34 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): authored renewable-lumber grove identity — wood nodes now use thicker faceted trunks and layered low-poly pine canopies with subtle per-node variation; persistent stump collars and sawn logs keep depleted/regrowing nodes readable; saplings now scale smoothly from 15% to 100% over the existing regrowth progress. Codex produced the coherent renderer diff and transient regrowth probes before exiting `124`; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, isolated regrowth/refill behavior, console checks, and rendered visual QA in `docs/harness/feedback/round-34-qa.md`.
+- Round 35 is ready for the next scheduled Codex generator slice under the same 48h loop authorization; `max_rounds` remains 35.
 - 2026-07-13 operator reassignment: the user moved all active Claude/Fable generator appointments to Codex. Future scheduled generator slices should use `docs/goals/2026-07-13-48h-codex-goal-loop.md` with Codex `gpt-5.6-sol` + ultra reasoning, not the exhausted Claude/Fable loop.
 - Do not include `.hermes/` in git.

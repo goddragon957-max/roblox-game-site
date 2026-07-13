@@ -740,15 +740,52 @@ function buildNodeMesh(node: ResourceNode): NodeVisual {
     claimNugget.rotation.z = Math.PI / 4;
     group.add(claimNugget);
   } else {
-    const trunk = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.8, 8), lambert(COLORS.trunk)));
-    trunk.position.y = 0.4;
+    // Renewable wood now reads as a worked frontier grove instead of a row of
+    // generic cones. The live pine stays inside `scalable` so depletion and
+    // regrowth keep using the existing simulation-driven size transition.
+    const variant = ((Math.abs(node.pos.x) * 0.73 + Math.abs(node.pos.z) * 0.41) % 1) * Math.PI * 2;
+    const trunkMaterial = lambert(COLORS.trunk);
+    const cutMaterial = lambert(COLORS.bridgeLight);
+    const trunk = shadowed(
+      new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.31, 1.08, 9), trunkMaterial)
+    );
+    trunk.position.y = 0.54;
     scalable.add(trunk);
-    const lower = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.85, 1.1, 8), lambert(COLORS.leaves)));
-    lower.position.y = 1.15;
-    scalable.add(lower);
-    const upper = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.9, 8), lambert(0x4da35e)));
-    upper.position.y = 1.85;
-    scalable.add(upper);
+
+    const canopyLayers: Array<[number, number, number, number]> = [
+      [1.08, 1.16, 1.03, COLORS.leaves],
+      [1.7, 1.08, 0.82, 0x357d45],
+      [2.25, 0.86, 0.58, 0x55a962]
+    ];
+    for (const [y, height, radius, color] of canopyLayers) {
+      const canopy = shadowed(new THREE.Mesh(new THREE.ConeGeometry(radius, height, 9), lambert(color)));
+      canopy.position.y = y;
+      canopy.rotation.y = variant + y * 0.37;
+      scalable.add(canopy);
+    }
+
+    // The stump collar and one sawn round remain full-size while the pine is a
+    // sapling, anchoring an exhausted node in the world without stamping six
+    // large signs or log piles across the tightly grouped grove.
+    const stump = shadowed(
+      new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.38, 0.24, 9),
+        [trunkMaterial, cutMaterial, cutMaterial]
+      )
+    );
+    stump.position.y = 0.12;
+    stump.rotation.y = variant;
+    group.add(stump);
+
+    const sawnLog = shadowed(
+      new THREE.Mesh(
+        new THREE.CylinderGeometry(0.11, 0.14, 0.74, 8),
+        [trunkMaterial, cutMaterial, cutMaterial]
+      )
+    );
+    sawnLog.position.set(Math.cos(variant) * 0.62, 0.16, Math.sin(variant) * 0.62);
+    sawnLog.rotation.set(0, -variant, Math.PI / 2);
+    group.add(sawnLog);
   }
   return { group, scalable };
 }
@@ -1338,11 +1375,11 @@ export function ThreeRtsScene() {
         const visual = ensureNodeVisual(node);
         visual.group.userData.entityId = exhaustedGold ? undefined : node.id;
         visual.scalable.visible = !exhaustedGold;
-        // A regrowing tree reads as a sapling scaling back up, then pops to
-        // full size when it becomes gatherable again; active nodes shrink with
-        // their remaining amount. A spent gold claim keeps only its bedrock
+        // A regrowing tree reads as a sapling and smoothly returns to full
+        // size as it becomes gatherable again; active nodes shrink with their
+        // remaining amount. A spent gold claim keeps only its bedrock
         // and timber shell, so it no longer looks gatherable or simply vanish.
-        const scale = regrow ? 0.15 + 0.65 * regrow.progress : Math.max(0.35, node.amountLeft / node.maxAmount);
+        const scale = regrow ? 0.15 + 0.85 * regrow.progress : Math.max(0.35, node.amountLeft / node.maxAmount);
         visual.scalable.scale.setScalar(scale);
       }
       for (const [id, visual] of nodeVisuals) {
