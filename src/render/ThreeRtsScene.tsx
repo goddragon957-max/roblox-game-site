@@ -713,6 +713,78 @@ function buildNodeMesh(node: ResourceNode): NodeVisual {
   return { group, scalable };
 }
 
+function buildFrontierRoad(): THREE.Group {
+  const group = new THREE.Group();
+  const roadMaterial = lambert(0xb58c55);
+  const wornCenterMaterial = lambert(0xc29a63);
+  const rutMaterial = lambert(0x8b673f);
+
+  function addSegment(from: [number, number], to: [number, number], width: number) {
+    const dx = to[0] - from[0];
+    const dz = to[1] - from[1];
+    const length = Math.hypot(dx, dz);
+    const rotationY = -Math.atan2(dz, dx);
+    const centerX = (from[0] + to[0]) / 2;
+    const centerZ = (from[1] + to[1]) / 2;
+
+    const shoulder = new THREE.Mesh(new THREE.BoxGeometry(length + 0.18, 0.018, width), roadMaterial);
+    shoulder.position.set(centerX, 0.018, centerZ);
+    shoulder.rotation.y = rotationY;
+    shoulder.receiveShadow = true;
+    group.add(shoulder);
+
+    // A slightly raised, irregular-width center keeps the route toy-like and
+    // leaves darker worn shoulders instead of reading as a perfect rectangle.
+    const center = new THREE.Mesh(
+      new THREE.BoxGeometry(length * 0.94, 0.012, width * 0.72),
+      wornCenterMaterial
+    );
+    center.position.set(centerX, 0.033, centerZ);
+    center.rotation.y = rotationY;
+    center.receiveShadow = true;
+    group.add(center);
+
+    // Paired wagon ruts run continuously toward the bridge. Their restrained
+    // contrast makes the path legible at the opening camera without competing
+    // with selection rings, resource crystals, or command markers.
+    for (const offset of [-width * 0.22, width * 0.22]) {
+      const rut = new THREE.Mesh(new THREE.BoxGeometry(length * 0.9, 0.01, 0.12), rutMaterial);
+      rut.position.set(
+        centerX + Math.sin(rotationY) * offset,
+        0.044,
+        centerZ + Math.cos(rotationY) * offset
+      );
+      rut.rotation.y = rotationY;
+      rut.receiveShadow = true;
+      group.add(rut);
+    }
+  }
+
+  // The route bends around the existing resource clusters, meets the authored
+  // bridge exactly at each bank, and terminates inside both headquarters dirt
+  // clearings. It is visual-only: simulation terrain and pathing stay unchanged.
+  const westRoute: Array<[number, number]> = [
+    [-13.5, 11.5],
+    [-9.1, 8.1],
+    [-4.3, 3.4],
+    [TERRAIN.river.centerX - TERRAIN.river.width / 2 - 0.6, TERRAIN.bridge.centerZ]
+  ];
+  const eastRoute: Array<[number, number]> = [
+    [TERRAIN.river.centerX + TERRAIN.river.width / 2 + 0.6, TERRAIN.bridge.centerZ],
+    [10.4, -4.2],
+    [13.3, -8.2],
+    [16, -12]
+  ];
+
+  for (const route of [westRoute, eastRoute]) {
+    for (let index = 0; index < route.length - 1; index += 1) {
+      addSegment(route[index], route[index + 1], index % 2 === 0 ? 2.35 : 2.15);
+    }
+  }
+
+  return group;
+}
+
 function buildFrontierBridge(): THREE.Group {
   const group = new THREE.Group();
   const span = TERRAIN.river.width + 1.2;
@@ -820,6 +892,9 @@ export function ThreeRtsScene() {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
+
+    const frontierRoad = buildFrontierRoad();
+    scene.add(frontierRoad);
 
     const river = new THREE.Mesh(new THREE.PlaneGeometry(TERRAIN.river.width, MAP_HALF * 2), lambert(COLORS.river));
     river.rotation.x = -Math.PI / 2;
