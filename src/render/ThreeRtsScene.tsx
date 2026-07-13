@@ -20,11 +20,17 @@ interface EntityVisual {
   ring: THREE.Mesh;
   hpFill: THREE.Mesh | null;
   hpBar: THREE.Group | null;
-  carryCube: THREE.Mesh | null;
+  carry: CarryVisual | null;
   flash: THREE.Mesh | null;
   bolt: THREE.Mesh | null;
   rangeRing: THREE.Group | null;
   rallyFlag: THREE.Group | null;
+}
+
+interface CarryVisual {
+  root: THREE.Group;
+  goldBundle: THREE.Group;
+  woodBundle: THREE.Group;
 }
 
 interface NodeVisual {
@@ -246,6 +252,60 @@ function buildUnitMesh(unit: Unit): THREE.Group {
     body.add(clubHead);
   }
   return body;
+}
+
+function buildWorkerCarryVisual(): CarryVisual {
+  const root = new THREE.Group();
+  root.position.set(-0.08, 0.52, 0.46);
+  root.visible = false;
+
+  // A leather pouch with exposed nuggets makes a gold delivery read as
+  // treasure instead of the generic recolored cube it replaces.
+  const goldBundle = new THREE.Group();
+  const pouch = shadowed(new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), lambert(COLORS.leather)));
+  pouch.scale.set(1.15, 0.95, 0.82);
+  pouch.position.y = -0.03;
+  goldBundle.add(pouch);
+  const pouchTie = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.025, 6, 10), lambert(COLORS.bridgeLight));
+  pouchTie.rotation.x = Math.PI / 2;
+  pouchTie.position.y = 0.16;
+  goldBundle.add(pouchTie);
+  for (const [x, y, z, size] of [
+    [-0.13, 0.17, 0, 0.11],
+    [0.12, 0.18, 0.02, 0.12],
+    [0, 0.24, 0.06, 0.09]
+  ] as Array<[number, number, number, number]>) {
+    const nugget = shadowed(new THREE.Mesh(new THREE.OctahedronGeometry(size), lambert(COLORS.gold)));
+    nugget.position.set(x, y, z);
+    goldBundle.add(nugget);
+  }
+  root.add(goldBundle);
+
+  // Three cross-stacked logs and pale rope bands keep wood readable by shape,
+  // even when faction lighting makes its brown color similar to the backpack.
+  const woodBundle = new THREE.Group();
+  const logGeometry = new THREE.CylinderGeometry(0.075, 0.085, 0.62, 8);
+  const logMaterial = lambert(COLORS.trunk);
+  for (const [y, z] of [
+    [-0.07, 0],
+    [0.08, 0],
+    [0.01, 0.14]
+  ] as Array<[number, number]>) {
+    const log = shadowed(new THREE.Mesh(logGeometry, logMaterial));
+    log.rotation.z = Math.PI / 2;
+    log.position.set(0, y, z);
+    woodBundle.add(log);
+  }
+  const ropeGeometry = new THREE.BoxGeometry(0.055, 0.34, 0.27);
+  const ropeMaterial = lambert(COLORS.bridgeLight);
+  for (const x of [-0.19, 0.19]) {
+    const rope = shadowed(new THREE.Mesh(ropeGeometry, ropeMaterial));
+    rope.position.set(x, 0.01, 0.06);
+    woodBundle.add(rope);
+  }
+  root.add(woodBundle);
+
+  return { root, goldBundle, woodBundle };
 }
 
 function buildBuildingMesh(building: Building): { mesh: THREE.Group; height: number; ringRadius: number } {
@@ -903,12 +963,10 @@ export function ThreeRtsScene() {
       group.add(ring);
       const { bar, fill } = makeHpBar(0.9, 1.55);
       group.add(bar);
-      const carryCube = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.26), lambert(COLORS.gold));
-      carryCube.position.set(0, 0.55, 0.42);
-      carryCube.visible = false;
-      group.add(carryCube);
+      const carry = unit.kind === 'worker' ? buildWorkerCarryVisual() : null;
+      if (carry) group.add(carry.root);
       scene.add(group);
-      visual = { group, body, ring, hpFill: fill, hpBar: bar, carryCube, flash: null, bolt: null, rangeRing: null, rallyFlag: null };
+      visual = { group, body, ring, hpFill: fill, hpBar: bar, carry, flash: null, bolt: null, rangeRing: null, rallyFlag: null };
       unitVisuals.set(unit.id, visual);
       return visual;
     }
@@ -992,7 +1050,7 @@ export function ThreeRtsScene() {
         group.add(rallyFlag);
       }
       scene.add(group);
-      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carryCube: null, flash, bolt, rangeRing, rallyFlag };
+      visual = { group, body: mesh, ring, hpFill: fill, hpBar: bar, carry: null, flash, bolt, rangeRing, rallyFlag };
       buildingVisuals.set(building.id, visual);
       return visual;
     }
@@ -1046,13 +1104,10 @@ export function ThreeRtsScene() {
           visual.body.scale.setScalar(1);
         }
 
-        if (visual.carryCube) {
-          visual.carryCube.visible = unit.kind === 'worker' && unit.carry !== null;
-          if (unit.carry) {
-            (visual.carryCube.material as THREE.MeshLambertMaterial).color.setHex(
-              unit.carry.type === 'gold' ? COLORS.gold : COLORS.trunk
-            );
-          }
+        if (visual.carry) {
+          visual.carry.root.visible = unit.carry !== null;
+          visual.carry.goldBundle.visible = unit.carry?.type === 'gold';
+          visual.carry.woodBundle.visible = unit.carry?.type === 'wood';
         }
         if (visual.hpFill && visual.hpBar) {
           const ratio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));

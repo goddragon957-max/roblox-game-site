@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_31_ready
-current_round: 31
+current_phase: round_32_ready
+current_round: 32
 next_role: generator
 pause_reason: ""
 max_rounds: 35
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-13T12:20:12Z"
+updated_at: "2026-07-13T13:17:42Z"
 resume_attempts: 1
-last_verified_at: "2026-07-13T12:20:12Z"
+last_verified_at: "2026-07-13T13:17:42Z"
 last_verdict: pass
 ```
 
@@ -50,6 +50,7 @@ last_verdict: pass
 - Round 28 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): puppy-headquarters frontier-outpost identity — added a framed door, wooden porch/step, green paw-emblem sign, warm shuttered window, and stacked logs so the friendly base feels inhabited and visually balances the detailed raider camp. Codex produced the coherent renderer diff and completed a browser probe before timing out during visual evidence; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-28-qa.md`.
 - Round 29 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): puppy-barracks training-post identity — added a framed leather entry and step, frontier-green shield crest with crossed practice swords, and compact side shield rack so the first production building visibly reads as a soldier training post. Codex produced the coherent renderer diff and passed deterministic gates before timing out during visual evidence; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-29-qa.md`.
 - Round 30 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): puppy-watchtower defense-post identity — added timber reinforcement bands, a lookout balcony/rail, frontier-green roof, puppy paw crest, and roof launcher so the tower reads as an authored friendly defense structure. Codex produced the coherent renderer diff before timing out; evaluator independently reran `npm run verify`, `git diff --check`, browser tower/gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-30-qa.md`.
-- Round 31 is ready for the next scheduled Codex generator slice under the same 48h loop authorization; `max_rounds` was raised from 30 to 35 so the explicitly authorized loop does not stop at the prior cap.
+- Round 31 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): worker carried-resource model/readability — replaced the generic recolored carry cube with a tied leather pouch and exposed gold nuggets for gold deliveries plus a rope-bound three-log bundle for wood deliveries. Codex produced the coherent renderer diff and short-lived carry probes before timing out; evaluator independently reran `npm run verify`, `git diff --check`, isolated gold/wood carry browser smokes, gather/build/train/attack smoke, console checks, and rendered visual QA in `docs/harness/feedback/round-31-qa.md`.
+- Round 32 is ready for the next scheduled Codex generator slice under the same 48h loop authorization; `max_rounds` remains 35.
 - 2026-07-13 operator reassignment: the user moved all active Claude/Fable generator appointments to Codex. Future scheduled generator slices should use `docs/goals/2026-07-13-48h-codex-goal-loop.md` with Codex `gpt-5.6-sol` + ultra reasoning, not the exhausted Claude/Fable loop.
 - Do not include `.hermes/` in git.
