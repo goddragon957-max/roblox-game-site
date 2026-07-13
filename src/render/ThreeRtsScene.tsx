@@ -264,6 +264,86 @@ function buildBuildingMesh(building: Building): { mesh: THREE.Group; height: num
     const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5), new THREE.MeshBasicMaterial({ color: COLORS.ringPlayer, side: THREE.DoubleSide }));
     flag.position.set(0.45, 4.05, 0);
     group.add(flag);
+
+    // Give the puppy headquarters a welcoming frontier identity to match the
+    // richer raider camp. All props stay attached to the existing base visual
+    // so simulation footprint, pathing, selection, and cleanup remain intact.
+    const door = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.74, 1.18, 0.12), lambert(COLORS.leather)));
+    door.position.set(0, 0.62, 1.64);
+    group.add(door);
+    const doorFrameMaterial = lambert(COLORS.trunk);
+    const doorPostGeometry = new THREE.BoxGeometry(0.12, 1.34, 0.12);
+    for (const x of [-0.45, 0.45]) {
+      const post = shadowed(new THREE.Mesh(doorPostGeometry, doorFrameMaterial));
+      post.position.set(x, 0.67, 1.7);
+      group.add(post);
+    }
+    const doorLintel = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.14, 0.12), doorFrameMaterial));
+    doorLintel.position.set(0, 1.34, 1.7);
+    group.add(doorLintel);
+    const doorKnob = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), lambert(COLORS.gold));
+    doorKnob.position.set(0.22, 0.66, 1.73);
+    group.add(doorKnob);
+
+    const porchMaterial = lambert(COLORS.bridgeLight);
+    const porch = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.14, 0.72), porchMaterial));
+    porch.position.set(0, 0.1, 1.93);
+    group.add(porch);
+    const step = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.1, 0.42), porchMaterial));
+    step.position.set(0, 0.05, 2.48);
+    group.add(step);
+
+    // A chunky green paw sign is legible at the distant isometric scale and
+    // makes the friendly faction clear without adding more HUD copy.
+    const sign = shadowed(
+      new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.48, 0.1), lambert(COLORS.frontierGreen))
+    );
+    sign.position.set(0, 1.58, 1.7);
+    group.add(sign);
+    const pawMaterial = lambert(COLORS.cream);
+    const pawPad = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), pawMaterial);
+    pawPad.scale.set(1.2, 0.9, 0.28);
+    pawPad.position.set(0, 1.53, 1.78);
+    group.add(pawPad);
+    for (const [x, y] of [
+      [-0.18, 1.69],
+      [0, 1.74],
+      [0.18, 1.69]
+    ] as Array<[number, number]>) {
+      const toe = new THREE.Mesh(new THREE.SphereGeometry(0.075, 9, 7), pawMaterial);
+      toe.scale.z = 0.3;
+      toe.position.set(x, y, 1.78);
+      group.add(toe);
+    }
+
+    // Warm shuttered window and a tidy log stockpile make the outpost feel
+    // inhabited while keeping the starting workers and build slots readable.
+    const windowGlow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.58, 0.7),
+      new THREE.MeshBasicMaterial({ color: COLORS.flame })
+    );
+    windowGlow.position.set(1.64, 0.94, 0.35);
+    group.add(windowGlow);
+    const shutterGeometry = new THREE.BoxGeometry(0.12, 0.68, 0.2);
+    const shutterMaterial = lambert(COLORS.frontierGreen);
+    for (const z of [-0.14, 0.84]) {
+      const shutter = shadowed(new THREE.Mesh(shutterGeometry, shutterMaterial));
+      shutter.position.set(1.72, 0.94, z);
+      group.add(shutter);
+    }
+
+    const logGeometry = new THREE.CylinderGeometry(0.12, 0.12, 0.92, 8);
+    const logMaterial = lambert(COLORS.trunk);
+    for (const [x, y, z] of [
+      [1.86, 0.14, -0.55],
+      [2.08, 0.14, -0.52],
+      [1.97, 0.37, -0.54]
+    ] as Array<[number, number, number]>) {
+      const log = shadowed(new THREE.Mesh(logGeometry, logMaterial));
+      log.position.set(x, y, z);
+      log.rotation.x = Math.PI / 2;
+      group.add(log);
+    }
     return { mesh: group, height: 4.6, ringRadius: 2.6 };
   }
   if (building.kind === 'barracks') {
