@@ -1,0 +1,382 @@
+export type PlanetTool = 'water' | 'forest' | 'crystal' | 'settlement' | 'shield';
+
+export type PlanetBiome = 'barren' | 'ocean' | 'forest' | 'crystal' | 'settlement' | 'shield';
+
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface PlanetCell {
+  id: string;
+  normal: Vec3;
+  biome: PlanetBiome;
+  vitality: number;
+  heat: number;
+  shielded: boolean;
+}
+
+export interface MeteorEvent {
+  id: string;
+  kind: 'meteor';
+  impactCellId: string;
+  timer: number;
+  duration: number;
+  resolved: boolean;
+}
+
+export interface PlanetLogEntry {
+  id: string;
+  time: number;
+  text: string;
+  tone: 'good' | 'warn' | 'danger' | 'neutral';
+}
+
+export interface PlanetState {
+  time: number;
+  cycle: number;
+  energy: number;
+  water: number;
+  biomass: number;
+  minerals: number;
+  population: number;
+  stability: number;
+  shield: number;
+  selectedTool: PlanetTool;
+  selectedCellId: string | null;
+  nextMeteorAt: number;
+  eventSeq: number;
+  logSeq: number;
+  cells: PlanetCell[];
+  activeEvent: MeteorEvent | null;
+  lastBirthAt: number;
+  logs: PlanetLogEntry[];
+}
+
+export interface PlanetTotals {
+  barren: number;
+  ocean: number;
+  forest: number;
+  crystal: number;
+  settlement: number;
+  shield: number;
+  habitability: number;
+  protectedCells: number;
+  livingCells: number;
+}
+
+export const TOOL_LABELS: Record<PlanetTool, string> = {
+  water: '바다 뿌리기',
+  forest: '숲 심기',
+  crystal: '수정 광맥',
+  settlement: '정착지 세우기',
+  shield: '방어막 씌우기'
+};
+
+export const TOOL_COSTS: Record<PlanetTool, { energy: number; minerals?: number; water?: number; biomass?: number }> = {
+  water: { energy: 8 },
+  forest: { energy: 10, water: 4 },
+  crystal: { energy: 12 },
+  settlement: { energy: 18, minerals: 4, biomass: 4 },
+  shield: { energy: 14, minerals: 3 }
+};
+
+const CELL_COUNT = 132;
+const METEOR_DURATION = 8;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round(value: number, digits = 0) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function normalize(vec: Vec3): Vec3 {
+  const length = Math.hypot(vec.x, vec.y, vec.z) || 1;
+  return { x: vec.x / length, y: vec.y / length, z: vec.z / length };
+}
+
+function logEntry(state: PlanetState, text: string, tone: PlanetLogEntry['tone']): PlanetLogEntry {
+  return { id: `log-${state.logSeq + 1}`, time: round(state.time, 1), text, tone };
+}
+
+function withLog(state: PlanetState, text: string, tone: PlanetLogEntry['tone']): PlanetState {
+  const entry = logEntry(state, text, tone);
+  const logs = [entry, ...getLogs(state)].slice(0, 6);
+  return { ...state, logSeq: state.logSeq + 1, logs };
+}
+
+export function getLogs(state: PlanetState): PlanetLogEntry[] {
+  return state.logs;
+}
+
+function makeCell(index: number, total: number): PlanetCell {
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const y = 1 - (index / (total - 1)) * 2;
+  const radius = Math.sqrt(1 - y * y);
+  const theta = golden * index;
+  const normal = normalize({ x: Math.cos(theta) * radius, y, z: Math.sin(theta) * radius });
+  const latitude = Math.abs(normal.y);
+  const wave = Math.sin(index * 2.17) + Math.cos(index * 0.73);
+  let biome: PlanetBiome = 'barren';
+  let vitality = 0.18;
+
+  if (latitude < 0.34 && wave > 1.05) {
+    biome = 'ocean';
+    vitality = 0.66;
+  } else if (latitude < 0.56 && wave < -1.05) {
+    biome = 'forest';
+    vitality = 0.72;
+  } else if ((index * 17) % 29 < 4) {
+    biome = 'crystal';
+    vitality = 0.48;
+  } else if (index === 64 || index === 78) {
+    biome = 'settlement';
+    vitality = 0.74;
+  }
+
+  return {
+    id: `cell-${index + 1}`,
+    normal,
+    biome,
+    vitality,
+    heat: clamp(0.42 + latitude * 0.42 + Math.sin(index) * 0.08, 0, 1),
+    shielded: false
+  };
+}
+
+function nextImpactCell(state: PlanetState) {
+  const index = (state.eventSeq * 37 + Math.floor(state.time * 3) + 19) % state.cells.length;
+  return state.cells[index].id;
+}
+
+export function createInitialPlanetState(): PlanetState {
+  const cells = Array.from({ length: CELL_COUNT }, (_, index) => makeCell(index, CELL_COUNT));
+  const state: PlanetState = {
+    time: 0,
+    cycle: 1,
+    energy: 88,
+    water: 26,
+    biomass: 18,
+    minerals: 16,
+    population: 12,
+    stability: 72,
+    shield: 0,
+    selectedTool: 'water',
+    selectedCellId: null,
+    nextMeteorAt: 18,
+    eventSeq: 0,
+    logSeq: 0,
+    cells,
+    activeEvent: null,
+    lastBirthAt: 0,
+    logs: []
+  };
+  return withLog(state, '작은 원시 행성이 깨어났어요. 바다·숲·수정으로 표면을 빚어보세요.', 'good');
+}
+
+export function planetTotals(state: PlanetState): PlanetTotals {
+  const counts: PlanetTotals = {
+    barren: 0,
+    ocean: 0,
+    forest: 0,
+    crystal: 0,
+    settlement: 0,
+    shield: 0,
+    habitability: 0,
+    protectedCells: 0,
+    livingCells: 0
+  };
+
+  for (const cell of state.cells) {
+    counts[cell.biome] += 1;
+    if (cell.biome !== 'barren' && cell.biome !== 'crystal') counts.livingCells += 1;
+    if (cell.shielded || cell.biome === 'shield') counts.protectedCells += 1;
+  }
+
+  const livingScore = counts.ocean * 1.2 + counts.forest * 1.5 + counts.settlement * 2.4 + counts.shield * 0.8;
+  const economyScore = state.water * 0.12 + state.biomass * 0.14 + state.population * 0.18 + state.minerals * 0.05;
+  counts.habitability = clamp(Math.round(livingScore + economyScore + state.stability * 0.32), 0, 100);
+  return counts;
+}
+
+export function selectTool(state: PlanetState, tool: PlanetTool): PlanetState {
+  return { ...state, selectedTool: tool };
+}
+
+function canPay(state: PlanetState, tool: PlanetTool) {
+  const cost = TOOL_COSTS[tool];
+  return (
+    state.energy >= cost.energy &&
+    state.minerals >= (cost.minerals ?? 0) &&
+    state.water >= (cost.water ?? 0) &&
+    state.biomass >= (cost.biomass ?? 0)
+  );
+}
+
+function pay(state: PlanetState, tool: PlanetTool): PlanetState {
+  const cost = TOOL_COSTS[tool];
+  return {
+    ...state,
+    energy: round(state.energy - cost.energy, 1),
+    minerals: round(state.minerals - (cost.minerals ?? 0), 1),
+    water: round(state.water - (cost.water ?? 0), 1),
+    biomass: round(state.biomass - (cost.biomass ?? 0), 1)
+  };
+}
+
+export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedTool, cellId = state.selectedCellId): PlanetState {
+  if (!cellId) return withLog({ ...state, selectedTool: tool }, '행성 표면을 먼저 찍어주세요.', 'warn');
+  if (!canPay(state, tool)) return withLog({ ...state, selectedTool: tool, selectedCellId: cellId }, `${TOOL_LABELS[tool]}에 필요한 자원이 부족해요.`, 'warn');
+
+  let touched = false;
+  let next = pay({ ...state, selectedTool: tool, selectedCellId: cellId }, tool);
+  const cells: PlanetCell[] = next.cells.map((cell): PlanetCell => {
+    if (cell.id !== cellId) return cell;
+    touched = true;
+    switch (tool) {
+      case 'water':
+        next = { ...next, water: round(next.water + 15, 1), stability: clamp(next.stability + 1.5, 0, 100) };
+        return { ...cell, biome: 'ocean' as const, vitality: clamp(cell.vitality + 0.34, 0, 1), heat: clamp(cell.heat - 0.18, 0, 1), shielded: false };
+      case 'forest':
+        next = { ...next, biomass: round(next.biomass + 14, 1), stability: clamp(next.stability + 2.5, 0, 100) };
+        return { ...cell, biome: 'forest' as const, vitality: clamp(cell.vitality + 0.38, 0, 1), heat: clamp(cell.heat - 0.08, 0, 1), shielded: false };
+      case 'crystal':
+        next = { ...next, minerals: round(next.minerals + 18, 1), energy: round(next.energy + 8, 1) };
+        return { ...cell, biome: 'crystal' as const, vitality: clamp(cell.vitality + 0.16, 0, 1), shielded: false };
+      case 'settlement':
+        next = { ...next, population: round(next.population + 10, 1), stability: clamp(next.stability + 1, 0, 100), lastBirthAt: next.time };
+        return { ...cell, biome: 'settlement' as const, vitality: clamp(cell.vitality + 0.42, 0, 1), shielded: false };
+      case 'shield':
+        next = { ...next, shield: clamp(next.shield + 34, 0, 100), stability: clamp(next.stability + 0.5, 0, 100) };
+        return { ...cell, biome: 'shield' as const, vitality: clamp(cell.vitality + 0.25, 0, 1), shielded: true };
+      default:
+        return cell;
+    }
+  });
+
+  next = { ...next, cells };
+  if (!touched) return withLog(next, '그 표면 좌표를 찾지 못했어요.', 'warn');
+
+  const message: Record<PlanetTool, string> = {
+    water: '푸른 바다가 패치처럼 번졌어요.',
+    forest: '초록 숲이 산소를 뿜기 시작했어요.',
+    crystal: '보라 수정 광맥이 별빛 에너지를 모읍니다.',
+    settlement: '작은 돔 마을이 불을 밝혔어요.',
+    shield: '황금 방어막 돔이 충격 지점을 감쌌어요.'
+  };
+  return withLog(next, message[tool], tool === 'shield' ? 'good' : 'neutral');
+}
+
+export function triggerMeteor(state: PlanetState): PlanetState {
+  if (state.activeEvent) return state;
+  const eventSeq = state.eventSeq + 1;
+  const impactCellId = nextImpactCell({ ...state, eventSeq });
+  const next: PlanetState = {
+    ...state,
+    eventSeq,
+    activeEvent: {
+      id: `meteor-${eventSeq}`,
+      kind: 'meteor',
+      impactCellId,
+      timer: METEOR_DURATION,
+      duration: METEOR_DURATION,
+      resolved: false
+    },
+    nextMeteorAt: state.time + 24
+  };
+  return withLog(next, '운석 경보! 붉은 궤적이 행성으로 떨어집니다. 방어막을 준비하세요.', 'danger');
+}
+
+function resolveMeteor(state: PlanetState): PlanetState {
+  const event = state.activeEvent;
+  if (!event) return state;
+  const target = state.cells.find((cell) => cell.id === event.impactCellId);
+  const blocked = state.shield >= 20 || target?.shielded || target?.biome === 'shield';
+
+  if (blocked) {
+    const cells: PlanetCell[] = state.cells.map((cell): PlanetCell =>
+      cell.id === event.impactCellId ? { ...cell, shielded: false, vitality: clamp(cell.vitality + 0.08, 0, 1) } : cell
+    );
+    const next: PlanetState = {
+      ...state,
+      cells,
+      shield: clamp(state.shield - 26, 0, 100),
+      stability: clamp(state.stability + 3, 0, 100),
+      activeEvent: null
+    };
+    return withLog(next, '방어막이 운석을 튕겨냈고, 파편이 별빛 에너지로 변했어요.', 'good');
+  }
+
+  const cells: PlanetCell[] = state.cells.map((cell): PlanetCell =>
+    cell.id === event.impactCellId
+      ? { ...cell, biome: 'barren' as const, vitality: 0.06, heat: clamp(cell.heat + 0.22, 0, 1), shielded: false }
+      : cell
+  );
+  const next: PlanetState = {
+    ...state,
+    cells,
+    stability: clamp(state.stability - 18, 0, 100),
+    population: clamp(round(state.population - 4, 1), 0, 999),
+    activeEvent: null
+  };
+  return withLog(next, '운석이 표면을 태웠어요. 다시 물과 숲으로 복구해야 합니다.', 'danger');
+}
+
+export function tickPlanet(state: PlanetState, seconds: number): PlanetState {
+  const delta = clamp(seconds, 0, 5);
+  let next: PlanetState = {
+    ...state,
+    time: round(state.time + delta, 2),
+    cycle: Math.floor((state.time + delta) / 30) + 1
+  };
+
+  const totals = planetTotals(next);
+  const energyGain = delta * (0.58 + totals.crystal * 0.018 + totals.settlement * 0.012);
+  const waterGain = delta * (totals.ocean * 0.018);
+  const biomassGain = delta * (totals.forest * 0.024 + totals.ocean * 0.006);
+  const mineralGain = delta * (totals.crystal * 0.03);
+  const populationGain = delta * (totals.settlement * 0.018 + totals.forest * 0.004);
+  const stabilityDrift = delta * ((totals.forest + totals.ocean) * 0.012 - (next.activeEvent ? 0.08 : 0));
+
+  next = {
+    ...next,
+    energy: clamp(round(next.energy + energyGain, 1), 0, 180),
+    water: clamp(round(next.water + waterGain, 1), 0, 160),
+    biomass: clamp(round(next.biomass + biomassGain, 1), 0, 160),
+    minerals: clamp(round(next.minerals + mineralGain, 1), 0, 160),
+    population: clamp(round(next.population + populationGain, 1), 0, 260),
+    stability: clamp(round(next.stability + stabilityDrift, 1), 0, 100),
+    cells: next.cells.map((cell) => {
+      const vitalityGain = cell.biome === 'forest' || cell.biome === 'ocean' ? 0.006 * delta : cell.biome === 'settlement' ? 0.003 * delta : 0;
+      return { ...cell, vitality: clamp(round(cell.vitality + vitalityGain, 3), 0, 1) };
+    })
+  };
+
+  if (!next.activeEvent && next.time >= next.nextMeteorAt) next = triggerMeteor(next);
+
+  if (next.activeEvent) {
+    const activeEvent = { ...next.activeEvent, timer: round(next.activeEvent.timer - delta, 2) };
+    next = { ...next, activeEvent };
+    if (activeEvent.timer <= 0) next = resolveMeteor(next);
+  }
+
+  return next;
+}
+
+export function nearestCellId(state: PlanetState, normal: Vec3): string {
+  const target = normalize(normal);
+  let best = state.cells[0];
+  let bestDot = -Infinity;
+  for (const cell of state.cells) {
+    const dot = cell.normal.x * target.x + cell.normal.y * target.y + cell.normal.z * target.z;
+    if (dot > bestDot) {
+      best = cell;
+      bestDot = dot;
+    }
+  }
+  return best.id;
+}
