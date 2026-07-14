@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import {
+  COMBAT_HIT_DURATION,
   MAP_HALF,
   TERRAIN,
   TOWER_SHOT_DURATION,
+  combatHitFeedback,
   nextBuildSlot,
   nodeRegrowth,
   orderPreviews,
@@ -11,7 +13,7 @@ import {
   towerShots,
   waveTelegraph
 } from '../game/simulation';
-import type { Building, GameState, OrderPreviewKind, ResourceNode, Unit } from '../game/types';
+import type { Building, CombatHitFeedback, GameState, OrderPreviewKind, ResourceNode, Unit } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 
 interface EntityVisual {
@@ -36,6 +38,14 @@ interface CarryVisual {
 interface NodeVisual {
   group: THREE.Group;
   scalable: THREE.Group;
+}
+
+interface CombatHitVisual {
+  group: THREE.Group;
+  spark: THREE.Group;
+  core: THREE.Mesh;
+  rays: THREE.Mesh[];
+  ripple: THREE.Mesh;
 }
 
 const COLORS = {
@@ -1060,6 +1070,7 @@ export function ThreeRtsScene() {
     const unitVisuals = new Map<string, EntityVisual>();
     const buildingVisuals = new Map<string, EntityVisual>();
     const nodeVisuals = new Map<string, NodeVisual>();
+    const combatHitVisuals = new Map<string, CombatHitVisual>();
 
     // Order lines: one line + target dot per selected player unit with an
     // active destination, so a selected army shows where it is going.
@@ -1102,6 +1113,67 @@ export function ThreeRtsScene() {
       (visual.line.material as THREE.Material).dispose();
       visual.dot.geometry.dispose();
       (visual.dot.material as THREE.Material).dispose();
+    }
+
+    function ensureCombatHitVisual(hit: CombatHitFeedback): CombatHitVisual {
+      let visual = combatHitVisuals.get(hit.id);
+      if (visual) return visual;
+
+      const group = new THREE.Group();
+      const spark = new THREE.Group();
+      spark.position.y = 1.05;
+      group.add(spark);
+
+      // A cream core reads as contact while faction-colored shards make the
+      // source clear: friendly gold versus raider orange. The upper burst is
+      // billboarded in syncScene so it remains legible at the RTS camera.
+      const core = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.34),
+        new THREE.MeshBasicMaterial({
+          color: COLORS.cream,
+          transparent: true,
+          opacity: 0.95,
+          depthWrite: false
+        })
+      );
+      spark.add(core);
+
+      const accent = hit.attackerFaction === 'player' ? COLORS.gold : COLORS.ringEnemy;
+      const rays: THREE.Mesh[] = [];
+      for (let index = 0; index < 4; index += 1) {
+        const angle = 0.35 + index * (Math.PI / 2);
+        const ray = new THREE.Mesh(
+          new THREE.ConeGeometry(0.12, index % 2 === 0 ? 0.62 : 0.5, 4),
+          new THREE.MeshBasicMaterial({
+            color: accent,
+            transparent: true,
+            opacity: 0.9,
+            depthWrite: false
+          })
+        );
+        ray.position.set(Math.cos(angle) * 0.58, Math.sin(angle) * 0.58, 0);
+        ray.rotation.z = angle - Math.PI / 2;
+        spark.add(ray);
+        rays.push(ray);
+      }
+
+      const ripple = new THREE.Mesh(
+        new THREE.RingGeometry(0.42, 0.58, 24),
+        new THREE.MeshBasicMaterial({
+          color: accent,
+          transparent: true,
+          opacity: 0.82,
+          depthWrite: false
+        })
+      );
+      ripple.rotation.x = -Math.PI / 2;
+      ripple.position.y = 0.08;
+      group.add(ripple);
+
+      scene.add(group);
+      visual = { group, spark, core, rays, ripple };
+      combatHitVisuals.set(hit.id, visual);
+      return visual;
     }
 
     function ensureUnitVisual(unit: Unit): EntityVisual {
@@ -1324,6 +1396,35 @@ export function ThreeRtsScene() {
         if (!liveBuildings.has(id)) {
           disposeGroup(visual.group);
           buildingVisuals.delete(id);
+        }
+      }
+
+      // Target-side combat feedback: every spark is keyed to a real unit hit
+      // recorded by the simulation. Snapshot positions let a lethal impact
+      // finish even after removeDead removes the target visual.
+      const liveCombatHits = new Set<string>();
+      for (const hit of combatHitFeedback(sim)) {
+        liveCombatHits.add(hit.id);
+        const visual = ensureCombatHitVisual(hit);
+        const life = Math.max(0, Math.min(1, hit.age / COMBAT_HIT_DURATION));
+        const pop = Math.min(1, hit.age / 0.08);
+        visual.group.position.set(hit.to.x, 0, hit.to.z);
+        visual.spark.quaternion.copy(camera.quaternion);
+        visual.spark.scale.setScalar(1.05 + pop * 0.45 + life * 0.65);
+        visual.core.scale.setScalar(1 + life * 0.45);
+        (visual.core.material as THREE.MeshBasicMaterial).opacity =
+          1 * Math.max(0, 1 - hit.age / 0.32);
+        for (const ray of visual.rays) {
+          (ray.material as THREE.MeshBasicMaterial).opacity =
+            0.95 * Math.max(0, 1 - hit.age / 0.36);
+        }
+        visual.ripple.scale.setScalar(0.95 + life * 2.1);
+        (visual.ripple.material as THREE.MeshBasicMaterial).opacity = 0.82 * (1 - life);
+      }
+      for (const [id, visual] of combatHitVisuals) {
+        if (!liveCombatHits.has(id)) {
+          disposeGroup(visual.group);
+          combatHitVisuals.delete(id);
         }
       }
 
@@ -1587,6 +1688,7 @@ export function ThreeRtsScene() {
       for (const visual of unitVisuals.values()) disposeGroup(visual.group);
       for (const visual of buildingVisuals.values()) disposeGroup(visual.group);
       for (const visual of nodeVisuals.values()) disposeGroup(visual.group);
+      for (const visual of combatHitVisuals.values()) disposeGroup(visual.group);
       for (const visual of orderVisuals.values()) disposeOrderVisual(visual);
       disposeGroup(telegraphGroup);
       disposeGroup(buildPreviewGroup);

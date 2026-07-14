@@ -2,6 +2,7 @@ import type {
   BuildableKind,
   Building,
   BuildingKind,
+  CombatHitFeedback,
   DeliveryStreak,
   GameState,
   MatchGrade,
@@ -55,11 +56,14 @@ export const SOLDIER_AGGRO_RANGE = 10;
 export const MISSION_SOLDIER_TARGET = 3;
 export const THREAT_ALERT_DURATION = 4;
 export const TOWER_SHOT_DURATION = 0.35;
+export const COMBAT_HIT_DURATION = 0.45;
 export const WAVE_CLEAR_FEEDBACK_DURATION = 5;
 export const DELIVERY_STREAK_WINDOW = 8;
 export const DELIVERY_STREAK_MIN = 2;
 export const DELIVERY_STREAK_CELEBRATE_AT = 5;
 export const WOOD_REGROW_TIME = 40;
+
+const MAX_COMBAT_HIT_EVENTS = 24;
 
 const UNIT_STATS: Record<UnitKind, Pick<Unit, 'maxHp' | 'speed' | 'attackDamage' | 'attackRange' | 'attackCooldown'>> = {
   worker: { maxHp: 40, speed: 4.2, attackDamage: 2, attackRange: 1.3, attackCooldown: 1.2 },
@@ -161,6 +165,8 @@ export function createInitialState(): GameState {
     lastWaveClearedNumber: 0,
     lastPlayerHitAt: null,
     lastPlayerHitPos: null,
+    combatHitSeq: 0,
+    combatHitEvents: [],
     lastDepositAt: null,
     deliveryStreakCount: 0,
     status: 'playing',
@@ -320,6 +326,25 @@ export function towerShots(state: GameState): TowerShot[] {
     shots.push({ id: building.id, from: { ...building.pos }, to: { ...building.lastShotTarget }, age });
   }
   return shots;
+}
+
+// Melee feedback: expose every recent unit hit, including simultaneous and
+// lethal strikes, from snapshots recorded exactly where simulation damage is
+// applied. Old hits (and all hits after match end) disappear deterministically.
+export function combatHitFeedback(state: GameState): CombatHitFeedback[] {
+  if (state.status !== 'playing') return [];
+  const hits: CombatHitFeedback[] = [];
+  for (const event of state.combatHitEvents) {
+    const age = state.time - event.at;
+    if (age < 0 || age > COMBAT_HIT_DURATION) continue;
+    hits.push({
+      ...event,
+      from: { ...event.from },
+      to: { ...event.to },
+      age
+    });
+  }
+  return hits;
 }
 
 // Economy readability: surface worker puppies that are doing nothing so the
@@ -544,16 +569,45 @@ export function waveClear(state: GameState): WaveClear {
   };
 }
 
-function damageTarget(state: GameState, id: string, amount: number) {
+function recordCombatHit(state: GameState, attacker: Unit, target: Unit | Building, damage: number) {
+  state.combatHitSeq += 1;
+  state.combatHitEvents.push({
+    id: `hit-${state.combatHitSeq}`,
+    attackerId: attacker.id,
+    targetId: target.id,
+    attackerFaction: attacker.faction,
+    targetFaction: target.faction,
+    from: { ...attacker.pos },
+    to: { ...target.pos },
+    damage,
+    at: state.time
+  });
+  if (state.combatHitEvents.length > MAX_COMBAT_HIT_EVENTS) {
+    state.combatHitEvents.splice(0, state.combatHitEvents.length - MAX_COMBAT_HIT_EVENTS);
+  }
+}
+
+function expireCombatHitEvents(state: GameState) {
+  const cutoff = state.time - COMBAT_HIT_DURATION;
+  let expired = 0;
+  while (expired < state.combatHitEvents.length && state.combatHitEvents[expired].at < cutoff) expired += 1;
+  if (expired > 0) state.combatHitEvents.splice(0, expired);
+}
+
+function damageTarget(state: GameState, attacker: Unit, id: string, amount: number) {
   const unit = findUnit(state, id);
   if (unit) {
+    const damage = Math.min(amount, Math.max(0, unit.hp));
     unit.hp -= amount;
+    recordCombatHit(state, attacker, unit, damage);
     if (unit.faction === 'player') recordPlayerHit(state, unit.pos, false);
     return;
   }
   const building = findBuilding(state, id);
   if (building) {
+    const damage = Math.min(amount, Math.max(0, building.hp));
     building.hp -= amount;
+    recordCombatHit(state, attacker, building, damage);
     if (building.faction === 'player') recordPlayerHit(state, building.pos, building.kind === 'base');
   }
 }
@@ -696,7 +750,7 @@ function stepAttack(state: GameState, unit: Unit, dt: number) {
     return;
   }
   if (unit.cooldownLeft <= 0) {
-    damageTarget(state, unit.order.targetId, unit.attackDamage);
+    damageTarget(state, unit, unit.order.targetId, unit.attackDamage);
     unit.cooldownLeft = unit.attackCooldown;
   }
 }
@@ -988,6 +1042,7 @@ export function advance(state: GameState, dtTotal: number) {
     const dt = Math.min(MAX_STEP, remaining);
     remaining -= dt;
     state.time += dt;
+    expireCombatHitEvents(state);
 
     if (!state.waveWarned && state.time >= state.nextWaveAt - WAVE_WARNING_LEAD) {
       state.waveWarned = true;

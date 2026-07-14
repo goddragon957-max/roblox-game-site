@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   advance,
   canAfford,
+  combatHitFeedback,
   commandSmart,
   createInitialState,
   deliveryStreak,
@@ -27,6 +28,7 @@ import {
 } from '../game/simulation';
 import type {
   BuildableKind,
+  CombatHitFeedback,
   DeliveryStreak,
   GameState,
   MatchScore,
@@ -127,6 +129,7 @@ declare global {
         threatAlert: () => ThreatAlert;
         towerRanges: () => RangePreview[];
         towerShots: () => TowerShot[];
+        combatHits: () => CombatHitFeedback[];
         rallyPoints: () => RallyPreview[];
         orderPreviews: () => OrderPreview[];
         restart: () => void;
@@ -171,6 +174,7 @@ if (typeof window !== 'undefined') {
       threatAlert: () => threatAlert(useGameStore.getState().sim),
       towerRanges: () => towerRangePreviews(useGameStore.getState().sim),
       towerShots: () => towerShots(useGameStore.getState().sim),
+      combatHits: () => combatHitFeedback(useGameStore.getState().sim),
       rallyPoints: () => rallyPreviews(useGameStore.getState().sim),
       orderPreviews: () => orderPreviews(useGameStore.getState().sim),
       restart: () => useGameStore.getState().restart()

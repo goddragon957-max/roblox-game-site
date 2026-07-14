@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COMBAT_HIT_DURATION,
   COSTS,
   DELIVERY_STREAK_WINDOW,
   FIRST_WAVE_AT,
@@ -13,6 +14,7 @@ import {
   WAVE_WARNING_LEAD,
   WOOD_REGROW_TIME,
   advance,
+  combatHitFeedback,
   commandSmart,
   createInitialState,
   deliveryStreak,
@@ -361,6 +363,118 @@ describe('combat and win/loss', () => {
     expect(waveSize(2)).toBe(2);
     expect(waveSize(4)).toBe(3);
     expect(waveSize(20)).toBe(5);
+  });
+});
+
+describe('combat hit feedback', () => {
+  function stateWithSoldier() {
+    const state = createInitialState();
+    state.gold = 1000;
+    state.wood = 1000;
+    expect(placeBuilding(state, 'barracks')).not.toBeNull();
+    expect(trainSoldier(state)).toBe(true);
+    advance(state, 5);
+    const soldier = state.units.find((unit) => unit.kind === 'soldier' && unit.faction === 'player');
+    const raider = state.units.find((unit) => unit.kind === 'raider' && unit.faction === 'enemy');
+    if (!soldier || !raider) throw new Error('expected soldier and raider');
+    return { state, soldier, raider };
+  }
+
+  it('records the exact real soldier hit at the damaged raider', () => {
+    const { state, soldier, raider } = stateWithSoldier();
+    raider.pos = { x: soldier.pos.x + 1, z: soldier.pos.z };
+    raider.order = { type: 'idle' };
+    commandSmart(state, [soldier.id], { point: { ...raider.pos }, entityId: raider.id });
+    const from = { ...soldier.pos };
+    const to = { ...raider.pos };
+
+    expect(combatHitFeedback(state)).toEqual([]);
+    advance(state, 0.05);
+
+    expect(raider.hp).toBe(raider.maxHp - soldier.attackDamage);
+    expect(combatHitFeedback(state)).toEqual([
+      expect.objectContaining({
+        id: 'hit-1',
+        attackerId: soldier.id,
+        targetId: raider.id,
+        attackerFaction: 'player',
+        targetFaction: 'enemy',
+        from,
+        to,
+        damage: soldier.attackDamage,
+        age: 0
+      })
+    ]);
+  });
+
+  it('records unit-driven impacts against buildings too', () => {
+    const { state, soldier } = stateWithSoldier();
+    const camp = state.buildings.find((building) => building.kind === 'enemyCamp');
+    if (!camp) throw new Error('expected enemy camp');
+    soldier.pos = { x: camp.pos.x - 1, z: camp.pos.z };
+    const impact = { ...camp.pos };
+    commandSmart(state, [soldier.id], { point: impact, entityId: camp.id });
+
+    advance(state, 0.05);
+
+    expect(camp.hp).toBe(camp.maxHp - soldier.attackDamage);
+    expect(combatHitFeedback(state)).toEqual([
+      expect.objectContaining({
+        attackerId: soldier.id,
+        targetId: camp.id,
+        targetFaction: 'enemy',
+        to: impact,
+        damage: soldier.attackDamage
+      })
+    ]);
+  });
+
+  it('keeps opposing hits from the same simulation step as separate events', () => {
+    const { state, soldier, raider } = stateWithSoldier();
+    raider.pos = { x: soldier.pos.x + 1, z: soldier.pos.z };
+    raider.order = { type: 'attack', targetId: soldier.id };
+    commandSmart(state, [soldier.id], { point: { ...raider.pos }, entityId: raider.id });
+
+    advance(state, 0.05);
+
+    expect(soldier.hp).toBe(soldier.maxHp - raider.attackDamage);
+    expect(raider.hp).toBe(raider.maxHp - soldier.attackDamage);
+    const hits = combatHitFeedback(state);
+    expect(hits).toHaveLength(2);
+    expect(new Set(hits.map((hit) => hit.id)).size).toBe(2);
+    expect(new Set(hits.map((hit) => hit.attackerId))).toEqual(new Set([soldier.id, raider.id]));
+  });
+
+  it('keeps a lethal impact at its snapshot after the target is removed', () => {
+    const { state, soldier, raider } = stateWithSoldier();
+    raider.hp = soldier.attackDamage;
+    raider.pos = { x: soldier.pos.x + 1, z: soldier.pos.z };
+    raider.order = { type: 'idle' };
+    const impact = { ...raider.pos };
+    commandSmart(state, [soldier.id], { point: impact, entityId: raider.id });
+
+    advance(state, 0.05);
+
+    expect(state.units.some((unit) => unit.id === raider.id)).toBe(false);
+    expect(combatHitFeedback(state)).toEqual([
+      expect.objectContaining({ targetId: raider.id, to: impact, damage: soldier.attackDamage })
+    ]);
+  });
+
+  it('expires naturally after combat stops', () => {
+    const { state, soldier, raider } = stateWithSoldier();
+    raider.pos = { x: soldier.pos.x + 1, z: soldier.pos.z };
+    raider.order = { type: 'idle' };
+    commandSmart(state, [soldier.id], { point: { ...raider.pos }, entityId: raider.id });
+    advance(state, 0.05);
+    expect(combatHitFeedback(state)).toHaveLength(1);
+
+    soldier.order = { type: 'move', target: { x: -20, z: -20 } };
+    raider.order = { type: 'idle' };
+    advance(state, COMBAT_HIT_DURATION + 0.05);
+
+    expect(combatHitFeedback(state)).toEqual([]);
+    expect(state.combatHitEvents).toEqual([]);
   });
 });
 

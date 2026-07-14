@@ -113,6 +113,8 @@ export interface GameState {
   lastWaveClearedNumber: number;
   lastPlayerHitAt: number | null;
   lastPlayerHitPos: Vec2 | null;
+  combatHitSeq: number;
+  combatHitEvents: CombatHitEvent[];
   lastDepositAt: number | null;
   deliveryStreakCount: number;
   status: GameStatus;
@@ -195,6 +197,22 @@ export interface TowerShot {
   id: string;
   from: Vec2;
   to: Vec2;
+  age: number;
+}
+
+export interface CombatHitEvent {
+  id: string;
+  attackerId: string;
+  targetId: string;
+  attackerFaction: Faction;
+  targetFaction: Faction;
+  from: Vec2;
+  to: Vec2;
+  damage: number;
+  at: number;
+}
+
+export interface CombatHitFeedback extends CombatHitEvent {
   age: number;
 }
 
