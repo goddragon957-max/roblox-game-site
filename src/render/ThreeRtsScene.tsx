@@ -4,12 +4,14 @@ import {
   COMBAT_HIT_DURATION,
   MAP_HALF,
   TERRAIN,
+  THREAT_ALERT_DURATION,
   TOWER_SHOT_DURATION,
   combatHitFeedback,
   nextBuildSlot,
   nodeRegrowth,
   orderPreviews,
   playerUnitIdsInRect,
+  threatAlert,
   towerShots,
   waveTelegraph
 } from '../game/simulation';
@@ -1026,6 +1028,102 @@ export function ThreeRtsScene() {
     scene.add(commandMarker);
     let markerAge = Infinity;
 
+    // Under-siege signal: two danger pulses stay centered on the latest real
+    // player-hit position while a compact shield alarm hovers above the unit
+    // or building. This persistent cue is intentionally distinct from both
+    // the short cream combat spark and the enemy-orange wave spawn spike.
+    const threatSignalGroup = new THREE.Group();
+    const threatInnerRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.82, 1.06, 32),
+      new THREE.MeshBasicMaterial({
+        color: COLORS.hpBad,
+        transparent: true,
+        opacity: 0.88,
+        depthWrite: false
+      })
+    );
+    threatInnerRing.rotation.x = -Math.PI / 2;
+    threatInnerRing.position.y = 0.085;
+    threatSignalGroup.add(threatInnerRing);
+
+    const threatOuterRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.35, 1.58, 40),
+      new THREE.MeshBasicMaterial({
+        color: COLORS.ringEnemy,
+        transparent: true,
+        opacity: 0.72,
+        depthWrite: false
+      })
+    );
+    threatOuterRing.rotation.x = -Math.PI / 2;
+    threatOuterRing.position.y = 0.075;
+    threatSignalGroup.add(threatOuterRing);
+
+    const threatMarker = new THREE.Group();
+    const markerHalo = new THREE.Mesh(
+      new THREE.RingGeometry(0.48, 0.61, 24),
+      new THREE.MeshBasicMaterial({
+        color: COLORS.ringEnemy,
+        transparent: true,
+        opacity: 0.62,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      })
+    );
+    markerHalo.position.z = -0.04;
+    threatMarker.add(markerHalo);
+
+    const shieldShape = new THREE.Shape();
+    shieldShape.moveTo(0, 0.48);
+    shieldShape.lineTo(0.38, 0.3);
+    shieldShape.lineTo(0.31, -0.18);
+    shieldShape.lineTo(0, -0.5);
+    shieldShape.lineTo(-0.31, -0.18);
+    shieldShape.lineTo(-0.38, 0.3);
+    shieldShape.closePath();
+    const shieldGeometry = new THREE.ShapeGeometry(shieldShape);
+    const shieldBorder = new THREE.Mesh(
+      shieldGeometry,
+      new THREE.MeshBasicMaterial({
+        color: COLORS.ringEnemy,
+        transparent: true,
+        opacity: 0.98,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      })
+    );
+    shieldBorder.scale.setScalar(1.18);
+    shieldBorder.position.z = -0.02;
+    threatMarker.add(shieldBorder);
+    const shieldFace = new THREE.Mesh(
+      shieldGeometry,
+      new THREE.MeshBasicMaterial({
+        color: COLORS.hpBad,
+        transparent: true,
+        opacity: 0.96,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      })
+    );
+    threatMarker.add(shieldFace);
+
+    const alertBar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.085, 0.3, 0.04),
+      new THREE.MeshBasicMaterial({ color: COLORS.cream })
+    );
+    alertBar.position.set(0, 0.08, 0.03);
+    threatMarker.add(alertBar);
+    const alertDot = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.065),
+      new THREE.MeshBasicMaterial({ color: COLORS.cream })
+    );
+    alertDot.position.set(0, -0.2, 0.03);
+    threatMarker.add(alertDot);
+    threatMarker.position.y = 2.1;
+    threatSignalGroup.add(threatMarker);
+    threatSignalGroup.visible = false;
+    scene.add(threatSignalGroup);
+
     // Raider telegraph: a pulsing enemy-orange ring plus a hovering spike on
     // the actual spawn ground during the wave warning window, so "incoming"
     // has a place on the battlefield, not just a countdown chip.
@@ -1447,6 +1545,52 @@ export function ThreeRtsScene() {
         }
       }
 
+      const threat = threatAlert(sim);
+      threatSignalGroup.visible = threat.active && threat.pos !== null;
+      if (threat.active && threat.pos) {
+        threatSignalGroup.position.set(threat.pos.x, 0, threat.pos.z);
+
+        // Buildings need a wider ground halo and a higher badge than units.
+        // Matching is renderer-only and keeps the signal anchored to the
+        // recorded hit snapshot even if a surviving unit moves afterward.
+        const hitBuilding = sim.buildings.find(
+          (building) =>
+            building.faction === 'player' &&
+            Math.hypot(building.pos.x - threat.pos!.x, building.pos.z - threat.pos!.z) < 0.15
+        );
+        let footprintScale = 0.9;
+        let markerHeight = 2.1;
+        if (hitBuilding?.kind === 'base') {
+          footprintScale = 1.7;
+          markerHeight = 5.25;
+        } else if (hitBuilding?.kind === 'barracks') {
+          footprintScale = 1.5;
+          markerHeight = 3.8;
+        } else if (hitBuilding?.kind === 'tower') {
+          footprintScale = 1.15;
+          markerHeight = 4.7;
+        }
+
+        const age = threat.secondsAgo ?? 0;
+        const linger = 1 - Math.min(1, age / THREAT_ALERT_DURATION);
+        const opacityStrength = 0.48 + linger * 0.52;
+        const innerPhase = (sim.time % 1.05) / 1.05;
+        const outerPhase = (innerPhase + 0.5) % 1;
+        threatInnerRing.scale.setScalar(footprintScale * (0.92 + innerPhase * 0.42));
+        threatOuterRing.scale.setScalar(footprintScale * (0.95 + outerPhase * 0.55));
+        (threatInnerRing.material as THREE.MeshBasicMaterial).opacity =
+          0.88 * opacityStrength * (1 - innerPhase * 0.42);
+        (threatOuterRing.material as THREE.MeshBasicMaterial).opacity =
+          0.72 * opacityStrength * (1 - outerPhase * 0.5);
+
+        threatMarker.position.y = markerHeight + Math.sin(sim.time * 5.5) * 0.12;
+        threatMarker.quaternion.copy(camera.quaternion);
+        threatMarker.scale.setScalar(0.96 + Math.sin(sim.time * 7) * 0.04);
+        markerHalo.scale.setScalar(0.9 + innerPhase * 0.34);
+        (markerHalo.material as THREE.MeshBasicMaterial).opacity =
+          0.62 * opacityStrength * (1 - innerPhase * 0.35);
+      }
+
       const telegraph = waveTelegraph(sim);
       telegraphGroup.visible = telegraph.active && telegraph.pos !== null;
       if (telegraph.active && telegraph.pos) {
@@ -1690,6 +1834,7 @@ export function ThreeRtsScene() {
       for (const visual of nodeVisuals.values()) disposeGroup(visual.group);
       for (const visual of combatHitVisuals.values()) disposeGroup(visual.group);
       for (const visual of orderVisuals.values()) disposeOrderVisual(visual);
+      disposeGroup(threatSignalGroup);
       disposeGroup(telegraphGroup);
       disposeGroup(buildPreviewGroup);
       renderer.dispose();
