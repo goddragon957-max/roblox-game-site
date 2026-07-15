@@ -623,7 +623,7 @@ button { font: inherit; }
 
 .planet-log {
   left: 292px;
-  bottom: 28px;
+  bottom: 92px;
   display: grid;
   gap: 6px;
   width: min(390px, calc(100vw - 690px));
@@ -668,6 +668,11 @@ button { font: inherit; }
   background: rgba(255, 255, 255, 0.055);
   color: rgba(247, 251, 255, 0.72);
   font: 850 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.planet-score-strip span:nth-child(5),
+.planet-score-strip span:nth-child(6) {
+  color: #ffe4a6;
+  background: rgba(255, 215, 131, 0.09);
 }
 
 @media (max-width: 1120px) {

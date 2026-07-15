@@ -47,8 +47,9 @@ If continuing this branch as a harness round, write `docs/harness/feedback/round
    - `window.__planetForgeSmoke.getState()` returns the planet state.
    - `window.__planetForgeSmoke.command.selectTool('forest')` changes the selected tool.
    - `window.__planetForgeSmoke.command.paintCell()` changes at least one cell biome and resource totals.
+   - `window.__planetForgeSmoke.command.paintCells()` paints multiple cells and increases `brushStreak`.
    - `window.__planetForgeSmoke.command.triggerMeteor()` creates an active meteor event.
-   - Shielding the impact cell or ticking through the timer changes the event outcome.
+   - Shielding the impact cell leaves `scar: "debris"`; ignoring the timer leaves `scar: "crater"`.
    - Browser console has zero fatal JavaScript errors.
 
 ## Visual bar
@@ -59,9 +60,10 @@ Within the first three seconds the screen should read as:
 
 - a fullscreen 3D planet sandbox;
 - central rotating planet with colored biome patches and visible trees/crystals/domes/shields;
+- click/drag painting has visible pulse rings and brush feedback;
 - dark galaxy/starfield and space atmosphere;
 - compact glass HUD and tool palette, not page-like panels covering the world;
-- meteor warning/impact feedback when the event is active.
+- meteor warning/impact feedback when the event is active, plus crater/debris aftermath.
 
 Score each criterion 0/1/2. Any 0 is a hard fail:
 
@@ -70,7 +72,7 @@ Score each criterion 0/1/2. Any 0 is a hard fail:
 | Product/genre read in 3 seconds | screenshot/browser visual capture |
 | Planet readability | central planet, visible surface patches/adornments |
 | Control loop readability | click/paint or smoke command visibly changes state |
-| Threat/reward readability | meteor warning and shield/damage outcome |
+| Threat/reward readability | meteor warning, shield/debris reward, crater damage outcome |
 | HUD readability | compact overlays, selected tool/resources readable |
 | Screenshot desirability | screenshot makes the prototype worth trying |
 

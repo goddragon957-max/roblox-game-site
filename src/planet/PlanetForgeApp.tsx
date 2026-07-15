@@ -6,12 +6,14 @@ import {
   applyTool,
   createInitialPlanetState,
   getLogs,
+  nearestCellId,
   planetTotals,
   selectTool,
   tickPlanet,
   triggerMeteor,
   type PlanetBiome,
   type PlanetCell,
+  type PlanetScar,
   type PlanetState,
   type PlanetTool,
   type Vec3
@@ -43,6 +45,7 @@ interface PlanetSmokeApi {
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
+    paintCells: (cellIds?: string[], tool?: PlanetTool) => PlanetState;
     tick: (seconds: number) => PlanetState;
     triggerMeteor: () => PlanetState;
     reset: () => PlanetState;
@@ -158,8 +161,42 @@ function makeShieldDome() {
   return dome;
 }
 
+function makeCrater(seed: number) {
+  const root = new THREE.Group();
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.13, 0.018, 6, 36),
+    new THREE.MeshStandardMaterial({ color: '#2a1715', emissive: '#5b160f', roughness: 0.98, metalness: 0.02 })
+  );
+  rim.position.y = 0.018;
+  rim.rotation.x = Math.PI / 2;
+  const ash = new THREE.Mesh(
+    new THREE.CircleGeometry(0.12, 18),
+    new THREE.MeshStandardMaterial({ color: '#19120f', emissive: '#3a0d08', roughness: 0.98, metalness: 0.01, side: THREE.DoubleSide })
+  );
+  ash.rotation.x = -Math.PI / 2;
+  ash.position.y = 0.012;
+  root.rotation.y = seed;
+  root.add(ash, rim);
+  return root;
+}
+
+function makeDebris(seed: number) {
+  const root = new THREE.Group();
+  for (let i = 0; i < 5; i += 1) {
+    const { x, z } = localOffset(seed + i * 6.11, 1.7);
+    const shard = new THREE.Mesh(
+      new THREE.TetrahedronGeometry(0.035 + (i % 2) * 0.012, 0),
+      new THREE.MeshStandardMaterial({ color: '#ffd783', emissive: '#ff9d3b', roughness: 0.36, metalness: 0.18 })
+    );
+    shard.position.set(x, 0.055 + i * 0.006, z);
+    shard.rotation.set(seed * 0.13 + i, seed * 0.27, seed * 0.39 + i * 0.4);
+    root.add(shard);
+  }
+  return root;
+}
+
 function rebuildAdornment(group: THREE.Group, cell: PlanetCell) {
-  if (group.userData.biome === cell.biome && group.userData.vitality === cell.vitality) return;
+  if (group.userData.biome === cell.biome && group.userData.vitality === cell.vitality && group.userData.scar === cell.scar) return;
   clearGroup(group);
   const seed = seedFromId(cell.id);
   if (cell.biome === 'forest') {
@@ -172,15 +209,25 @@ function rebuildAdornment(group: THREE.Group, cell: PlanetCell) {
   } else if (cell.biome === 'shield') {
     group.add(makeShieldDome());
   }
+  if (cell.scar === 'crater') group.add(makeCrater(seed + 2.9));
+  if (cell.scar === 'debris') group.add(makeDebris(seed + 4.3));
   group.scale.setScalar(0.82 + cell.vitality * 0.34);
   group.userData.biome = cell.biome;
   group.userData.vitality = cell.vitality;
+  group.userData.scar = cell.scar;
 }
 
 interface CellVisual {
   patch: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>;
   adornment: THREE.Group;
+  pulseRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshStandardMaterial>;
 }
+
+const SCAR_LABELS: Record<PlanetScar, string> = {
+  none: '깨끗함',
+  crater: '운석 크레이터',
+  debris: '별빛 파편'
+};
 
 interface SceneContext {
   renderer: THREE.WebGLRenderer;
@@ -224,11 +271,16 @@ function makeStars() {
 function updateCellVisual(visual: CellVisual, cell: PlanetCell, selectedCellId: string | null) {
   const style = BIOME_COLORS[cell.biome];
   visual.patch.material.color.set(style.color);
-  visual.patch.material.emissive.set(style.emissive);
+  visual.patch.material.emissive.set(cell.scar === 'crater' ? '#5b160f' : style.emissive);
   visual.patch.material.roughness = style.roughness;
   visual.patch.material.metalness = style.metalness;
   visual.patch.material.opacity = style.opacity ?? (cell.biome === 'barren' ? 0.78 : 0.92);
-  visual.patch.scale.setScalar(0.76 + cell.vitality * 0.34 + (cell.id === selectedCellId ? 0.16 : 0));
+  visual.patch.scale.setScalar(0.76 + cell.vitality * 0.34 + (cell.id === selectedCellId ? 0.16 : 0) + cell.pulse * 0.12);
+  visual.pulseRing.visible = cell.pulse > 0.02;
+  visual.pulseRing.scale.setScalar(0.78 + cell.pulse * 0.95);
+  visual.pulseRing.material.opacity = cell.pulse * 0.72;
+  visual.pulseRing.material.color.set(cell.scar === 'crater' ? '#ff6b33' : cell.scar === 'debris' ? '#ffd783' : style.color);
+  visual.pulseRing.material.emissive.set(cell.scar === 'crater' ? '#ff2c1b' : cell.scar === 'debris' ? '#ff9d3b' : style.emissive);
   rebuildAdornment(visual.adornment, cell);
 }
 
@@ -276,6 +328,7 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       new THREE.SphereGeometry(PLANET_RADIUS, 64, 36),
       new THREE.MeshStandardMaterial({ color: '#6d543e', emissive: '#100805', roughness: 0.9, metalness: 0.02 })
     );
+    core.userData.planetPicker = true;
     planetGroup.add(core);
 
     const atmosphere = new THREE.Mesh(
@@ -306,7 +359,7 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
 
     const patchGeometry = new THREE.CircleGeometry(0.16, 7);
     const cellVisuals = new Map<string, CellVisual>();
-    const raycastTargets: THREE.Object3D[] = [];
+    const raycastTargets: THREE.Object3D[] = [core];
     for (const cell of planetRef.current.cells) {
       const normal = vec3(cell.normal);
       const style = BIOME_COLORS[cell.biome];
@@ -327,8 +380,14 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       const adornment = new THREE.Group();
       adornment.userData.cellId = cell.id;
       setSurfaceTransform(adornment, normal, PLANET_RADIUS + 0.075, 'y');
-      planetGroup.add(patch, adornment);
-      cellVisuals.set(cell.id, { patch, adornment });
+      const pulseRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.2, 0.012, 6, 44),
+        new THREE.MeshStandardMaterial({ color: style.color, emissive: style.emissive, transparent: true, opacity: 0, roughness: 0.28, metalness: 0.08, depthWrite: false })
+      );
+      pulseRing.visible = false;
+      setSurfaceTransform(pulseRing, normal, PLANET_RADIUS + 0.05, 'z');
+      planetGroup.add(patch, pulseRing, adornment);
+      cellVisuals.set(cell.id, { patch, adornment, pulseRing });
       raycastTargets.push(patch);
     }
 
@@ -372,16 +431,68 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    const handlePointerDown = (event: PointerEvent) => {
+    const drag = { mode: 'idle' as 'idle' | 'paint' | 'rotate', lastCellId: null as string | null };
+    const pickCellId = (event: PointerEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(raycastTargets, false);
-      const hit = hits.find((item) => typeof item.object.userData.cellId === 'string');
-      if (hit) onPaint(hit.object.userData.cellId as string);
+      const hit = hits.find((item) => typeof item.object.userData.cellId === 'string' || item.object.userData.planetPicker === true);
+      if (!hit) return null;
+      if (typeof hit.object.userData.cellId === 'string') return hit.object.userData.cellId as string;
+      const localPoint = planetGroup.worldToLocal(hit.point.clone()).normalize();
+      return nearestCellId(planetRef.current, { x: localPoint.x, y: localPoint.y, z: localPoint.z });
     };
+    const rotatePlanet = (event: PointerEvent) => {
+      planetGroup.rotation.y += event.movementX * 0.007;
+      planetGroup.rotation.x = THREE.MathUtils.clamp(planetGroup.rotation.x + event.movementY * 0.004, -0.55, 0.55);
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      try {
+        renderer.domElement.setPointerCapture(event.pointerId);
+      } catch {
+        // Synthetic pointer smoke events do not always register an active pointer.
+      }
+      const cellId = pickCellId(event);
+      if (event.button === 2 || event.altKey || !cellId) {
+        drag.mode = 'rotate';
+        drag.lastCellId = null;
+        rotatePlanet(event);
+        return;
+      }
+      drag.mode = 'paint';
+      drag.lastCellId = cellId;
+      onPaint(cellId);
+    };
+    const handlePointerMove = (event: PointerEvent) => {
+      if (drag.mode === 'rotate') {
+        event.preventDefault();
+        rotatePlanet(event);
+        return;
+      }
+      if (drag.mode !== 'paint' || (event.buttons & 1) !== 1) return;
+      const cellId = pickCellId(event);
+      if (cellId && cellId !== drag.lastCellId) {
+        drag.lastCellId = cellId;
+        onPaint(cellId);
+      }
+    };
+    const handlePointerUp = (event: PointerEvent) => {
+      drag.mode = 'idle';
+      drag.lastCellId = null;
+      try {
+        if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId);
+      } catch {
+        // Synthetic pointer smoke events may not own pointer capture.
+      }
+    };
+    const handleContextMenu = (event: MouseEvent) => event.preventDefault();
     renderer.domElement.addEventListener('pointerdown', handlePointerDown);
+    renderer.domElement.addEventListener('pointermove', handlePointerMove);
+    renderer.domElement.addEventListener('pointerup', handlePointerUp);
+    renderer.domElement.addEventListener('pointercancel', handlePointerUp);
+    renderer.domElement.addEventListener('contextmenu', handleContextMenu);
 
     const context: SceneContext = {
       renderer,
@@ -432,6 +543,10 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       cancelAnimationFrame(context.frame);
       window.removeEventListener('resize', resize);
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
+      renderer.domElement.removeEventListener('pointermove', handlePointerMove);
+      renderer.domElement.removeEventListener('pointerup', handlePointerUp);
+      renderer.domElement.removeEventListener('pointercancel', handlePointerUp);
+      renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
       container.removeChild(renderer.domElement);
       disposeObject(scene);
       patchGeometry.dispose();
@@ -506,6 +621,11 @@ export function PlanetForgeApp() {
           const targetCell = cellId ?? current.selectedCellId ?? current.cells.find((cell) => cell.biome === 'barren')?.id ?? current.cells[0]?.id;
           return commit((state) => applyTool({ ...state, selectedTool: tool ?? state.selectedTool, selectedCellId: targetCell }, tool ?? state.selectedTool, targetCell));
         },
+        paintCells: (cellIds?: string[], tool?: PlanetTool) => {
+          const current = planetRef.current;
+          const targets = cellIds && cellIds.length > 0 ? cellIds : current.cells.filter((cell) => cell.biome === 'barren').slice(0, 3).map((cell) => cell.id);
+          return commit((state) => targets.reduce((next, targetCell) => applyTool({ ...next, selectedTool: tool ?? next.selectedTool, selectedCellId: targetCell }, tool ?? next.selectedTool, targetCell), state));
+        },
         tick: (seconds: number) => handleTick(seconds),
         triggerMeteor: () => handleMeteor(),
         reset: () => handleReset()
@@ -528,7 +648,7 @@ export function PlanetForgeApp() {
       <section className="planet-title-panel" aria-label="planet mission">
         <span className="eyebrow">PLANET FORGE · BRANCH PROTOTYPE</span>
         <h1>작은 행성을 손으로 빚고 지켜라</h1>
-        <p>표면을 클릭해서 바다·숲·수정·도시·방어막을 배치하세요. 운석이 오면 충돌 지점에 방어막을 씌워야 합니다.</p>
+        <p>클릭/드래그로 표면을 칠하고, 빈 우주나 우클릭 드래그로 행성을 돌리세요. 운석 뒤에는 크레이터나 별빛 파편이 남습니다.</p>
       </section>
 
       <section className="planet-stats" aria-label="planet status">
@@ -603,12 +723,12 @@ export function PlanetForgeApp() {
         {activeCell ? (
           <>
             <b>{activeCell.biome.toUpperCase()}</b>
-            <small>생명력 {Math.round(activeCell.vitality * 100)}% · 열 {Math.round(activeCell.heat * 100)}%</small>
+            <small>생명력 {Math.round(activeCell.vitality * 100)}% · 열 {Math.round(activeCell.heat * 100)}% · {SCAR_LABELS[activeCell.scar]}</small>
           </>
         ) : (
           <>
             <b>행성 클릭</b>
-            <small>표면 패치를 찍으면 현재 도구가 바로 적용됩니다.</small>
+            <small>표면 패치를 드래그하면 현재 도구가 연속 적용됩니다.</small>
           </>
         )}
       </section>
@@ -627,6 +747,9 @@ export function PlanetForgeApp() {
         <span>숲 {totals.forest}</span>
         <span>수정 {totals.crystal}</span>
         <span>도시 {totals.settlement}</span>
+        <span>크레이터 {totals.craters}</span>
+        <span>파편 {totals.debrisFields}</span>
+        <span>브러시 {planet.brushStreak}연속</span>
         <span>방어막 {Math.floor(planet.shield)}%</span>
         <span>안정도 {Math.floor(planet.stability)}%</span>
       </section>

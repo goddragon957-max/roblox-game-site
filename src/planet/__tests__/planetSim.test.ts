@@ -11,6 +11,8 @@ describe('planet forge simulation', () => {
     expect(totals.forest).toBeGreaterThan(0);
     expect(totals.crystal).toBeGreaterThan(0);
     expect(totals.habitability).toBeGreaterThan(20);
+    expect(totals.craters).toBe(0);
+    expect(state.brushStreak).toBe(0);
     expect(getLogs(state)[0].text).toContain('원시 행성');
   });
 
@@ -24,8 +26,22 @@ describe('planet forge simulation', () => {
 
     const painted = state.cells.find((cell) => cell.id === target!.id);
     expect(painted?.biome).toBe('ocean');
+    expect(painted?.pulse).toBe(1);
+    expect(painted?.scar).toBe('none');
     expect(state.water).toBeGreaterThan(26);
     expect(state.energy).toBeLessThan(88);
+  });
+
+  it('tracks brush streaks when multiple cells are painted quickly', () => {
+    let state = createInitialPlanetState();
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 3);
+
+    for (const target of targets) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+
+    expect(state.brushStreak).toBe(3);
+    expect(getLogs(state)[0].text).toContain('브러시 3연속');
   });
 
   it('uses forest and settlement tools to increase living planet score', () => {
@@ -53,6 +69,8 @@ describe('planet forge simulation', () => {
 
     expect(state.activeEvent).toBeNull();
     expect(state.stability).toBeGreaterThanOrEqual(stabilityBefore);
+    expect(state.cells.find((cell) => cell.id === impactCellId)?.scar).toBe('debris');
+    expect(planetTotals(state).debrisFields).toBe(1);
     expect(getLogs(state)[0].text).toContain('튕겨냈고');
   });
 
@@ -66,6 +84,8 @@ describe('planet forge simulation', () => {
 
     expect(state.activeEvent).toBeNull();
     expect(state.cells.find((cell) => cell.id === impactCellId)?.biome).toBe('barren');
+    expect(state.cells.find((cell) => cell.id === impactCellId)?.scar).toBe('crater');
+    expect(planetTotals(state).craters).toBe(1);
     expect(state.stability).toBeLessThan(72);
     expect(getLogs(state)[0].text).toContain('운석이 표면');
   });

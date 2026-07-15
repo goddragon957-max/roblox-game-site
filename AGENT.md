@@ -21,7 +21,9 @@ paint surface → grow a living world → react to meteor danger → protect the
 
 - The first screen must read as a polished space/planet sandbox within three seconds: central rotating planet, visible colored biome patches, starfield, compact glass HUD, and tool palette.
 - Player input must be real: clicking a planet surface patch applies the selected terraforming tool and changes resources/state.
+- Drag painting and manual planet rotation are part of the current control bar: left-drag paints adjacent surface patches; right-drag or empty-space drag rotates the planet.
 - At least one threat loop must be real: a meteor warning appears, an impact zone is visible, a shield can block it, and ignoring it damages the planet.
+- Meteor aftermath should stay visible: shield success leaves star-debris rewards; ignored impacts leave crater scars.
 - Smoke markers are contract: `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, `window.__planetForgeSmoke`.
 - Keep the game surface fullscreen and primary. UI overlays should be compact; avoid dashboard slabs that hide the planet.
 - No copied third-party assets; build procedural Three.js visuals.

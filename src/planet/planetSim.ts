@@ -2,6 +2,8 @@ export type PlanetTool = 'water' | 'forest' | 'crystal' | 'settlement' | 'shield
 
 export type PlanetBiome = 'barren' | 'ocean' | 'forest' | 'crystal' | 'settlement' | 'shield';
 
+export type PlanetScar = 'none' | 'crater' | 'debris';
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -15,6 +17,8 @@ export interface PlanetCell {
   vitality: number;
   heat: number;
   shielded: boolean;
+  scar: PlanetScar;
+  pulse: number;
 }
 
 export interface MeteorEvent {
@@ -51,6 +55,9 @@ export interface PlanetState {
   cells: PlanetCell[];
   activeEvent: MeteorEvent | null;
   lastBirthAt: number;
+  lastPaintAt: number;
+  lastPaintedCellId: string | null;
+  brushStreak: number;
   logs: PlanetLogEntry[];
 }
 
@@ -64,6 +71,8 @@ export interface PlanetTotals {
   habitability: number;
   protectedCells: number;
   livingCells: number;
+  craters: number;
+  debrisFields: number;
 }
 
 export const TOOL_LABELS: Record<PlanetTool, string> = {
@@ -144,7 +153,9 @@ function makeCell(index: number, total: number): PlanetCell {
     biome,
     vitality,
     heat: clamp(0.42 + latitude * 0.42 + Math.sin(index) * 0.08, 0, 1),
-    shielded: false
+    shielded: false,
+    scar: 'none',
+    pulse: 0
   };
 }
 
@@ -173,6 +184,9 @@ export function createInitialPlanetState(): PlanetState {
     cells,
     activeEvent: null,
     lastBirthAt: 0,
+    lastPaintAt: -999,
+    lastPaintedCellId: null,
+    brushStreak: 0,
     logs: []
   };
   return withLog(state, '작은 원시 행성이 깨어났어요. 바다·숲·수정으로 표면을 빚어보세요.', 'good');
@@ -188,13 +202,17 @@ export function planetTotals(state: PlanetState): PlanetTotals {
     shield: 0,
     habitability: 0,
     protectedCells: 0,
-    livingCells: 0
+    livingCells: 0,
+    craters: 0,
+    debrisFields: 0
   };
 
   for (const cell of state.cells) {
     counts[cell.biome] += 1;
     if (cell.biome !== 'barren' && cell.biome !== 'crystal') counts.livingCells += 1;
     if (cell.shielded || cell.biome === 'shield') counts.protectedCells += 1;
+    if (cell.scar === 'crater') counts.craters += 1;
+    if (cell.scar === 'debris') counts.debrisFields += 1;
   }
 
   const livingScore = counts.ocean * 1.2 + counts.forest * 1.5 + counts.settlement * 2.4 + counts.shield * 0.8;
@@ -233,26 +251,38 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
   if (!canPay(state, tool)) return withLog({ ...state, selectedTool: tool, selectedCellId: cellId }, `${TOOL_LABELS[tool]}에 필요한 자원이 부족해요.`, 'warn');
 
   let touched = false;
-  let next = pay({ ...state, selectedTool: tool, selectedCellId: cellId }, tool);
+  const continuingStroke = state.lastPaintedCellId !== null && state.lastPaintedCellId !== cellId && state.time - state.lastPaintAt <= 4;
+  const brushStreak = continuingStroke ? clamp(state.brushStreak + 1, 1, 99) : 1;
+  let next = pay(
+    {
+      ...state,
+      selectedTool: tool,
+      selectedCellId: cellId,
+      lastPaintAt: state.time,
+      lastPaintedCellId: cellId,
+      brushStreak
+    },
+    tool
+  );
   const cells: PlanetCell[] = next.cells.map((cell): PlanetCell => {
     if (cell.id !== cellId) return cell;
     touched = true;
     switch (tool) {
       case 'water':
         next = { ...next, water: round(next.water + 15, 1), stability: clamp(next.stability + 1.5, 0, 100) };
-        return { ...cell, biome: 'ocean' as const, vitality: clamp(cell.vitality + 0.34, 0, 1), heat: clamp(cell.heat - 0.18, 0, 1), shielded: false };
+        return { ...cell, biome: 'ocean' as const, vitality: clamp(cell.vitality + 0.34, 0, 1), heat: clamp(cell.heat - 0.18, 0, 1), shielded: false, scar: 'none', pulse: 1 };
       case 'forest':
         next = { ...next, biomass: round(next.biomass + 14, 1), stability: clamp(next.stability + 2.5, 0, 100) };
-        return { ...cell, biome: 'forest' as const, vitality: clamp(cell.vitality + 0.38, 0, 1), heat: clamp(cell.heat - 0.08, 0, 1), shielded: false };
+        return { ...cell, biome: 'forest' as const, vitality: clamp(cell.vitality + 0.38, 0, 1), heat: clamp(cell.heat - 0.08, 0, 1), shielded: false, scar: 'none', pulse: 1 };
       case 'crystal':
         next = { ...next, minerals: round(next.minerals + 18, 1), energy: round(next.energy + 8, 1) };
-        return { ...cell, biome: 'crystal' as const, vitality: clamp(cell.vitality + 0.16, 0, 1), shielded: false };
+        return { ...cell, biome: 'crystal' as const, vitality: clamp(cell.vitality + 0.16, 0, 1), shielded: false, scar: 'none', pulse: 1 };
       case 'settlement':
         next = { ...next, population: round(next.population + 10, 1), stability: clamp(next.stability + 1, 0, 100), lastBirthAt: next.time };
-        return { ...cell, biome: 'settlement' as const, vitality: clamp(cell.vitality + 0.42, 0, 1), shielded: false };
+        return { ...cell, biome: 'settlement' as const, vitality: clamp(cell.vitality + 0.42, 0, 1), shielded: false, scar: 'none', pulse: 1 };
       case 'shield':
         next = { ...next, shield: clamp(next.shield + 34, 0, 100), stability: clamp(next.stability + 0.5, 0, 100) };
-        return { ...cell, biome: 'shield' as const, vitality: clamp(cell.vitality + 0.25, 0, 1), shielded: true };
+        return { ...cell, biome: 'shield' as const, vitality: clamp(cell.vitality + 0.25, 0, 1), shielded: true, scar: 'none', pulse: 1 };
       default:
         return cell;
     }
@@ -268,7 +298,8 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
     settlement: '작은 돔 마을이 불을 밝혔어요.',
     shield: '황금 방어막 돔이 충격 지점을 감쌌어요.'
   };
-  return withLog(next, message[tool], tool === 'shield' ? 'good' : 'neutral');
+  const streakText = brushStreak >= 3 ? ` 브러시 ${brushStreak}연속!` : '';
+  return withLog(next, `${message[tool]}${streakText}`, tool === 'shield' || brushStreak >= 3 ? 'good' : 'neutral');
 }
 
 export function triggerMeteor(state: PlanetState): PlanetState {
@@ -299,11 +330,13 @@ function resolveMeteor(state: PlanetState): PlanetState {
 
   if (blocked) {
     const cells: PlanetCell[] = state.cells.map((cell): PlanetCell =>
-      cell.id === event.impactCellId ? { ...cell, shielded: false, vitality: clamp(cell.vitality + 0.08, 0, 1) } : cell
+      cell.id === event.impactCellId ? { ...cell, shielded: false, vitality: clamp(cell.vitality + 0.08, 0, 1), scar: 'debris', pulse: 1 } : cell
     );
     const next: PlanetState = {
       ...state,
       cells,
+      energy: clamp(round(state.energy + 10, 1), 0, 180),
+      minerals: clamp(round(state.minerals + 6, 1), 0, 160),
       shield: clamp(state.shield - 26, 0, 100),
       stability: clamp(state.stability + 3, 0, 100),
       activeEvent: null
@@ -313,7 +346,7 @@ function resolveMeteor(state: PlanetState): PlanetState {
 
   const cells: PlanetCell[] = state.cells.map((cell): PlanetCell =>
     cell.id === event.impactCellId
-      ? { ...cell, biome: 'barren' as const, vitality: 0.06, heat: clamp(cell.heat + 0.22, 0, 1), shielded: false }
+      ? { ...cell, biome: 'barren' as const, vitality: 0.06, heat: clamp(cell.heat + 0.22, 0, 1), shielded: false, scar: 'crater', pulse: 1 }
       : cell
   );
   const next: PlanetState = {
@@ -352,7 +385,7 @@ export function tickPlanet(state: PlanetState, seconds: number): PlanetState {
     stability: clamp(round(next.stability + stabilityDrift, 1), 0, 100),
     cells: next.cells.map((cell) => {
       const vitalityGain = cell.biome === 'forest' || cell.biome === 'ocean' ? 0.006 * delta : cell.biome === 'settlement' ? 0.003 * delta : 0;
-      return { ...cell, vitality: clamp(round(cell.vitality + vitalityGain, 3), 0, 1) };
+      return { ...cell, vitality: clamp(round(cell.vitality + vitalityGain, 3), 0, 1), pulse: clamp(round(cell.pulse - delta * 0.36, 2), 0, 1) };
     })
   };
 

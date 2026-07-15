@@ -18,8 +18,9 @@ paint surface → resources change → planet becomes more alive → meteor warn
 - Pure deterministic planet state in `src/planet/planetSim.ts` with Vitest coverage.
 - Three.js fullscreen planet renderer in `src/planet/PlanetForgeApp.tsx`.
 - Tools: water, forest, crystal, settlement, shield.
+- Controls: click or drag across surface patches to paint; right-drag or drag empty space to rotate the planet.
 - Real resources: energy, water, biomass, minerals, population, stability, shield.
-- Real threat loop: timed meteor event with impact marker; shield blocks it, ignoring it damages the target cell.
+- Real threat loop: timed meteor event with impact marker; shield blocks it and leaves collectible star debris, ignoring it burns a crater into the target cell.
 - Smoke markers: `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, and `window.__planetForgeSmoke` command helpers.
 
 ## Run

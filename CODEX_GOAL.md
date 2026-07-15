@@ -32,8 +32,9 @@ Read `DESIGN.md` before any UI/renderer/HUD/game-feedback work. Design quality i
 
 1. **3D planet surface** — Three.js fullscreen scene with central sphere, stars, atmosphere, colored surface patches, and visible biome adornments.
 2. **Player control** — selecting a tool and clicking a surface patch changes the planet state and visual surface.
+   - Current branch also supports click/drag painting and right-drag/empty-space drag planet rotation.
 3. **Terraforming economy** — energy/water/biomass/minerals/population/stability respond to tool use and ticking.
-4. **Threat loop** — meteor event has visible warning/impact marker; shield blocks it; ignoring it damages the impact cell.
+4. **Threat loop** — meteor event has visible warning/impact marker; shield blocks it and leaves star debris; ignoring it damages the impact cell with a crater.
 5. **Compact HUD** — resources, habitability, tool palette, selected cell, log, and meteor status are readable without hiding the planet.
 6. **Smoke hooks** — `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, `window.__planetForgeSmoke`.
 

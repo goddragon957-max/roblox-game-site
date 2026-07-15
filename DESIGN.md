@@ -47,6 +47,7 @@ Reject or revise work that:
 
 - hides the planet behind large panels;
 - only changes text/state without visible surface feedback;
+- removes drag-to-paint, pulse rings, crater scars, or debris rewards without replacing them with stronger visible feedback;
 - uses generic dashboard cards as the main impression;
 - leaves biomes as tiny unreadable dots;
 - claims visual PASS without browser-rendered screenshot/vision evidence;
