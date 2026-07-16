@@ -50,6 +50,7 @@ If continuing this branch as a harness round, write `docs/harness/feedback/round
    - `window.__planetForgeSmoke.command.paintCells()` paints multiple cells and increases `brushStreak`.
    - Dragging/painting enough cells exposes a brush combo chip with `data-brush-combo-tier` (`streak`/`combo`/`mega`) and `data-combo-recent="true"` during the short feedback window.
    - `window.__planetForgeSmoke.getTerraformSurge()` starts inactive with count `0`; seven distinct quick paints keep it inactive, the eighth activates one bounded reward/log and tool-colored layered surface burst, and ninth/tenth same-stroke paints keep count `1`. `[data-terraform-surge-active]` must mirror active/count/cell/tool, and advancing 16 seconds clears the transient marker while preserving the count.
+   - `window.__planetForgeSmoke.getSettlementBirth()` starts inactive with count `0`; a successful settlement paint records the cell/timestamp, increments the persistent count, activates `[data-settlement-birth-active="true"]`, and renders a surface-attached colony beacon. Advancing beyond the deterministic birth duration clears the transient marker while preserving the count.
    - `window.__planetForgeSmoke.command.triggerMeteor()` creates an active meteor event.
    - Shielding the impact cell leaves `scar: "debris"` plus `lastImpactKind: "shield"`; ignoring the timer leaves `scar: "crater"` plus `lastImpactKind: "crater"`.
    - `window.__planetForgeSmoke.getWeather()` returns `{ phase, cloudCover, auroraStrength, stormIntensity }`; `getState().phase` is one of `dormant`/`breathing`/`blooming`/`shielded`.
@@ -83,6 +84,7 @@ Within the first three seconds the screen should read as:
 - a fullscreen 3D planet sandbox;
 - central rotating planet with colored biome patches and visible trees/crystals/domes/shields;
 - click/drag painting has visible pulse rings, brush combo feedback, life motes, and a tool-colored radial Terraform Surge on the 8th quick paint;
+- settlement painting has a visible short-lived colony birth beacon and compact chip;
 - dark galaxy/starfield and space atmosphere;
 - compact glass HUD and tool palette, not page-like panels covering the world;
 - meteor warning/impact feedback when the event is active, crater/debris aftermath, emerald crater-restoration feedback, and the guardian unlock ring/chip when enough shield coverage is built.

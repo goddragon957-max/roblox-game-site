@@ -2,16 +2,16 @@
 
 ```yaml
 status: running
-current_phase: round_40_generator_ready
-current_round: 40
+current_phase: round_41_generator_ready
+current_round: 41
 next_role: generator
 last_verdict: pass
 pause_reason: ""
 max_rounds: 45
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-16T04:28:04Z"
-resume_attempts: 1
-last_verified_at: "2026-07-16T04:28:04Z"
+updated_at: "2026-07-16T09:31:26Z"
+resume_attempts: 2
+last_verified_at: "2026-07-16T09:31:26Z"
 ```
 
 ## Notes
@@ -59,8 +59,8 @@ last_verified_at: "2026-07-16T04:28:04Z"
 - Round 37 on branch `planet-forge-prototype` (Planet Forge Round 7) closed the meteor-damage loop with deterministic water/forest crater restoration, a bounded reward, stable smoke markers, compact recovery chip, and screenshot-visible emerald surface ring. Claude Sonnet/Opus exited `143` after a useful diff; the evaluator corrected the duration-aware expiry test, strengthened the ring after visual inspection, independently verified 96 tests/build/browser/visual gates, and recorded evidence in `docs/harness/feedback/round-37-qa.md`.
 - Round 38 on branch `planet-forge-prototype` (Planet Forge Round 8) shipped the deterministic once-per-mega-stroke Terraform Surge: bounded energy/stability reward, stable hook/markers, compact tool-colored cue, and a surface-attached layered ring/radial-spark burst. Claude Sonnet/Opus hit its session limit after a useful diff; the evaluator extended visual observability, added independent-review boundary tests, verified 104 tests/build/browser/visual gates, and recorded evidence in `docs/harness/feedback/round-38-qa.md`.
 - Round 39 (work order `docs/goals/2026-07-16-planet-forge-claude-sonnet-round9.md`): short-viewport command HUD — the first Claude Sonnet/Opus delegation completed without source edits or log output, so the evaluator/controller relaunched the exact bounded goal. The second worker implemented a `max-height: 720px` command rail, compact stats/tool grid, and no-scroll viewport tests, then exited `143` after reporting a truthful handoff. Evaluator independently verified `npm run verify`, exact `1440×900` / `1280×633` / `1024×600` layout geometry, real tool + surface painting, surge, shield/debris, crater/restoration, zero fatal browser errors, and rendered visual QA. Active config/contract/agent briefs were corrected from stale RTS semantics to Planet Forge. The operator then re-requested Fable; the larger Fable handoff returned a session-limit line until 6:10pm Asia/Seoul, and one-shot retry `d88fc97eafc3` was scheduled for 18:12 KST rather than falling back silently.
-- Round 40 is ready for the next small Planet Forge generator slice on `planet-forge-prototype`; keep the planet hero-first and choose one tactile surface, meteor spectacle, or progression/game-feel improvement. The main-branch Puppy Frontier RTS remains preserved and out of scope unless the user explicitly switches back.
+- Round 40 (work order `docs/goals/2026-07-16-planet-forge-fable-round40-settlement-birth.md`): settlement birth beacon — Fable smoke returned `FABLE_READY`, then the full Fable run left a coherent source/test/style diff before hitting a new session limit (`resets 11:10pm Asia/Seoul`). Evaluator treated it as a blocked-but-useful handoff, added truthful handoff/feedback docs, verified `npm run verify`, `git diff --check`, production browser smoke at `1280×633`, settlement-birth hook/DOM/rendered beacon, surge + meteor/crater/restoration regressions, zero fatal console errors, and visual QA 12/12. Round 41 is ready for the next small Planet Forge generator slice; keep Fable preferred after reset and do not fall back to Sonnet unless explicitly asked.
 - 2026-07-13 historical operator reassignment: the Puppy Frontier RTS loop moved from exhausted Claude/Fable to Codex `gpt-5.6-sol` + ultra via `docs/goals/2026-07-13-48h-codex-goal-loop.md`.
-- 2026-07-16 branch-specific override: on `planet-forge-prototype`, the operator re-enabled Fable as the preferred Claude model, but the latest larger handoff hit a session limit until 6:10pm Asia/Seoul. Use Fable after reset if smoke returns `FABLE_READY`; do not silently fall back to Sonnet unless the user explicitly asks. Codex `gpt-5.6-sol` + ultra remains fallback only when Claude cannot run and no useful diff exists.
+- 2026-07-16 branch-specific override: on `planet-forge-prototype`, the operator re-enabled Fable as the preferred Claude model. Fable smoke can pass while a larger high-effort run still later hits a session limit; after Round 40 the latest limit line was `resets 11:10pm (Asia/Seoul)`. Use Fable after reset if smoke returns `FABLE_READY`; do not silently fall back to Sonnet unless the user explicitly asks. Codex `gpt-5.6-sol` + ultra remains fallback only when Claude cannot run and no useful diff exists.
 - 2026-07-14 scope note: Nestory/MOM-voice is out of scope for this go-mode continuation because the user said they are working on Nestory directly; avoid touching the Nestory repo/cron unless explicitly reauthorized.
 - Do not include `.hermes/` in git.

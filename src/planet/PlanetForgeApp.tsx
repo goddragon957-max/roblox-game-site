@@ -14,11 +14,13 @@ import {
   planetLifeSignal,
   planetObjective,
   planetRestorationSignal,
+  planetSettlementBirthSignal,
   planetTerraformSurgeSignal,
   planetTotals,
   planetWeather,
   RESTORATION_SIGNAL_DURATION,
   selectTool,
+  SETTLEMENT_BIRTH_SIGNAL_DURATION,
   TERRAFORM_SURGE_SIGNAL_DURATION,
   tickPlanet,
   triggerMeteor,
@@ -30,6 +32,7 @@ import {
   type PlanetObjective,
   type PlanetRestoration,
   type PlanetScar,
+  type PlanetSettlementBirth,
   type PlanetState,
   type PlanetTerraformSurge,
   type PlanetTool,
@@ -88,6 +91,7 @@ interface PlanetSmokeApi {
   getObjective: () => PlanetObjective;
   getRestoration: () => PlanetRestoration;
   getTerraformSurge: () => PlanetTerraformSurge;
+  getSettlementBirth: () => PlanetSettlementBirth;
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
@@ -269,6 +273,32 @@ function makeSurgeBurst() {
   return { group, innerRing, outerRing, shards };
 }
 
+function makeBirthBeacon() {
+  const group = new THREE.Group();
+  // Upward golden light column rooted at the new colony dome.
+  const column = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.075, 0.62, 10, 1, true),
+    new THREE.MeshBasicMaterial({ color: '#ffd06b', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })
+  );
+  column.position.y = 0.34;
+  // Cyan spark crowning the column so the beat reads at planet scale.
+  const spark = new THREE.Mesh(
+    new THREE.SphereGeometry(0.05, 12, 10),
+    new THREE.MeshBasicMaterial({ color: '#8ff8ff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+  );
+  spark.position.y = 0.66;
+  // Expanding gold pulse ring hugging the surface around the settlement.
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.2, 0.024, 8, 56),
+    new THREE.MeshBasicMaterial({ color: '#ffe27a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.03;
+  group.add(column, spark, ring);
+  group.visible = false;
+  return { group, column, spark, ring };
+}
+
 function rebuildAdornment(group: THREE.Group, cell: PlanetCell) {
   if (group.userData.biome === cell.biome && group.userData.vitality === cell.vitality && group.userData.scar === cell.scar) return;
   clearGroup(group);
@@ -318,6 +348,7 @@ interface SceneContext {
   objectiveBurst: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   restorationRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   terraformSurge: ReturnType<typeof makeSurgeBurst>;
+  birthBeacon: ReturnType<typeof makeBirthBeacon>;
   meteor: THREE.Group;
   impactRing: THREE.Mesh;
   selectionRing: THREE.Mesh;
@@ -550,6 +581,9 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
     const terraformSurge = makeSurgeBurst();
     planetGroup.add(terraformSurge.group);
 
+    const birthBeacon = makeBirthBeacon();
+    planetGroup.add(birthBeacon.group);
+
     const orbitalRing = new THREE.Mesh(
       new THREE.TorusGeometry(PLANET_RADIUS * 1.34, 0.014, 8, 160),
       new THREE.MeshStandardMaterial({ color: '#6fe8ff', emissive: '#1788b8', transparent: true, opacity: 0.5, roughness: 0.35 })
@@ -716,6 +750,7 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       objectiveBurst,
       restorationRing,
       terraformSurge,
+      birthBeacon,
       meteor,
       impactRing,
       selectionRing,
@@ -813,6 +848,26 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
         }
       } else {
         terraformSurge.group.visible = false;
+      }
+
+      const birth = planetSettlementBirthSignal(current);
+      const birthAge = current.time - birth.since;
+      if (birth.count > 0 && birth.lastCellId && birthAge >= 0 && birthAge < SETTLEMENT_BIRTH_SIGNAL_DURATION) {
+        const birthCell = current.cells.find((cell) => cell.id === birth.lastCellId);
+        if (birthCell) {
+          const normal = vec3(birthCell.normal);
+          const fade = 1 - birthAge / SETTLEMENT_BIRTH_SIGNAL_DURATION;
+          setSurfaceTransform(birthBeacon.group, normal, PLANET_RADIUS + 0.02, 'y');
+          birthBeacon.group.visible = true;
+          birthBeacon.column.material.opacity = fade * (0.62 + Math.sin(current.time * 5) * 0.16);
+          birthBeacon.column.scale.set(1, 0.8 + (1 - fade) * 0.3 + Math.sin(current.time * 3.2) * 0.06, 1);
+          birthBeacon.spark.material.opacity = fade * 0.95;
+          birthBeacon.spark.scale.setScalar(0.8 + Math.sin(current.time * 6) * 0.22);
+          birthBeacon.ring.material.opacity = 0.2 + fade * 0.75;
+          birthBeacon.ring.scale.setScalar(0.72 + (1 - fade) * 1.9 + Math.sin(current.time * 7) * 0.04);
+        }
+      } else {
+        birthBeacon.group.visible = false;
       }
 
       if (current.activeEvent) {
@@ -946,6 +1001,7 @@ export function PlanetForgeApp() {
       getObjective: () => planetObjective(planetRef.current),
       getRestoration: () => planetRestorationSignal(planetRef.current),
       getTerraformSurge: () => planetTerraformSurgeSignal(planetRef.current),
+      getSettlementBirth: () => planetSettlementBirthSignal(planetRef.current),
       command: {
         selectTool: (tool: PlanetTool) => handleSelectTool(tool),
         paintCell: (cellId?: string, tool?: PlanetTool) => {
@@ -975,6 +1031,7 @@ export function PlanetForgeApp() {
   const objective = useMemo(() => planetObjective(planet), [planet]);
   const restoration = useMemo(() => planetRestorationSignal(planet), [planet]);
   const terraformSurge = useMemo(() => planetTerraformSurgeSignal(planet), [planet]);
+  const settlementBirth = useMemo(() => planetSettlementBirthSignal(planet), [planet]);
   const logs = getLogs(planet);
   const visibleLogs = logs.slice(0, 3);
   const activeCell = planet.selectedCellId ? planet.cells.find((cell) => cell.id === planet.selectedCellId) : null;
@@ -1163,6 +1220,19 @@ export function PlanetForgeApp() {
             : terraformSurge.count > 0
               ? `서지 ${terraformSurge.count}회 발동`
               : '8연속 손길로 서지를 발동하세요'}
+        </div>
+        <div
+          className={`planet-birth-chip${settlementBirth.active ? ' active' : ''}${settlementBirth.count === 0 ? ' empty' : ''}`}
+          data-settlement-birth-active={settlementBirth.active ? 'true' : 'false'}
+          data-settlement-birth-count={settlementBirth.count}
+          data-settlement-birth-cell={settlementBirth.lastCellId ?? ''}
+        >
+          <span className="planet-birth-dot" />
+          {settlementBirth.active
+            ? '새 콜로니 탄생! 정착민이 불을 밝혀요'
+            : settlementBirth.count > 0
+              ? `탄생한 콜로니 ${settlementBirth.count}곳`
+              : '정착지를 세워 콜로니를 깨워보세요'}
         </div>
       </section>
 

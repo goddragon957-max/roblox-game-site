@@ -9,11 +9,13 @@ import {
   planetLifeSignal,
   planetObjective,
   planetRestorationSignal,
+  planetSettlementBirthSignal,
   planetTerraformSurgeSignal,
   planetTotals,
   planetWeather,
   RESTORATION_SIGNAL_DURATION,
   selectTool,
+  SETTLEMENT_BIRTH_SIGNAL_DURATION,
   TERRAFORM_SURGE_SIGNAL_DURATION,
   tickPlanet,
   triggerMeteor
@@ -527,6 +529,109 @@ describe('planet forge simulation', () => {
     const signal = planetTerraformSurgeSignal(state);
     expect(signal.active).toBe(false);
     expect(signal.count).toBe(1);
+  });
+
+  it('starts with an inactive settlement-birth signal and zero count', () => {
+    const state = createInitialPlanetState();
+    const signal = planetSettlementBirthSignal(state);
+
+    expect(signal.active).toBe(false);
+    expect(signal.count).toBe(0);
+    expect(signal.lastCellId).toBeNull();
+  });
+
+  it('records a settlement birth with cell and timestamp when a settlement paint succeeds', () => {
+    let state = createInitialPlanetState();
+    state = tickPlanet(state, 2);
+    const target = state.cells.find((cell) => cell.biome === 'barren');
+    expect(target).toBeTruthy();
+
+    state = applyTool({ ...state, selectedTool: 'settlement', selectedCellId: target!.id }, 'settlement', target!.id);
+
+    const signal = planetSettlementBirthSignal(state);
+    expect(signal.active).toBe(true);
+    expect(signal.count).toBe(1);
+    expect(signal.lastCellId).toBe(target!.id);
+    expect(signal.since).toBe(state.time);
+    expect(state.cells.find((cell) => cell.id === target!.id)?.biome).toBe('settlement');
+  });
+
+  it('increments the settlement-birth count per successful settlement and tracks the latest cell', () => {
+    let state = createInitialPlanetState();
+    state = { ...state, energy: 120, minerals: 40, biomass: 40 };
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 2);
+
+    state = applyTool({ ...state, selectedTool: 'settlement', selectedCellId: targets[0].id }, 'settlement', targets[0].id);
+    state = applyTool({ ...state, selectedTool: 'settlement', selectedCellId: targets[1].id }, 'settlement', targets[1].id);
+
+    const signal = planetSettlementBirthSignal(state);
+    expect(signal.count).toBe(2);
+    expect(signal.lastCellId).toBe(targets[1].id);
+  });
+
+  it('does not trigger a settlement birth from non-settlement tools', () => {
+    let state = createInitialPlanetState();
+    state = { ...state, energy: 120, minerals: 40, biomass: 40 };
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 4);
+    const tools = ['water', 'forest', 'crystal', 'shield'] as const;
+
+    tools.forEach((tool, index) => {
+      state = applyTool({ ...state, selectedTool: tool, selectedCellId: targets[index].id }, tool, targets[index].id);
+    });
+
+    const signal = planetSettlementBirthSignal(state);
+    expect(signal.active).toBe(false);
+    expect(signal.count).toBe(0);
+    expect(signal.lastCellId).toBeNull();
+  });
+
+  it('does not record a settlement birth for unaffordable, cell-less, or unknown-cell attempts', () => {
+    const base = createInitialPlanetState();
+    const target = base.cells.find((cell) => cell.biome === 'barren');
+    expect(target).toBeTruthy();
+
+    const unaffordable = applyTool({ ...base, energy: 0, selectedCellId: target!.id }, 'settlement', target!.id);
+    expect(planetSettlementBirthSignal(unaffordable).count).toBe(0);
+    expect(getLogs(unaffordable)[0].text).toContain('자원이 부족');
+
+    const noCell = applyTool({ ...base, selectedCellId: null }, 'settlement', null);
+    expect(planetSettlementBirthSignal(noCell).count).toBe(0);
+
+    const unknownCell = applyTool(base, 'settlement', 'cell-9999');
+    expect(planetSettlementBirthSignal(unknownCell).count).toBe(0);
+    expect(getLogs(unknownCell)[0].text).toContain('좌표를 찾지');
+  });
+
+  it('expires the settlement-birth active signal at the exact deterministic duration while keeping the count', () => {
+    let state = createInitialPlanetState();
+    const target = state.cells.find((cell) => cell.biome === 'barren');
+    state = applyTool({ ...state, selectedTool: 'settlement', selectedCellId: target!.id }, 'settlement', target!.id);
+    expect(planetSettlementBirthSignal(state).active).toBe(true);
+
+    let remaining = SETTLEMENT_BIRTH_SIGNAL_DURATION - 0.1;
+    while (remaining > 0) {
+      const step = Math.min(5, remaining);
+      state = tickPlanet(state, step);
+      remaining -= step;
+    }
+    expect(planetSettlementBirthSignal(state).active).toBe(true);
+
+    state = tickPlanet(state, 0.1);
+    const signal = planetSettlementBirthSignal(state);
+    expect(signal.active).toBe(false);
+    expect(signal.count).toBe(1);
+    expect(signal.lastCellId).toBe(target!.id);
+  });
+
+  it('keeps a settlement birth inactive when its recorded timestamp is in the future', () => {
+    const state = {
+      ...createInitialPlanetState(),
+      settlementBirths: 1,
+      lastSettlementBirthAt: 5,
+      lastSettlementBirthCellId: 'cell-1'
+    };
+
+    expect(planetSettlementBirthSignal(state).active).toBe(false);
   });
 
   it('keeps a terraform surge inactive when its recorded timestamp is in the future', () => {

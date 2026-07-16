@@ -87,6 +87,9 @@ export interface PlanetState {
   lastTerraformSurgeAt: number;
   lastTerraformSurgeCellId: string | null;
   lastTerraformSurgeTool: PlanetTool | null;
+  settlementBirths: number;
+  lastSettlementBirthAt: number;
+  lastSettlementBirthCellId: string | null;
 }
 
 export interface PlanetWeather {
@@ -119,6 +122,13 @@ export interface PlanetTerraformSurge {
   count: number;
   lastCellId: string | null;
   lastTool: PlanetTool | null;
+  since: number;
+}
+
+export interface PlanetSettlementBirth {
+  active: boolean;
+  count: number;
+  lastCellId: string | null;
   since: number;
 }
 
@@ -295,7 +305,10 @@ export function createInitialPlanetState(): PlanetState {
     terraformSurgeCount: 0,
     lastTerraformSurgeAt: -999,
     lastTerraformSurgeCellId: null,
-    lastTerraformSurgeTool: null
+    lastTerraformSurgeTool: null,
+    settlementBirths: 0,
+    lastSettlementBirthAt: -999,
+    lastSettlementBirthCellId: null
   };
   state = { ...state, phase: deriveMilestonePhase(planetTotals(state)) };
   const initialDef = OBJECTIVE_SEQUENCE[0];
@@ -501,6 +514,21 @@ export function planetTerraformSurgeSignal(state: PlanetState): PlanetTerraformS
   };
 }
 
+// Long enough for a browser screenshot to catch the colony beacon while it
+// still reads as a transient birth beat rather than a permanent fixture.
+export const SETTLEMENT_BIRTH_SIGNAL_DURATION = 14;
+
+export function planetSettlementBirthSignal(state: PlanetState): PlanetSettlementBirth {
+  const age = state.time - state.lastSettlementBirthAt;
+  const active = state.settlementBirths > 0 && age >= 0 && age < SETTLEMENT_BIRTH_SIGNAL_DURATION;
+  return {
+    active,
+    count: state.settlementBirths,
+    lastCellId: state.lastSettlementBirthCellId,
+    since: state.lastSettlementBirthAt
+  };
+}
+
 export function planetLifeSignal(state: PlanetState): PlanetLifeSignal {
   const totals = planetTotals(state);
   const cellCount = state.cells.length;
@@ -578,7 +606,15 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
         updatedCell = { ...cell, biome: 'crystal' as const, vitality: clamp(cell.vitality + 0.16, 0, 1), shielded: false, scar: 'none', pulse: 1 };
         break;
       case 'settlement':
-        next = { ...next, population: round(next.population + 10, 1), stability: clamp(next.stability + 1, 0, 100), lastBirthAt: next.time };
+        next = {
+          ...next,
+          population: round(next.population + 10, 1),
+          stability: clamp(next.stability + 1, 0, 100),
+          lastBirthAt: next.time,
+          settlementBirths: next.settlementBirths + 1,
+          lastSettlementBirthAt: next.time,
+          lastSettlementBirthCellId: cellId
+        };
         updatedCell = { ...cell, biome: 'settlement' as const, vitality: clamp(cell.vitality + 0.42, 0, 1), shielded: false, scar: 'none', pulse: 1 };
         break;
       case 'shield':
