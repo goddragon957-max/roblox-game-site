@@ -4,15 +4,16 @@
 
 Judge whether the first screen and main interaction state actually look like the intended game-like product. Passing build/tests is not enough.
 
-## Puppy Frontier RTS Visual Target
+## Planet Forge Visual Target
 
 The first three seconds should communicate:
 
-- 3D isometric RTS battlefield, not a dashboard or landing page.
-- Player base, worker units, resource nodes, enemy camp/raiders, terrain, and minimap.
-- Real RTS control loop: select units, issue smart commands, gather/build/train/attack.
-- Compact game HUD with resources, objective, command card, and readable feedback.
-- Low-poly/procedural visuals that look intentional and playable.
+- fullscreen 3D spherical planet sandbox, not a dashboard or landing page;
+- central living planet with readable ocean/forest/crystal/settlement/shield surface identity;
+- real creation loop: select tool, paint/drag the surface, see resource and world feedback;
+- readable meteor danger and shield/debris/crater/restoration outcomes;
+- compact glass HUD that stays secondary to the planet and keeps all actions reachable at short viewport heights;
+- magical sci-fi toy visuals that look intentional and playable.
 
 ## Scorecard
 
@@ -20,11 +21,11 @@ Score each 0/1/2. Any 0 is a hard fail.
 
 | Criterion | Meaning |
 |---|---|
-| Product/genre read in 3 seconds | User instantly understands this is an isometric RTS prototype. |
-| Battlefield readability (base/resources/enemy) | Base, workers, resource nodes, enemy camp/raiders, terrain, and travel paths are visible and spatially coherent. |
-| Control loop readability | Selection, command hints, selection rings/HP bars, and smart-command feedback make interaction understandable. |
-| Economy/production loop readability | Resource chips, build/train buttons, costs, disabled states, and unit/building counts communicate economy and production. |
-| HUD/minimap readability | HUD and minimap are compact, readable, and integrated without hiding the battlefield. |
+| Product/genre read in 3 seconds | User instantly understands this is a planet-making sandbox. |
+| Planet readability | Planet is the focal hero; biomes, atmosphere, and tiny props are distinguishable. |
+| Control loop readability | Tool selection, surface paint pulses/combos, and selected-cell feedback make interaction understandable. |
+| Threat/reward readability | Meteor warning/impact and debris/crater/restoration/progression beats are visible. |
+| HUD readability | HUD is compact, integrated, non-overlapping, and all five tools + meteor action remain reachable. |
 | Screenshot desirability | Screenshot makes a user want to try the prototype. |
 
 ## Evidence
@@ -35,9 +36,9 @@ Record:
 
 ```text
 screenshot path or browser visual capture
-viewport size
+viewport size (include 1280x633 and 1024x600 for HUD/layout work)
 idle-state scorecard
-post-interaction scorecard if selection/command state changed
+post-interaction scorecard if a tool/threat/reward state changed
 specific visual failures
 ```
 
@@ -45,13 +46,14 @@ specific visual failures
 
 Do not inflate scores because the app is technically working.
 
-Common Puppy Frontier RTS failures:
+Common Planet Forge failures:
 
-- The game only reads as a flat board, dashboard, or static mockup.
-- Workers/resources/enemy camp exist in state but are not visible or distinguishable.
-- Selection/commands change state but lack visible rings, markers, HUD feedback, or HP bars.
-- Economy/build/train is hidden in logs instead of readable from HUD/buttons.
-- The screenshot needs explanatory text to make sense as an RTS.
+- the planet is hidden, too small, off-center, or visually weaker than panels;
+- biomes/props exist in state but are tiny unreadable dots;
+- tool selection or painting changes state without visible world feedback;
+- meteor/reward beats are visible only as text;
+- the right rail clips/scrolls or loses tool/meteor actions on short desktop viewports;
+- the screenshot needs explanatory text to make sense as a planet sandbox.
 
 ## Output
 

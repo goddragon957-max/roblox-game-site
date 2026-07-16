@@ -1,23 +1,24 @@
-# Harness Config — Puppy Frontier RTS
+# Harness Config — Planet Forge
 
 ```yaml
-project_name: Puppy Frontier RTS
-project_slug: puppy-frontier-rts
+project_name: Planet Forge
+project_slug: planet-forge
 repo_path: /home/sy/projects/roblox-game-site
+branch: planet-forge-prototype
 stack:
   runtime: web
   framework: Vite + React + TypeScript
-  state: Zustand
-  simulation: deterministic TS module (src/game/)
-  renderer: Three.js isometric battlefield
+  state: React state + deterministic TypeScript simulation
+  simulation: src/planet/planetSim.ts
+  renderer: fullscreen Three.js spherical planet
   styling: semantic CSS + StyleSeed judgment (compact game HUD)
-product_type: rts_game_prototype
+product_type: planet_sandbox_game_prototype
 primary_language: ko
 source_thread: discord/#로블록스-게임
-previous_direction:
-  name: Orbit Bloom (space-focus app)
-  backup_tag: pre-rts-rebuild-20260709-203351
-  replaced_with_user_approval: true
+preserved_direction:
+  name: Puppy Frontier RTS
+  branch: main
+  out_of_scope_without_user_switch: true
 harness:
   mode: contract_first_generator_evaluator
   strict_visual_gate: true
@@ -42,9 +43,11 @@ harness:
     - store/ads pipeline before a strong playable/visual slice exists
   human_approval_required_for:
     - external_deploy
-    - git_push
     - project_direction_change
     - deleting_or_replacing_current_app
+  current_go_mode_authorization:
+    branch_push: planet-forge-prototype
+    enabled: true
 verification:
   deterministic:
     - npm run verify:harness
@@ -52,14 +55,15 @@ verification:
     - npm run lint
     - npm run build
   browser:
-    marker: data-ui-pass="puppy-frontier-rts"
-    canvas: canvas[data-game-canvas="rts-three"]
-    smoke_object: window.__rtsSmoke.getState()
+    marker: data-ui-pass="planet-forge-prototype"
+    canvas: canvas[data-game-canvas="planet-three"]
+    smoke_object: window.__planetForgeSmoke.getState()
     required_interactions:
-      - selecting a worker changes sim.selectedIds
-      - gather command increases gold/wood over advanced time
-      - build/train subtracts costs and adds buildings/units
-      - attack command reduces enemy camp HP
+      - selecting a tool changes selectedTool
+      - painting a real surface cell changes biome/resources
+      - meteor shield leaves debris and ignored meteor leaves a crater
+      - repainting a crater with water/forest clears it and emits restoration feedback
+      - all five tools and meteor action remain visible at short desktop viewports
     console_errors_allowed: 0
 visual_policy:
   reference_first: true
@@ -67,6 +71,7 @@ visual_policy:
   first_three_seconds_scorecard_required: true
   screenshot_required_for_visual_pass: true
   dom_snapshot_never_enough_for_visual_pass: true
+  planet_must_remain_hero: true
   no_static_landing_page: true
-  no_placeholder_procedural_final: true
+  no_dashboard_shell: true
 ```

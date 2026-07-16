@@ -2,14 +2,16 @@
 
 ## Mission
 
-Be a skeptical QA gate for **Puppy Frontier RTS**. Never PASS by reading code alone.
+Be a skeptical QA gate for **Planet Forge** on `planet-forge-prototype`. Never PASS by reading code alone.
 
 ## Required Reads
 
+- `AGENT.md`
+- `DESIGN.md`
 - `docs/harness/state.md`
 - `docs/harness/contract.md`
 - `docs/harness/instruction-integrity.md`
-- Latest `docs/harness/handoff/round-N-gen.md`
+- latest `docs/harness/handoff/round-N-gen.md`
 - `docs/harness/gotchas/*.md`
 - `VERIFY.md`
 - `package.json`
@@ -17,30 +19,28 @@ Be a skeptical QA gate for **Puppy Frontier RTS**. Never PASS by reading code al
 ## Required Checks
 
 ```bash
-npm run verify:harness
-npm run test
-npm run lint
+npm run verify
+npm run test -- --run src/planet/__tests__/planetSim.test.ts
 npm run build
 ```
 
-Then, when visual/interaction behavior changed, run browser smoke:
+Then run browser smoke when visual/interaction behavior changed:
 
-1. Start preview/dev server on a strict fresh port.
-2. Confirm `data-ui-pass="puppy-frontier-rts"` exists.
-3. Confirm `canvas[data-game-canvas="rts-three"]` exists with non-zero size.
-4. Confirm `window.__rtsSmoke.getState()` is available.
-5. Verify selection changes `sim.selectedIds`.
-6. Verify gather commands increase gold/wood over advanced simulation time.
-7. Verify build/train commands subtract costs and add buildings/units.
-8. Verify an attack command can reduce enemy camp HP.
-9. Check console for fatal JS errors.
-10. Capture and inspect screenshot/rendered output when visual quality matters.
+1. Start production preview on a strict fresh port with the `/roblox-game-site/` base.
+2. Confirm `data-ui-pass="planet-forge-prototype"` exists.
+3. Confirm `canvas[data-game-canvas="planet-three"]` exists with non-zero size.
+4. Inspect `window.__planetForgeSmoke.getState()` and command keys before scripting.
+5. Verify a real tool click changes `selectedTool` and a real canvas pointer interaction paints a cell.
+6. Verify paint/progression feedback plus meteor shield/debris, ignored crater, and crater restoration paths remain intact.
+7. At `1280×633` and `1024×600`, verify all five tools + meteor action are inside the viewport, at least `44px` tall, and no body/panel scroll is required.
+8. Check the console for fatal JavaScript errors.
+9. Capture and inspect screenshot/rendered output whenever visual quality matters.
 
 ## Instruction Integrity Rejection Rule
 
 Reject the round if:
 
-- generator handoff is missing or lacks exact commands/results;
+- generator handoff is missing or lacks exact commands/results without a truthful evaluator-authored recovery handoff;
 - claimed handoff/feedback/screenshot/report paths do not exist;
 - browser/play claims are only self-reported and not independently verified;
 - source or harness files were patched without reading the relevant files;
@@ -48,14 +48,12 @@ Reject the round if:
 
 ## Visual Calibration Rule
 
-Technical PASS and interaction PASS do not automatically imply visual PASS.
+Technical PASS and interaction PASS do not automatically imply visual PASS. Mark visual QA as FAIL or pending if:
 
-The evaluator must mark visual QA as FAIL or pending if:
-
-- the first screen does not read as a 3D isometric RTS within three seconds;
-- player base, workers, resources, enemy camp/raiders, HUD, or minimap are missing/unclear;
-- the control/economy/combat loop is only explained by copy and not visible in scene or HUD;
-- the first screen looks like a generic dashboard, landing page, or placeholder board;
+- the first screen does not read as a fullscreen 3D planet sandbox within three seconds;
+- the planet is not the hero or its biomes/props are unreadable;
+- the tool/paint/threat/reward loop exists only in copy or state;
+- the HUD looks like a generic dashboard, hides the world, overlaps, clips, or loses actions at short viewport heights;
 - no screenshot/rendered evidence was captured.
 
 ## Output

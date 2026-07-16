@@ -59,7 +59,20 @@ If continuing this branch as a harness round, write `docs/harness/feedback/round
    - `window.__planetForgeSmoke.getObjective()` returns `{ kind, label, target, progress, completed }`; `document.querySelector('.planet-objective-chip')` shows the same via `data-objective-kind`/`data-objective-progress`/`data-objective-target`/`data-objective-completed`.
    - Completing the current objective (e.g. painting 6 barren cells with the forest tool, then `tick`) grants a resource bonus, logs `목표 달성`, advances `getState().objectiveIndex` to the next goal, and briefly sets `document.querySelector('[data-objective-win-beat]')` to `data-objective-win-beat="true"` with a visible gold trophy banner and an expanding golden ring around the planet.
    - `window.__planetForgeSmoke.getRestoration()` starts inactive with count `0`; after an ignored meteor naturally leaves a crater, repainting that exact cell with water or forest clears the scar, increments the persistent count once, records the cell/tool, logs the recovery, grants the bounded reward, and sets `[data-crater-restoration-active="true"]` while an emerald regrowth ring is visible. Advancing beyond `RESTORATION_SIGNAL_DURATION` clears the active marker but preserves the count.
+   - At `1280×633` and `1024×600`, all five terraforming tools and the meteor action are fully inside the viewport, every action remains at least `44px` tall, the compact command panel has no internal scroll, and document/body scroll dimensions equal their client dimensions.
    - Browser console has zero fatal JavaScript errors.
+
+## Short-viewport command HUD reachability
+
+Measure at `1440×900`, `1280×633`, and `1024×600` (production preview, not dev):
+
+- `document.documentElement.scrollWidth/scrollHeight` equal the viewport (no page/body scroll).
+- `canvas[data-game-canvas="planet-three"]` client size equals the viewport and the planet remains the primary surface.
+- At `1440×900` the `.planet-right-rail` wrapper computes to `display: contents` and the authored stats-above-toolbox composition holds without stats/toolbox overlap.
+- At heights ≤ 700px the rail computes to `display: flex` (compact right rail, two-column tool grid, hints hidden, labels/costs legible).
+- Bounding rectangles for `.planet-toolbox` and all six actions (`바다 뿌리기`, `숲 심기`, `수정 광맥`, `정착지 세우기`, `방어막 씌우기`, `운석 테스트 호출`) are fully inside the viewport with height ≥ 44px.
+- `.planet-toolbox` has `scrollHeight <= clientHeight` (no hidden internal scrolling).
+- A real pointer click on a visible tool button changes `getState().selectedTool`, and a real canvas pointer paint changes selected cell/resources, at a short viewport.
 
 ## Visual bar
 

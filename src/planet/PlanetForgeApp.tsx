@@ -1052,55 +1052,57 @@ export function PlanetForgeApp() {
         </div>
       </section>
 
-      <section className="planet-stats" aria-label="planet status">
-        <div className="planet-stat primary">
-          <span>거주 가능성</span>
-          <b data-planet-habitability>{totals.habitability}%</b>
-        </div>
-        <div className="planet-stat">
-          <span>⚡ 에너지</span>
-          <b>{Math.floor(planet.energy)}</b>
-        </div>
-        <div className="planet-stat">
-          <span>💧 물</span>
-          <b>{Math.floor(planet.water)}</b>
-        </div>
-        <div className="planet-stat">
-          <span>🌿 생물량</span>
-          <b>{Math.floor(planet.biomass)}</b>
-        </div>
-        <div className="planet-stat">
-          <span>◆ 광물</span>
-          <b>{Math.floor(planet.minerals)}</b>
-        </div>
-        <div className="planet-stat">
-          <span>👥 인구</span>
-          <b>{Math.floor(planet.population)}</b>
-        </div>
-      </section>
+      <div className="planet-right-rail">
+        <section className="planet-stats" aria-label="planet status">
+          <div className="planet-stat primary">
+            <span>거주 가능성</span>
+            <b data-planet-habitability>{totals.habitability}%</b>
+          </div>
+          <div className="planet-stat">
+            <span>⚡ 에너지</span>
+            <b>{Math.floor(planet.energy)}</b>
+          </div>
+          <div className="planet-stat">
+            <span>💧 물</span>
+            <b>{Math.floor(planet.water)}</b>
+          </div>
+          <div className="planet-stat">
+            <span>🌿 생물량</span>
+            <b>{Math.floor(planet.biomass)}</b>
+          </div>
+          <div className="planet-stat">
+            <span>◆ 광물</span>
+            <b>{Math.floor(planet.minerals)}</b>
+          </div>
+          <div className="planet-stat">
+            <span>👥 인구</span>
+            <b>{Math.floor(planet.population)}</b>
+          </div>
+        </section>
 
-      <section className="planet-toolbox" aria-label="terraforming tools">
-        <div className="toolbox-head">
-          <span>행성 도구</span>
-          <button type="button" onClick={handleReset}>초기화</button>
-        </div>
-        {TOOL_ORDER.map((tool) => (
-          <button
-            key={tool}
-            type="button"
-            className={`planet-tool ${planet.selectedTool === tool ? 'active' : ''}`}
-            onClick={() => handleSelectTool(tool)}
-            data-selected-tool={planet.selectedTool === tool ? 'true' : 'false'}
-          >
-            <span className="planet-tool-label">{TOOL_LABELS[tool]}</span>
-            <CostText tool={tool} />
-            <small>{TOOL_HINTS[tool]}</small>
+        <section className="planet-toolbox" aria-label="terraforming tools">
+          <div className="toolbox-head">
+            <span>행성 도구</span>
+            <button type="button" onClick={handleReset}>초기화</button>
+          </div>
+          {TOOL_ORDER.map((tool) => (
+            <button
+              key={tool}
+              type="button"
+              className={`planet-tool ${planet.selectedTool === tool ? 'active' : ''}`}
+              onClick={() => handleSelectTool(tool)}
+              data-selected-tool={planet.selectedTool === tool ? 'true' : 'false'}
+            >
+              <span className="planet-tool-label">{TOOL_LABELS[tool]}</span>
+              <CostText tool={tool} />
+              <small>{TOOL_HINTS[tool]}</small>
+            </button>
+          ))}
+          <button type="button" className="meteor-button" onClick={handleMeteor} disabled={!!planet.activeEvent}>
+            운석 테스트 호출
           </button>
-        ))}
-        <button type="button" className="meteor-button" onClick={handleMeteor} disabled={!!planet.activeEvent}>
-          운석 테스트 호출
-        </button>
-      </section>
+        </section>
+      </div>
 
       <section
         className={`planet-alert ${planet.activeEvent ? 'active' : ''}`}

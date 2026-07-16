@@ -27,6 +27,7 @@ paint surface → resources change → planet becomes more alive → meteor warn
 - Meteor spectacle/progression: active meteors gain a hotter trail and pulsing impact beacon; resolved impacts leave a short shield/crater flash, and 8+ protected cells unlock a glowing 수호자 위성망 with a one-time resource bonus.
 - Objective loop + win beat: a compact rotating goal chip (`숲 6개 만들기` → `방어막 5개 완성` → `운석 1회 막기` → `거주 가능성 60% 달성`, then loops) tracks live progress against planet totals. Completing a goal grants a resource bonus, pops a gold trophy banner, and triggers an expanding golden shockwave ring around the planet, then advances to the next goal without ending the sandbox.
 - Crater restoration reward: repainting an ignored meteor crater with water or forest records one deterministic recovery, grants a bounded stability/biomass/water bonus, shows a compact recovery chip, and emits an emerald world-space regrowth ring; `getRestoration()` exposes activation, persistent count, cell, and tool for smoke tests.
+- Short-viewport command HUD: at heights up to `700px` the top-right stats and terraforming tools collapse into one compact command rail, with all five tools and the meteor action visible without panel scrolling while the fullscreen planet remains the hero.
 - Smoke markers: `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, and `window.__planetForgeSmoke` command helpers (`getWeather()`, `getLifeSignal()`, `getGuardian()`, `getObjective()`, `getRestoration()`, and `getTerraformSurge()`).
 
 ## Run

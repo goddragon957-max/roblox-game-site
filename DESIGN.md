@@ -21,6 +21,7 @@ fullscreen 3D planet sandbox: central living planet, colored biomes, starfield, 
 - **Color system:** deep navy/black background; cyan atmosphere; violet crystals; green forests; warm gold settlements/shields; red/orange only for danger.
 - **Shapes/materials:** smooth planet, chunky low-poly patches, tiny trees/crystals/domes, glowing rings, soft bloom-like emissive colors without relying on postprocessing.
 - **Typography/HUD:** compact glass panels, strong numeric hierarchy, short Korean labels that can be scanned while playing.
+- **Short viewport (`max-height: 700px`):** merge status + tools into one compact right command rail, use a two-column tool grid where needed, keep all five tools plus meteor action visible without scrolling, and preserve `44px` minimum action height.
 
 ## Default Slice Quality Bar
 
