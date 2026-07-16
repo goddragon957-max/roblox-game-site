@@ -12,6 +12,7 @@ import {
   nearestCellId,
   planetGuardianSignal,
   planetLifeSignal,
+  planetObjective,
   planetTotals,
   planetWeather,
   selectTool,
@@ -22,6 +23,7 @@ import {
   type PlanetCell,
   type PlanetGuardian,
   type PlanetLifeSignal,
+  type PlanetObjective,
   type PlanetScar,
   type PlanetState,
   type PlanetTool,
@@ -69,6 +71,7 @@ interface PlanetSmokeApi {
   getWeather: () => PlanetWeather;
   getLifeSignal: () => PlanetLifeSignal;
   getGuardian: () => PlanetGuardian;
+  getObjective: () => PlanetObjective;
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
@@ -268,6 +271,7 @@ interface SceneContext {
   comboFlare: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   guardianRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   impactFlash: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  objectiveBurst: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   meteor: THREE.Group;
   impactRing: THREE.Mesh;
   selectionRing: THREE.Mesh;
@@ -470,6 +474,20 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
     impactFlash.visible = false;
     planetGroup.add(impactFlash);
 
+    const objectiveBurst = new THREE.Mesh(
+      new THREE.TorusGeometry(0.32, 0.03, 10, 84),
+      new THREE.MeshBasicMaterial({
+        color: '#ffe27a',
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    objectiveBurst.rotation.x = Math.PI / 2.2;
+    objectiveBurst.visible = false;
+    planetGroup.add(objectiveBurst);
+
     const orbitalRing = new THREE.Mesh(
       new THREE.TorusGeometry(PLANET_RADIUS * 1.34, 0.014, 8, 160),
       new THREE.MeshStandardMaterial({ color: '#6fe8ff', emissive: '#1788b8', transparent: true, opacity: 0.5, roughness: 0.35 })
@@ -633,6 +651,7 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       comboFlare,
       guardianRing,
       impactFlash,
+      objectiveBurst,
       meteor,
       impactRing,
       selectionRing,
@@ -675,6 +694,17 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
         }
       } else {
         impactFlash.visible = false;
+      }
+
+      const objectiveAge = current.time - current.objectiveCompletedAt;
+      if (current.lastObjectiveLabel && objectiveAge >= 0 && objectiveAge < 18) {
+        const fade = 1 - objectiveAge / 18;
+        objectiveBurst.visible = true;
+        objectiveBurst.rotation.z += delta * 0.6;
+        objectiveBurst.scale.setScalar(PLANET_RADIUS * (1.05 + (1 - fade) * 2.6));
+        objectiveBurst.material.opacity = fade * 0.9;
+      } else {
+        objectiveBurst.visible = false;
       }
 
       if (current.activeEvent) {
@@ -805,6 +835,7 @@ export function PlanetForgeApp() {
       getWeather: () => planetWeather(planetRef.current),
       getLifeSignal: () => planetLifeSignal(planetRef.current),
       getGuardian: () => planetGuardianSignal(planetRef.current),
+      getObjective: () => planetObjective(planetRef.current),
       command: {
         selectTool: (tool: PlanetTool) => handleSelectTool(tool),
         paintCell: (cellId?: string, tool?: PlanetTool) => {
@@ -831,6 +862,7 @@ export function PlanetForgeApp() {
   const weather = useMemo(() => planetWeather(planet), [planet]);
   const lifeSignal = useMemo(() => planetLifeSignal(planet), [planet]);
   const guardian = useMemo(() => planetGuardianSignal(planet), [planet]);
+  const objective = useMemo(() => planetObjective(planet), [planet]);
   const logs = getLogs(planet);
   const visibleLogs = logs.slice(0, 3);
   const activeCell = planet.selectedCellId ? planet.cells.find((cell) => cell.id === planet.selectedCellId) : null;
@@ -838,6 +870,7 @@ export function PlanetForgeApp() {
   const phaseRecent = planet.time - planet.phaseSince < 4;
   const comboRecent = planet.brushComboTier !== 'none' && planet.time - planet.brushComboSince < 1.3;
   const guardianRecent = planet.time - planet.guardianSince < 4;
+  const objectiveJustCompleted = planet.lastObjectiveLabel !== '' && planet.time - planet.objectiveCompletedAt < 18;
 
   return (
     <main id="app" className="planet-app" data-ui-pass="planet-forge-prototype" data-demo="planet-forge-sandbox">
@@ -868,6 +901,28 @@ export function PlanetForgeApp() {
         >
           <span className="planet-guardian-dot" />
           {guardian.active ? '수호자 위성망 가동' : `수호자 진행 ${Math.round(guardian.strength * 100)}%`}
+        </div>
+        <div
+          className={`planet-objective-chip${objective.completed ? ' complete' : ''}`}
+          data-objective-kind={objective.kind}
+          data-objective-progress={objective.progress}
+          data-objective-target={objective.target}
+          data-objective-completed={objective.completed ? 'true' : 'false'}
+        >
+          <span className="planet-objective-dot" />
+          🎯 {objective.label} ({objective.progress}/{objective.target})
+        </div>
+      </section>
+
+      <section
+        className={`planet-win-beat${objectiveJustCompleted ? ' active' : ''}`}
+        aria-label="objective reward beat"
+        data-objective-win-beat={objectiveJustCompleted ? 'true' : 'false'}
+      >
+        <span className="win-beat-icon">🏆</span>
+        <div className="win-beat-body">
+          <b>{planet.lastObjectiveLabel ? `${planet.lastObjectiveLabel} 완료!` : '첫 목표를 향해 항해 중'}</b>
+          <small>보상: 에너지 +12 · 광물 +8 · 안정도 +4</small>
         </div>
       </section>
 

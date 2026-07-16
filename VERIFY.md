@@ -55,6 +55,8 @@ If continuing this branch as a harness round, write `docs/harness/feedback/round
    - `window.__planetForgeSmoke.getLifeSignal()` returns `{ moteCount, moteIntensity }`; improving living/protected cells increases or sustains visible life-mote feedback.
    - `window.__planetForgeSmoke.getGuardian()` returns `{ active, strength }`; painting/protecting 8+ cells with shield unlocks the guardian chip (`data-guardian-active="true"`) and glowing guardian ring.
    - `document.querySelector('.planet-phase-chip')` exists with `data-planet-phase` matching the current phase; painting 4+ cells with the shield tool then ticking flips it to `shielded` and briefly adds a `flash` class (`data-phase-recent="true"`).
+   - `window.__planetForgeSmoke.getObjective()` returns `{ kind, label, target, progress, completed }`; `document.querySelector('.planet-objective-chip')` shows the same via `data-objective-kind`/`data-objective-progress`/`data-objective-target`/`data-objective-completed`.
+   - Completing the current objective (e.g. painting 6 barren cells with the forest tool, then `tick`) grants a resource bonus, logs `목표 달성`, advances `getState().objectiveIndex` to the next goal, and briefly sets `document.querySelector('[data-objective-win-beat]')` to `data-objective-win-beat="true"` with a visible gold trophy banner and an expanding golden ring around the planet.
    - Browser console has zero fatal JavaScript errors.
 
 ## Visual bar

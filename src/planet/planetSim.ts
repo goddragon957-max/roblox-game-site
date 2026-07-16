@@ -74,6 +74,11 @@ export interface PlanetState {
   lastImpactCellId: string | null;
   guardianActive: boolean;
   guardianSince: number;
+  meteorsBlocked: number;
+  objectiveIndex: number;
+  objectiveBaseline: number;
+  objectiveCompletedAt: number;
+  lastObjectiveLabel: string;
 }
 
 export interface PlanetWeather {
@@ -91,6 +96,16 @@ export interface PlanetLifeSignal {
 export interface PlanetGuardian {
   active: boolean;
   strength: number;
+}
+
+export type ObjectiveKind = 'forest' | 'shield' | 'meteorBlock' | 'habitability';
+
+export interface PlanetObjective {
+  kind: ObjectiveKind;
+  label: string;
+  target: number;
+  progress: number;
+  completed: boolean;
 }
 
 export interface PlanetTotals {
@@ -243,9 +258,16 @@ export function createInitialPlanetState(): PlanetState {
     lastImpactKind: 'none',
     lastImpactCellId: null,
     guardianActive: false,
-    guardianSince: 0
+    guardianSince: 0,
+    meteorsBlocked: 0,
+    objectiveIndex: 0,
+    objectiveBaseline: 0,
+    objectiveCompletedAt: -999,
+    lastObjectiveLabel: ''
   };
   state = { ...state, phase: deriveMilestonePhase(planetTotals(state)) };
+  const initialDef = OBJECTIVE_SEQUENCE[0];
+  state = { ...state, objectiveBaseline: initialDef.measure(state, planetTotals(state)) };
   return withLog(state, '작은 원시 행성이 깨어났어요. 바다·숲·수정으로 표면을 빚어보세요.', 'good');
 }
 
@@ -330,6 +352,60 @@ function syncGuardian(state: PlanetState): PlanetState {
   }
 
   return withLog({ ...state, guardianActive: false, guardianSince: state.time }, '수호자 위성망이 흐려졌어요. 방어막을 더 늘려보세요.', 'warn');
+}
+
+interface ObjectiveDef {
+  kind: ObjectiveKind;
+  target: number;
+  label: string;
+  measure: (state: PlanetState, totals: PlanetTotals) => number;
+}
+
+const OBJECTIVE_SEQUENCE: ObjectiveDef[] = [
+  { kind: 'forest', target: 6, label: '숲 6개 만들기', measure: (_state, totals) => totals.forest },
+  { kind: 'shield', target: 5, label: '방어막 5개 완성', measure: (_state, totals) => totals.protectedCells },
+  { kind: 'meteorBlock', target: 1, label: '운석 1회 막기', measure: (state) => state.meteorsBlocked },
+  { kind: 'habitability', target: 60, label: '거주 가능성 60% 달성', measure: (_state, totals) => totals.habitability }
+];
+
+export const OBJECTIVE_COUNT = OBJECTIVE_SEQUENCE.length;
+
+const OBJECTIVE_REWARD_ENERGY = 12;
+const OBJECTIVE_REWARD_MINERALS = 8;
+const OBJECTIVE_REWARD_STABILITY = 4;
+
+export function planetObjective(state: PlanetState): PlanetObjective {
+  const def = OBJECTIVE_SEQUENCE[state.objectiveIndex % OBJECTIVE_SEQUENCE.length];
+  const totals = planetTotals(state);
+  const raw = def.measure(state, totals);
+  const progress = clamp(round(raw - state.objectiveBaseline), 0, def.target);
+  return { kind: def.kind, label: def.label, target: def.target, progress, completed: progress >= def.target };
+}
+
+function syncObjective(state: PlanetState): PlanetState {
+  const def = OBJECTIVE_SEQUENCE[state.objectiveIndex % OBJECTIVE_SEQUENCE.length];
+  const totals = planetTotals(state);
+  const raw = def.measure(state, totals);
+  const progress = clamp(round(raw - state.objectiveBaseline), 0, def.target);
+  if (progress < def.target) return state;
+
+  const nextIndex = (state.objectiveIndex + 1) % OBJECTIVE_SEQUENCE.length;
+  const rewarded: PlanetState = {
+    ...state,
+    objectiveIndex: nextIndex,
+    objectiveCompletedAt: state.time,
+    lastObjectiveLabel: def.label,
+    energy: clamp(round(state.energy + OBJECTIVE_REWARD_ENERGY, 1), 0, 180),
+    minerals: clamp(round(state.minerals + OBJECTIVE_REWARD_MINERALS, 1), 0, 160),
+    stability: clamp(round(state.stability + OBJECTIVE_REWARD_STABILITY, 1), 0, 100)
+  };
+  const nextDef = OBJECTIVE_SEQUENCE[nextIndex];
+  const baseline = nextDef.measure(rewarded, planetTotals(rewarded));
+  return withLog(
+    { ...rewarded, objectiveBaseline: baseline },
+    `목표 달성: ${def.label}! 보상으로 에너지·광물·안정도를 얻었어요.`,
+    'good'
+  );
 }
 
 export function planetWeather(state: PlanetState): PlanetWeather {
@@ -491,7 +567,8 @@ function resolveMeteor(state: PlanetState): PlanetState {
       activeEvent: null,
       lastImpactAt: state.time,
       lastImpactKind: 'shield',
-      lastImpactCellId: event.impactCellId
+      lastImpactCellId: event.impactCellId,
+      meteorsBlocked: state.meteorsBlocked + 1
     };
     return withLog(next, '방어막이 운석을 튕겨냈고, 파편이 별빛 에너지로 변했어요.', 'good');
   }
@@ -552,7 +629,7 @@ export function tickPlanet(state: PlanetState, seconds: number): PlanetState {
     if (activeEvent.timer <= 0) next = resolveMeteor(next);
   }
 
-  return syncGuardian(syncPhase(next));
+  return syncObjective(syncGuardian(syncPhase(next)));
 }
 
 export function nearestCellId(state: PlanetState, normal: Vec3): string {

@@ -24,7 +24,8 @@ paint surface → resources change → planet becomes more alive → meteor warn
 - Living weather/milestone system: `planetWeather(state)` derives cloud cover, aurora strength, and storm intensity from biome mix, craters, and stability; a stored `phase` (`dormant` → `breathing` → `blooming`, or `shielded` once 4+ cells are protected) drives a visible aurora ring + cloud shell in the 3D scene and a compact HUD phase chip that flashes on transition.
 - Living-surface feedback: `planetLifeSignal(state)` turns habitability and living/protected cells into orbiting life motes, while brush streaks escalate through compact combo chips (`연속 손길`/`리듬 콤보`/`메가 콤보`).
 - Meteor spectacle/progression: active meteors gain a hotter trail and pulsing impact beacon; resolved impacts leave a short shield/crater flash, and 8+ protected cells unlock a glowing 수호자 위성망 with a one-time resource bonus.
-- Smoke markers: `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, and `window.__planetForgeSmoke` command helpers (`getWeather()` exposes the live weather readout; `getLifeSignal()` exposes the life-mote signal; `getGuardian()` exposes the guardian unlock signal).
+- Objective loop + win beat: a compact rotating goal chip (`숲 6개 만들기` → `방어막 5개 완성` → `운석 1회 막기` → `거주 가능성 60% 달성`, then loops) tracks live progress against planet totals. Completing a goal grants a resource bonus, pops a gold trophy banner, and triggers an expanding golden shockwave ring around the planet, then advances to the next goal without ending the sandbox.
+- Smoke markers: `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, and `window.__planetForgeSmoke` command helpers (`getWeather()` exposes the live weather readout; `getLifeSignal()` exposes the life-mote signal; `getGuardian()` exposes the guardian unlock signal; `getObjective()` exposes the current objective/progress/completion state).
 
 ## Run
 

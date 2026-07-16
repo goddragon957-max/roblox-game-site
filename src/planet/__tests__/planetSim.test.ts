@@ -4,8 +4,10 @@ import {
   brushComboTier,
   createInitialPlanetState,
   getLogs,
+  OBJECTIVE_COUNT,
   planetGuardianSignal,
   planetLifeSignal,
+  planetObjective,
   planetTotals,
   planetWeather,
   selectTool,
@@ -227,5 +229,62 @@ describe('planet forge simulation', () => {
     expect(signal.active).toBe(false);
     expect(signal.strength).toBeGreaterThan(0);
     expect(signal.strength).toBeLessThan(1);
+  });
+
+  it('starts on the first objective in the loop and reports live progress', () => {
+    const state = createInitialPlanetState();
+    const objective = planetObjective(state);
+
+    expect(objective.kind).toBe('forest');
+    expect(objective.target).toBe(6);
+    expect(objective.progress).toBe(0);
+    expect(objective.completed).toBe(false);
+  });
+
+  it('completes the current objective, grants a reward, and advances to the next goal', () => {
+    let state = createInitialPlanetState();
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 6);
+
+    for (const target of targets) {
+      state = applyTool({ ...state, selectedTool: 'forest', selectedCellId: target.id }, 'forest', target.id);
+    }
+    expect(planetObjective(state).completed).toBe(true);
+
+    const energyBefore = state.energy;
+    const mineralsBefore = state.minerals;
+    const stabilityBefore = state.stability;
+    state = tickPlanet(state, 0);
+
+    expect(state.objectiveIndex).toBe(1);
+    expect(state.lastObjectiveLabel).toContain('숲');
+    expect(state.objectiveCompletedAt).toBe(state.time);
+    expect(state.energy).toBeGreaterThan(energyBefore);
+    expect(state.minerals).toBeGreaterThan(mineralsBefore);
+    expect(state.stability).toBeGreaterThan(stabilityBefore);
+    expect(getLogs(state)[0].text).toContain('목표 달성');
+    expect(planetObjective(state).kind).toBe('shield');
+    expect(planetObjective(state).progress).toBe(0);
+  });
+
+  it('counts a shield-blocked meteor toward the meteor-block objective', () => {
+    let state = createInitialPlanetState();
+    state = { ...state, objectiveIndex: 2, objectiveBaseline: 0 };
+    expect(planetObjective(state).kind).toBe('meteorBlock');
+    expect(planetObjective(state).completed).toBe(false);
+
+    state = triggerMeteor(state);
+    const impactCellId = state.activeEvent!.impactCellId;
+    state = applyTool({ ...state, selectedTool: 'shield', selectedCellId: impactCellId }, 'shield', impactCellId);
+    state = tickPlanet(state, 5);
+    state = tickPlanet(state, 3.2);
+
+    expect(state.meteorsBlocked).toBe(1);
+    expect(state.lastObjectiveLabel).toContain('운석');
+    expect(planetObjective(state).kind).toBe('habitability');
+  });
+
+  it('wraps the objective index with modulo so it always resolves a valid goal', () => {
+    const state = { ...createInitialPlanetState(), objectiveIndex: OBJECTIVE_COUNT, objectiveBaseline: 0 };
+    expect(planetObjective(state).kind).toBe('forest');
   });
 });
