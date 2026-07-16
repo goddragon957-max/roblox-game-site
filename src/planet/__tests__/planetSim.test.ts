@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTool, createInitialPlanetState, getLogs, planetTotals, selectTool, tickPlanet, triggerMeteor } from '../planetSim';
+import { applyTool, createInitialPlanetState, getLogs, planetTotals, planetWeather, selectTool, tickPlanet, triggerMeteor } from '../planetSim';
 
 describe('planet forge simulation', () => {
   it('starts as a living primitive planet with deterministic cells', () => {
@@ -72,6 +72,35 @@ describe('planet forge simulation', () => {
     expect(state.cells.find((cell) => cell.id === impactCellId)?.scar).toBe('debris');
     expect(planetTotals(state).debrisFields).toBe(1);
     expect(getLogs(state)[0].text).toContain('튕겨냈고');
+  });
+
+  it('derives a milestone phase and living weather signal from planet totals', () => {
+    const state = createInitialPlanetState();
+    const weather = planetWeather(state);
+
+    expect(['dormant', 'breathing', 'blooming', 'shielded']).toContain(state.phase);
+    expect(weather.phase).toBe(state.phase);
+    expect(weather.cloudCover).toBeGreaterThanOrEqual(0);
+    expect(weather.cloudCover).toBeLessThanOrEqual(1);
+    expect(weather.auroraStrength).toBeGreaterThanOrEqual(0);
+    expect(weather.auroraStrength).toBeLessThanOrEqual(1);
+    expect(weather.stormIntensity).toBeGreaterThanOrEqual(0);
+    expect(weather.stormIntensity).toBeLessThanOrEqual(1);
+  });
+
+  it('reaches the shielded milestone once enough surface is protected and logs the phase change', () => {
+    let state = createInitialPlanetState();
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 4);
+
+    for (const target of targets) {
+      state = applyTool({ ...state, selectedTool: 'shield', selectedCellId: target.id }, 'shield', target.id);
+    }
+    state = tickPlanet(state, 0);
+
+    expect(planetTotals(state).protectedCells).toBeGreaterThanOrEqual(4);
+    expect(state.phase).toBe('shielded');
+    expect(planetWeather(state).phase).toBe('shielded');
+    expect(getLogs(state)[0].text).toContain('방어막 네트워크');
   });
 
   it('damages the impact cell when a meteor is ignored', () => {

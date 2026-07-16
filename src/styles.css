@@ -473,6 +473,41 @@ button { font: inherit; }
   word-break: keep-all;
 }
 
+.planet-phase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 11px;
+  padding: 6px 12px 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(247, 251, 255, 0.86);
+  font: 800 11px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
+.planet-phase-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+.planet-phase-chip.phase-dormant { color: #9db3d9; }
+.planet-phase-chip.phase-breathing { color: #8ff8ff; }
+.planet-phase-chip.phase-blooming { color: #ffd06b; }
+.planet-phase-chip.phase-shielded { color: #79f4ff; border-color: rgba(121, 244, 255, 0.4); }
+.planet-phase-chip.flash {
+  animation: planet-phase-flash 0.9s ease-out 2;
+}
+
+@keyframes planet-phase-flash {
+  0% { background: rgba(255, 255, 255, 0.06); box-shadow: none; }
+  35% { background: rgba(255, 255, 255, 0.22); box-shadow: 0 0 22px currentColor; }
+  100% { background: rgba(255, 255, 255, 0.06); box-shadow: none; }
+}
+
 .planet-stats {
   top: 18px;
   right: 18px;

@@ -4,6 +4,8 @@ export type PlanetBiome = 'barren' | 'ocean' | 'forest' | 'crystal' | 'settlemen
 
 export type PlanetScar = 'none' | 'crater' | 'debris';
 
+export type PlanetPhase = 'dormant' | 'breathing' | 'blooming' | 'shielded';
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -59,6 +61,15 @@ export interface PlanetState {
   lastPaintedCellId: string | null;
   brushStreak: number;
   logs: PlanetLogEntry[];
+  phase: PlanetPhase;
+  phaseSince: number;
+}
+
+export interface PlanetWeather {
+  phase: PlanetPhase;
+  cloudCover: number;
+  auroraStrength: number;
+  stormIntensity: number;
 }
 
 export interface PlanetTotals {
@@ -81,6 +92,13 @@ export const TOOL_LABELS: Record<PlanetTool, string> = {
   crystal: '수정 광맥',
   settlement: '정착지 세우기',
   shield: '방어막 씌우기'
+};
+
+export const PHASE_LABELS: Record<PlanetPhase, string> = {
+  dormant: '휴면 행성',
+  breathing: '숨쉬는 행성',
+  blooming: '만개한 행성',
+  shielded: '방어 태세'
 };
 
 export const TOOL_COSTS: Record<PlanetTool, { energy: number; minerals?: number; water?: number; biomass?: number }> = {
@@ -166,7 +184,7 @@ function nextImpactCell(state: PlanetState) {
 
 export function createInitialPlanetState(): PlanetState {
   const cells = Array.from({ length: CELL_COUNT }, (_, index) => makeCell(index, CELL_COUNT));
-  const state: PlanetState = {
+  let state: PlanetState = {
     time: 0,
     cycle: 1,
     energy: 88,
@@ -187,8 +205,11 @@ export function createInitialPlanetState(): PlanetState {
     lastPaintAt: -999,
     lastPaintedCellId: null,
     brushStreak: 0,
-    logs: []
+    logs: [],
+    phase: 'dormant',
+    phaseSince: 0
   };
+  state = { ...state, phase: deriveMilestonePhase(planetTotals(state)) };
   return withLog(state, '작은 원시 행성이 깨어났어요. 바다·숲·수정으로 표면을 빚어보세요.', 'good');
 }
 
@@ -219,6 +240,49 @@ export function planetTotals(state: PlanetState): PlanetTotals {
   const economyScore = state.water * 0.12 + state.biomass * 0.14 + state.population * 0.18 + state.minerals * 0.05;
   counts.habitability = clamp(Math.round(livingScore + economyScore + state.stability * 0.32), 0, 100);
   return counts;
+}
+
+const SHIELDED_PHASE_THRESHOLD = 4;
+const BLOOMING_HABITABILITY = 55;
+const BREATHING_HABITABILITY = 28;
+
+function deriveMilestonePhase(totals: PlanetTotals): PlanetPhase {
+  if (totals.protectedCells >= SHIELDED_PHASE_THRESHOLD) return 'shielded';
+  if (totals.habitability >= BLOOMING_HABITABILITY) return 'blooming';
+  if (totals.habitability >= BREATHING_HABITABILITY) return 'breathing';
+  return 'dormant';
+}
+
+const PHASE_MESSAGES: Record<PlanetPhase, string> = {
+  dormant: '행성이 다시 잠들었어요. 물과 숲을 더 채워보세요.',
+  breathing: '행성이 숨을 쉬기 시작했어요! 대기가 옅게 빛나요.',
+  blooming: '행성이 만개했어요! 오로라가 행성을 감쌉니다.',
+  shielded: '방어막 네트워크가 완성돼 행성이 보호막을 둘렀어요.'
+};
+
+function syncPhase(state: PlanetState): PlanetState {
+  const phase = deriveMilestonePhase(planetTotals(state));
+  if (phase === state.phase) return state;
+  const tone: PlanetLogEntry['tone'] = phase === 'dormant' ? 'warn' : 'good';
+  return withLog({ ...state, phase, phaseSince: state.time }, PHASE_MESSAGES[phase], tone);
+}
+
+export function planetWeather(state: PlanetState): PlanetWeather {
+  const totals = planetTotals(state);
+  const cellCount = state.cells.length;
+  const cloudCover = clamp((totals.ocean * 1.6 + totals.forest * 1.1) / cellCount, 0, 1);
+  const auroraStrength = clamp((totals.crystal * 2.2 + totals.protectedCells * 1.6) / cellCount, 0, 1);
+  const stormIntensity = clamp(
+    (totals.craters * 3.4) / cellCount + (100 - state.stability) / 220 + (state.activeEvent ? 0.22 : 0),
+    0,
+    1
+  );
+  return {
+    phase: state.phase,
+    cloudCover: round(cloudCover, 3),
+    auroraStrength: round(auroraStrength, 3),
+    stormIntensity: round(stormIntensity, 3)
+  };
 }
 
 export function selectTool(state: PlanetState, tool: PlanetTool): PlanetState {
@@ -397,7 +461,7 @@ export function tickPlanet(state: PlanetState, seconds: number): PlanetState {
     if (activeEvent.timer <= 0) next = resolveMeteor(next);
   }
 
-  return next;
+  return syncPhase(next);
 }
 
 export function nearestCellId(state: PlanetState, normal: Vec3): string {

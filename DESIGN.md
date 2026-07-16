@@ -34,7 +34,7 @@ A slice is not done unless it answers at least one of these:
 
 ## Preferred Future Design Slices
 
-1. **Surface richness:** better patch shapes, terrain elevation, oceans wrapping together, clouds/weather bands.
+1. **Surface richness:** better patch shapes, terrain elevation, oceans wrapping together, clouds/weather bands. Shipped a first pass: `planetWeather(state)` (cloud cover/aurora/storm) drives a modulated cloud shell, an aurora ring colored per milestone phase, and a storm halo tint; the HUD title panel shows a compact phase chip (`dormant`/`breathing`/`blooming`/`shielded`) that flashes on transition.
 2. **Creation feedback:** brush particles, birth flashes, growing trees/cities, biome spreading.
 3. **Threat feedback:** meteor trails, impact craters, shield ripples, debris rewards.
 4. **Progression:** unlock moons/rings/species when habitability crosses thresholds.

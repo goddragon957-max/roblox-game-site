@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import {
+  PHASE_LABELS,
   TOOL_COSTS,
   TOOL_LABELS,
   applyTool,
@@ -8,6 +9,7 @@ import {
   getLogs,
   nearestCellId,
   planetTotals,
+  planetWeather,
   selectTool,
   tickPlanet,
   triggerMeteor,
@@ -16,6 +18,7 @@ import {
   type PlanetScar,
   type PlanetState,
   type PlanetTool,
+  type PlanetWeather,
   type Vec3
 } from './planetSim';
 
@@ -31,6 +34,13 @@ const BIOME_COLORS: Record<PlanetBiome, { color: string; emissive: string; rough
   shield: { color: '#79f4ff', emissive: '#12606c', roughness: 0.26, metalness: 0.18, opacity: 0.86 }
 };
 
+const PHASE_AURORA_COLOR: Record<PlanetState['phase'], string> = {
+  dormant: '#5c7bb0',
+  breathing: '#8ff8ff',
+  blooming: '#ffd06b',
+  shielded: '#79f4ff'
+};
+
 const TOOL_HINTS: Record<PlanetTool, string> = {
   water: '뜨거운 황무지를 바다로 바꿔 안정도를 올립니다.',
   forest: '바다 근처에 산소 숲을 심어 생명력을 키웁니다.',
@@ -42,6 +52,7 @@ const TOOL_HINTS: Record<PlanetTool, string> = {
 interface PlanetSmokeApi {
   ready: boolean;
   getState: () => PlanetState;
+  getWeather: () => PlanetWeather;
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
@@ -234,7 +245,9 @@ interface SceneContext {
   camera: THREE.PerspectiveCamera;
   scene: THREE.Scene;
   planetGroup: THREE.Group;
-  cloudShell: THREE.Mesh;
+  cloudShell: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
+  auroraRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
+  stormHalo: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   meteor: THREE.Group;
   impactRing: THREE.Mesh;
   selectionRing: THREE.Mesh;
@@ -342,6 +355,25 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       new THREE.MeshStandardMaterial({ color: '#eefaff', transparent: true, opacity: 0.12, roughness: 0.2, depthWrite: false })
     );
     planetGroup.add(cloudShell);
+
+    const auroraRing = new THREE.Mesh(
+      new THREE.TorusGeometry(PLANET_RADIUS * 1.14, 0.052, 8, 128),
+      new THREE.MeshBasicMaterial({
+        color: '#8ff8ff',
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    auroraRing.rotation.x = Math.PI / 2.5;
+    planetGroup.add(auroraRing);
+
+    const stormHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(PLANET_RADIUS * 1.12, 40, 20),
+      new THREE.MeshBasicMaterial({ color: '#ff6b33', transparent: true, opacity: 0, depthWrite: false })
+    );
+    planetGroup.add(stormHalo);
 
     const orbitalRing = new THREE.Mesh(
       new THREE.TorusGeometry(PLANET_RADIUS * 1.34, 0.014, 8, 160),
@@ -500,6 +532,8 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       scene,
       planetGroup,
       cloudShell,
+      auroraRing,
+      stormHalo,
       meteor,
       impactRing,
       selectionRing,
@@ -515,6 +549,8 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       const current = planetRef.current;
       planetGroup.rotation.y += delta * 0.1;
       cloudShell.rotation.y += delta * 0.08;
+      auroraRing.rotation.z += delta * 0.14;
+      stormHalo.rotation.y -= delta * 0.05;
       orbitalRing.rotation.z += delta * 0.04;
       moon.position.set(Math.cos(current.time * 0.22) * 2.75, 0.36 + Math.sin(current.time * 0.15) * 0.18, Math.sin(current.time * 0.22) * 2.75);
       if (current.activeEvent) {
@@ -570,6 +606,16 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
     } else {
       context.selectionRing.visible = false;
     }
+
+    const weather = planetWeather(planet);
+    context.cloudShell.material.opacity = 0.06 + weather.cloudCover * 0.4;
+    context.cloudShell.material.color.set('#eefaff').lerp(new THREE.Color('#ffb98a'), weather.stormIntensity * 0.6);
+
+    const auroraColor = PHASE_AURORA_COLOR[weather.phase];
+    context.auroraRing.material.color.set(auroraColor);
+    context.auroraRing.material.opacity = weather.auroraStrength * 0.85;
+
+    context.stormHalo.material.opacity = weather.stormIntensity * 0.32;
   }, [planet]);
 
   return <div ref={containerRef} className="planet-scene" aria-label="interactive planet forge scene" />;
@@ -614,6 +660,7 @@ export function PlanetForgeApp() {
     window.__planetForgeSmoke = {
       ready: true,
       getState: () => planetRef.current,
+      getWeather: () => planetWeather(planetRef.current),
       command: {
         selectTool: (tool: PlanetTool) => handleSelectTool(tool),
         paintCell: (cellId?: string, tool?: PlanetTool) => {
@@ -637,9 +684,11 @@ export function PlanetForgeApp() {
   }, [commit, handleMeteor, handleReset, handleSelectTool, handleTick]);
 
   const totals = useMemo(() => planetTotals(planet), [planet]);
+  const weather = useMemo(() => planetWeather(planet), [planet]);
   const logs = getLogs(planet);
   const activeCell = planet.selectedCellId ? planet.cells.find((cell) => cell.id === planet.selectedCellId) : null;
   const eventProgress = planet.activeEvent ? Math.max(0, 1 - planet.activeEvent.timer / planet.activeEvent.duration) : 0;
+  const phaseRecent = planet.time - planet.phaseSince < 4;
 
   return (
     <main id="app" className="planet-app" data-ui-pass="planet-forge-prototype" data-demo="planet-forge-sandbox">
@@ -649,6 +698,17 @@ export function PlanetForgeApp() {
         <span className="eyebrow">PLANET FORGE · BRANCH PROTOTYPE</span>
         <h1>작은 행성을 손으로 빚고 지켜라</h1>
         <p>클릭/드래그로 표면을 칠하고, 빈 우주나 우클릭 드래그로 행성을 돌리세요. 운석 뒤에는 크레이터나 별빛 파편이 남습니다.</p>
+        <div
+          className={`planet-phase-chip phase-${planet.phase}${phaseRecent ? ' flash' : ''}`}
+          data-planet-phase={planet.phase}
+          data-phase-recent={phaseRecent ? 'true' : 'false'}
+          data-weather-cloud={weather.cloudCover}
+          data-weather-aurora={weather.auroraStrength}
+          data-weather-storm={weather.stormIntensity}
+        >
+          <span className="planet-phase-dot" />
+          {PHASE_LABELS[planet.phase]}
+        </div>
       </section>
 
       <section className="planet-stats" aria-label="planet status">

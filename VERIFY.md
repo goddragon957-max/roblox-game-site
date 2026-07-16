@@ -50,6 +50,8 @@ If continuing this branch as a harness round, write `docs/harness/feedback/round
    - `window.__planetForgeSmoke.command.paintCells()` paints multiple cells and increases `brushStreak`.
    - `window.__planetForgeSmoke.command.triggerMeteor()` creates an active meteor event.
    - Shielding the impact cell leaves `scar: "debris"`; ignoring the timer leaves `scar: "crater"`.
+   - `window.__planetForgeSmoke.getWeather()` returns `{ phase, cloudCover, auroraStrength, stormIntensity }`; `getState().phase` is one of `dormant`/`breathing`/`blooming`/`shielded`.
+   - `document.querySelector('.planet-phase-chip')` exists with `data-planet-phase` matching the current phase; painting 4+ cells with the shield tool then ticking flips it to `shielded` and briefly adds a `flash` class (`data-phase-recent="true"`).
    - Browser console has zero fatal JavaScript errors.
 
 ## Visual bar

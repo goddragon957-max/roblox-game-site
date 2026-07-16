@@ -21,7 +21,8 @@ paint surface → resources change → planet becomes more alive → meteor warn
 - Controls: click or drag across surface patches to paint; right-drag or drag empty space to rotate the planet.
 - Real resources: energy, water, biomass, minerals, population, stability, shield.
 - Real threat loop: timed meteor event with impact marker; shield blocks it and leaves collectible star debris, ignoring it burns a crater into the target cell.
-- Smoke markers: `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, and `window.__planetForgeSmoke` command helpers.
+- Living weather/milestone system: `planetWeather(state)` derives cloud cover, aurora strength, and storm intensity from biome mix, craters, and stability; a stored `phase` (`dormant` → `breathing` → `blooming`, or `shielded` once 4+ cells are protected) drives a visible aurora ring + cloud shell in the 3D scene and a compact HUD phase chip that flashes on transition.
+- Smoke markers: `data-ui-pass="planet-forge-prototype"`, `canvas[data-game-canvas="planet-three"]`, and `window.__planetForgeSmoke` command helpers (`getWeather()` exposes the live weather readout).
 
 ## Run
 
