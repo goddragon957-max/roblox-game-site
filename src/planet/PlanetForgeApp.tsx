@@ -13,8 +13,10 @@ import {
   planetGuardianSignal,
   planetLifeSignal,
   planetObjective,
+  planetRestorationSignal,
   planetTotals,
   planetWeather,
+  RESTORATION_SIGNAL_DURATION,
   selectTool,
   tickPlanet,
   triggerMeteor,
@@ -24,6 +26,7 @@ import {
   type PlanetGuardian,
   type PlanetLifeSignal,
   type PlanetObjective,
+  type PlanetRestoration,
   type PlanetScar,
   type PlanetState,
   type PlanetTool,
@@ -72,6 +75,7 @@ interface PlanetSmokeApi {
   getLifeSignal: () => PlanetLifeSignal;
   getGuardian: () => PlanetGuardian;
   getObjective: () => PlanetObjective;
+  getRestoration: () => PlanetRestoration;
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
@@ -272,6 +276,7 @@ interface SceneContext {
   guardianRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   impactFlash: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   objectiveBurst: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
+  restorationRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   meteor: THREE.Group;
   impactRing: THREE.Mesh;
   selectionRing: THREE.Mesh;
@@ -488,6 +493,19 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
     objectiveBurst.visible = false;
     planetGroup.add(objectiveBurst);
 
+    const restorationRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.28, 0.034, 10, 72),
+      new THREE.MeshBasicMaterial({
+        color: '#4dffb0',
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    restorationRing.visible = false;
+    planetGroup.add(restorationRing);
+
     const orbitalRing = new THREE.Mesh(
       new THREE.TorusGeometry(PLANET_RADIUS * 1.34, 0.014, 8, 160),
       new THREE.MeshStandardMaterial({ color: '#6fe8ff', emissive: '#1788b8', transparent: true, opacity: 0.5, roughness: 0.35 })
@@ -652,6 +670,7 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       guardianRing,
       impactFlash,
       objectiveBurst,
+      restorationRing,
       meteor,
       impactRing,
       selectionRing,
@@ -705,6 +724,23 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
         objectiveBurst.material.opacity = fade * 0.9;
       } else {
         objectiveBurst.visible = false;
+      }
+
+      const restoration = planetRestorationSignal(current);
+      const restorationAge = current.time - restoration.since;
+      if (restoration.count > 0 && restoration.lastCellId && restorationAge >= 0 && restorationAge < RESTORATION_SIGNAL_DURATION) {
+        const healedCell = current.cells.find((cell) => cell.id === restoration.lastCellId);
+        if (healedCell) {
+          const normal = vec3(healedCell.normal);
+          const fade = 1 - restorationAge / RESTORATION_SIGNAL_DURATION;
+          setSurfaceTransform(restorationRing, normal, PLANET_RADIUS + 0.09, 'z');
+          restorationRing.visible = true;
+          restorationRing.rotation.z += delta * 1.3;
+          restorationRing.material.opacity = 0.18 + fade * 0.82;
+          restorationRing.scale.setScalar(0.78 + (1 - fade) * 2.15 + Math.sin(current.time * 8) * 0.05);
+        }
+      } else {
+        restorationRing.visible = false;
       }
 
       if (current.activeEvent) {
@@ -836,6 +872,7 @@ export function PlanetForgeApp() {
       getLifeSignal: () => planetLifeSignal(planetRef.current),
       getGuardian: () => planetGuardianSignal(planetRef.current),
       getObjective: () => planetObjective(planetRef.current),
+      getRestoration: () => planetRestorationSignal(planetRef.current),
       command: {
         selectTool: (tool: PlanetTool) => handleSelectTool(tool),
         paintCell: (cellId?: string, tool?: PlanetTool) => {
@@ -863,6 +900,7 @@ export function PlanetForgeApp() {
   const lifeSignal = useMemo(() => planetLifeSignal(planet), [planet]);
   const guardian = useMemo(() => planetGuardianSignal(planet), [planet]);
   const objective = useMemo(() => planetObjective(planet), [planet]);
+  const restoration = useMemo(() => planetRestorationSignal(planet), [planet]);
   const logs = getLogs(planet);
   const visibleLogs = logs.slice(0, 3);
   const activeCell = planet.selectedCellId ? planet.cells.find((cell) => cell.id === planet.selectedCellId) : null;
@@ -911,6 +949,20 @@ export function PlanetForgeApp() {
         >
           <span className="planet-objective-dot" />
           🎯 {objective.label} ({objective.progress}/{objective.target})
+        </div>
+        <div
+          className={`planet-restoration-chip${restoration.active ? ' active' : ''}${restoration.count === 0 ? ' empty' : ''}`}
+          data-crater-restoration-active={restoration.active ? 'true' : 'false'}
+          data-restoration-count={restoration.count}
+          data-restoration-cell={restoration.lastCellId ?? ''}
+          data-restoration-tool={restoration.lastTool ?? ''}
+        >
+          <span className="planet-restoration-dot" />
+          {restoration.active
+            ? '크레이터 복구됨! 생명이 돌아왔어요'
+            : restoration.count > 0
+              ? `복구된 크레이터 ${restoration.count}개`
+              : '크레이터를 물/숲으로 복구해보세요'}
         </div>
       </section>
 

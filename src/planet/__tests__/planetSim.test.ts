@@ -8,8 +8,10 @@ import {
   planetGuardianSignal,
   planetLifeSignal,
   planetObjective,
+  planetRestorationSignal,
   planetTotals,
   planetWeather,
+  RESTORATION_SIGNAL_DURATION,
   selectTool,
   tickPlanet,
   triggerMeteor
@@ -286,5 +288,98 @@ describe('planet forge simulation', () => {
   it('wraps the objective index with modulo so it always resolves a valid goal', () => {
     const state = { ...createInitialPlanetState(), objectiveIndex: OBJECTIVE_COUNT, objectiveBaseline: 0 };
     expect(planetObjective(state).kind).toBe('forest');
+  });
+
+  it('heals an ignored-meteor crater with a restorative tool and rewards exactly one restoration', () => {
+    let state = createInitialPlanetState();
+    state = triggerMeteor(state);
+    const impactCellId = state.activeEvent!.impactCellId;
+
+    state = tickPlanet(state, 5);
+    state = tickPlanet(state, 3.2);
+    expect(state.cells.find((cell) => cell.id === impactCellId)?.scar).toBe('crater');
+
+    const before = planetRestorationSignal(state);
+    expect(before.active).toBe(false);
+    expect(before.count).toBe(0);
+
+    const stabilityBefore = state.stability;
+    const biomassBefore = state.biomass;
+    const waterBefore = state.water;
+
+    state = applyTool({ ...state, selectedTool: 'forest', selectedCellId: impactCellId }, 'forest', impactCellId);
+
+    const painted = state.cells.find((cell) => cell.id === impactCellId);
+    expect(painted?.scar).toBe('none');
+    expect(painted?.biome).toBe('forest');
+    expect(state.craterRestorations).toBe(1);
+    expect(state.lastRestorationCellId).toBe(impactCellId);
+    expect(state.lastRestorationTool).toBe('forest');
+    expect(state.stability).toBeGreaterThan(stabilityBefore);
+    expect(state.biomass).toBeGreaterThan(biomassBefore);
+    expect(state.water).toBeGreaterThan(waterBefore);
+    expect(getLogs(state)[0].text).toContain('크레이터가 복구');
+
+    const after = planetRestorationSignal(state);
+    expect(after.active).toBe(true);
+    expect(after.count).toBe(1);
+    expect(after.lastCellId).toBe(impactCellId);
+    expect(after.lastTool).toBe('forest');
+  });
+
+  it('does not reward repainting a non-crater cell or an already-healed crater again', () => {
+    let state = createInitialPlanetState();
+    state = triggerMeteor(state);
+    const impactCellId = state.activeEvent!.impactCellId;
+    state = tickPlanet(state, 5);
+    state = tickPlanet(state, 3.2);
+
+    state = applyTool({ ...state, selectedTool: 'water', selectedCellId: impactCellId }, 'water', impactCellId);
+    expect(state.craterRestorations).toBe(1);
+
+    state = applyTool({ ...state, selectedTool: 'forest', selectedCellId: impactCellId }, 'forest', impactCellId);
+    expect(state.craterRestorations).toBe(1);
+
+    const barrenTarget = state.cells.find((cell) => cell.biome === 'barren');
+    expect(barrenTarget).toBeTruthy();
+    state = applyTool({ ...state, selectedTool: 'forest', selectedCellId: barrenTarget!.id }, 'forest', barrenTarget!.id);
+    expect(state.craterRestorations).toBe(1);
+  });
+
+  it('does not count shield/crystal/settlement tools on a crater as ecological restoration', () => {
+    for (const tool of ['shield', 'crystal', 'settlement'] as const) {
+      let state = createInitialPlanetState();
+      state = triggerMeteor(state);
+      const impactCellId = state.activeEvent!.impactCellId;
+      state = tickPlanet(state, 5);
+      state = tickPlanet(state, 3.2);
+
+      state = applyTool({ ...state, selectedTool: tool, selectedCellId: impactCellId }, tool, impactCellId);
+      expect(state.craterRestorations).toBe(0);
+      expect(planetRestorationSignal(state).active).toBe(false);
+    }
+  });
+
+  it('expires the restoration active signal after the deterministic duration while keeping the count', () => {
+    let state = createInitialPlanetState();
+    state = triggerMeteor(state);
+    const impactCellId = state.activeEvent!.impactCellId;
+    state = tickPlanet(state, 5);
+    state = tickPlanet(state, 3.2);
+    state = applyTool({ ...state, selectedTool: 'water', selectedCellId: impactCellId }, 'water', impactCellId);
+
+    expect(planetRestorationSignal(state).active).toBe(true);
+    expect(planetRestorationSignal({ ...state, time: state.lastRestorationAt - 0.1 }).active).toBe(false);
+
+    let remaining = RESTORATION_SIGNAL_DURATION + 0.1;
+    while (remaining > 0) {
+      const step = Math.min(5, remaining);
+      state = tickPlanet(state, step);
+      remaining -= step;
+    }
+
+    const signal = planetRestorationSignal(state);
+    expect(signal.active).toBe(false);
+    expect(signal.count).toBe(1);
   });
 });

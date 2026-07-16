@@ -57,6 +57,7 @@ If continuing this branch as a harness round, write `docs/harness/feedback/round
    - `document.querySelector('.planet-phase-chip')` exists with `data-planet-phase` matching the current phase; painting 4+ cells with the shield tool then ticking flips it to `shielded` and briefly adds a `flash` class (`data-phase-recent="true"`).
    - `window.__planetForgeSmoke.getObjective()` returns `{ kind, label, target, progress, completed }`; `document.querySelector('.planet-objective-chip')` shows the same via `data-objective-kind`/`data-objective-progress`/`data-objective-target`/`data-objective-completed`.
    - Completing the current objective (e.g. painting 6 barren cells with the forest tool, then `tick`) grants a resource bonus, logs `목표 달성`, advances `getState().objectiveIndex` to the next goal, and briefly sets `document.querySelector('[data-objective-win-beat]')` to `data-objective-win-beat="true"` with a visible gold trophy banner and an expanding golden ring around the planet.
+   - `window.__planetForgeSmoke.getRestoration()` starts inactive with count `0`; after an ignored meteor naturally leaves a crater, repainting that exact cell with water or forest clears the scar, increments the persistent count once, records the cell/tool, logs the recovery, grants the bounded reward, and sets `[data-crater-restoration-active="true"]` while an emerald regrowth ring is visible. Advancing beyond `RESTORATION_SIGNAL_DURATION` clears the active marker but preserves the count.
    - Browser console has zero fatal JavaScript errors.
 
 ## Visual bar
@@ -70,7 +71,7 @@ Within the first three seconds the screen should read as:
 - click/drag painting has visible pulse rings, brush combo feedback, and life motes as the surface becomes more alive;
 - dark galaxy/starfield and space atmosphere;
 - compact glass HUD and tool palette, not page-like panels covering the world;
-- meteor warning/impact feedback when the event is active, crater/debris aftermath, and the guardian unlock ring/chip when enough shield coverage is built.
+- meteor warning/impact feedback when the event is active, crater/debris aftermath, emerald crater-restoration feedback, and the guardian unlock ring/chip when enough shield coverage is built.
 
 Score each criterion 0/1/2. Any 0 is a hard fail:
 

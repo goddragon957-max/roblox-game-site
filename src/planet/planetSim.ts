@@ -79,6 +79,10 @@ export interface PlanetState {
   objectiveBaseline: number;
   objectiveCompletedAt: number;
   lastObjectiveLabel: string;
+  craterRestorations: number;
+  lastRestorationAt: number;
+  lastRestorationCellId: string | null;
+  lastRestorationTool: PlanetTool | null;
 }
 
 export interface PlanetWeather {
@@ -96,6 +100,14 @@ export interface PlanetLifeSignal {
 export interface PlanetGuardian {
   active: boolean;
   strength: number;
+}
+
+export interface PlanetRestoration {
+  active: boolean;
+  count: number;
+  lastCellId: string | null;
+  lastTool: PlanetTool | null;
+  since: number;
 }
 
 export type ObjectiveKind = 'forest' | 'shield' | 'meteorBlock' | 'habitability';
@@ -263,7 +275,11 @@ export function createInitialPlanetState(): PlanetState {
     objectiveIndex: 0,
     objectiveBaseline: 0,
     objectiveCompletedAt: -999,
-    lastObjectiveLabel: ''
+    lastObjectiveLabel: '',
+    craterRestorations: 0,
+    lastRestorationAt: -999,
+    lastRestorationCellId: null,
+    lastRestorationTool: null
   };
   state = { ...state, phase: deriveMilestonePhase(planetTotals(state)) };
   const initialDef = OBJECTIVE_SEQUENCE[0];
@@ -433,6 +449,24 @@ export function brushComboTier(streak: number): BrushComboTier {
   return 'none';
 }
 
+const RESTORATION_TOOLS: readonly PlanetTool[] = ['water', 'forest'];
+export const RESTORATION_SIGNAL_DURATION = 12;
+const RESTORATION_REWARD_STABILITY = 5;
+const RESTORATION_REWARD_BIOMASS = 6;
+const RESTORATION_REWARD_WATER = 5;
+
+export function planetRestorationSignal(state: PlanetState): PlanetRestoration {
+  const age = state.time - state.lastRestorationAt;
+  const active = state.craterRestorations > 0 && age >= 0 && age < RESTORATION_SIGNAL_DURATION;
+  return {
+    active,
+    count: state.craterRestorations,
+    lastCellId: state.lastRestorationCellId,
+    lastTool: state.lastRestorationTool,
+    since: state.lastRestorationAt
+  };
+}
+
 export function planetLifeSignal(state: PlanetState): PlanetLifeSignal {
   const totals = planetTotals(state);
   const cellCount = state.cells.length;
@@ -472,6 +506,7 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
   if (!canPay(state, tool)) return withLog({ ...state, selectedTool: tool, selectedCellId: cellId }, `${TOOL_LABELS[tool]}에 필요한 자원이 부족해요.`, 'warn');
 
   let touched = false;
+  let restoredCrater = false;
   const continuingStroke = state.lastPaintedCellId !== null && state.lastPaintedCellId !== cellId && state.time - state.lastPaintAt <= 4;
   const brushStreak = continuingStroke ? clamp(state.brushStreak + 1, 1, 99) : 1;
   const comboTier = brushComboTier(brushStreak);
@@ -492,25 +527,47 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
   const cells: PlanetCell[] = next.cells.map((cell): PlanetCell => {
     if (cell.id !== cellId) return cell;
     touched = true;
+    const wasCrater = cell.scar === 'crater';
+    let updatedCell: PlanetCell;
     switch (tool) {
       case 'water':
         next = { ...next, water: round(next.water + 15, 1), stability: clamp(next.stability + 1.5, 0, 100) };
-        return { ...cell, biome: 'ocean' as const, vitality: clamp(cell.vitality + 0.34, 0, 1), heat: clamp(cell.heat - 0.18, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        updatedCell = { ...cell, biome: 'ocean' as const, vitality: clamp(cell.vitality + 0.34, 0, 1), heat: clamp(cell.heat - 0.18, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        break;
       case 'forest':
         next = { ...next, biomass: round(next.biomass + 14, 1), stability: clamp(next.stability + 2.5, 0, 100) };
-        return { ...cell, biome: 'forest' as const, vitality: clamp(cell.vitality + 0.38, 0, 1), heat: clamp(cell.heat - 0.08, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        updatedCell = { ...cell, biome: 'forest' as const, vitality: clamp(cell.vitality + 0.38, 0, 1), heat: clamp(cell.heat - 0.08, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        break;
       case 'crystal':
         next = { ...next, minerals: round(next.minerals + 18, 1), energy: round(next.energy + 8, 1) };
-        return { ...cell, biome: 'crystal' as const, vitality: clamp(cell.vitality + 0.16, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        updatedCell = { ...cell, biome: 'crystal' as const, vitality: clamp(cell.vitality + 0.16, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        break;
       case 'settlement':
         next = { ...next, population: round(next.population + 10, 1), stability: clamp(next.stability + 1, 0, 100), lastBirthAt: next.time };
-        return { ...cell, biome: 'settlement' as const, vitality: clamp(cell.vitality + 0.42, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        updatedCell = { ...cell, biome: 'settlement' as const, vitality: clamp(cell.vitality + 0.42, 0, 1), shielded: false, scar: 'none', pulse: 1 };
+        break;
       case 'shield':
         next = { ...next, shield: clamp(next.shield + 34, 0, 100), stability: clamp(next.stability + 0.5, 0, 100) };
-        return { ...cell, biome: 'shield' as const, vitality: clamp(cell.vitality + 0.25, 0, 1), shielded: true, scar: 'none', pulse: 1 };
+        updatedCell = { ...cell, biome: 'shield' as const, vitality: clamp(cell.vitality + 0.25, 0, 1), shielded: true, scar: 'none', pulse: 1 };
+        break;
       default:
         return cell;
     }
+
+    if (wasCrater && RESTORATION_TOOLS.includes(tool)) {
+      restoredCrater = true;
+      next = {
+        ...next,
+        stability: clamp(round(next.stability + RESTORATION_REWARD_STABILITY, 1), 0, 100),
+        biomass: clamp(round(next.biomass + RESTORATION_REWARD_BIOMASS, 1), 0, 160),
+        water: clamp(round(next.water + RESTORATION_REWARD_WATER, 1), 0, 160),
+        craterRestorations: next.craterRestorations + 1,
+        lastRestorationAt: next.time,
+        lastRestorationCellId: cellId,
+        lastRestorationTool: tool
+      };
+    }
+    return updatedCell;
   });
 
   next = { ...next, cells };
@@ -524,6 +581,9 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
     shield: '황금 방어막 돔이 충격 지점을 감쌌어요.'
   };
   const streakText = brushStreak >= 3 ? ` 브러시 ${brushStreak}연속!` : '';
+  if (restoredCrater) {
+    return withLog(next, `크레이터가 복구되며 생명이 돌아왔어요! 안정도·생물량·물을 얻었습니다.${streakText}`, 'good');
+  }
   return withLog(next, `${message[tool]}${streakText}`, tool === 'shield' || brushStreak >= 3 ? 'good' : 'neutral');
 }
 

@@ -2,15 +2,15 @@
 
 ```yaml
 status: running
-current_phase: round_37_ready
-current_round: 37
+current_phase: round_38_ready
+current_round: 38
 next_role: generator
 pause_reason: ""
 max_rounds: 40
 created_at: "2026-06-29T01:30:01Z"
-updated_at: "2026-07-14T03:53:21Z"
+updated_at: "2026-07-16T02:41:53Z"
 resume_attempts: 1
-last_verified_at: "2026-07-14T03:53:21Z"
+last_verified_at: "2026-07-16T02:41:53Z"
 last_verdict: pass
 ```
 
@@ -56,7 +56,9 @@ last_verdict: pass
 - Round 34 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): authored renewable-lumber grove identity — wood nodes now use thicker faceted trunks and layered low-poly pine canopies with subtle per-node variation; persistent stump collars and sawn logs keep depleted/regrowing nodes readable; saplings now scale smoothly from 15% to 100% over the existing regrowth progress. Codex produced the coherent renderer diff and transient regrowth probes before exiting `124`; evaluator independently reran `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, isolated regrowth/refill behavior, console checks, and rendered visual QA in `docs/harness/feedback/round-34-qa.md`.
 - Round 35 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): combat-hit feedback — unit-driven attacks against units/buildings now record short-lived deterministic hit events, `__rtsSmoke.command.combatHits()` exposes them for browser proof, and the Three.js scene renders a cream/gold target-side burst plus ground ripple at the impact point. Codex produced the coherent sim/store/renderer/test diff before exiting `124`; evaluator enlarged the VFX after visual inspection, then verified `npm run verify`, `git diff --check`, browser gather/build/train/attack smoke, combat-hit expiry, console checks, and rendered visual QA in `docs/harness/feedback/round-35-qa.md`.
 - Round 36 (work order `docs/goals/2026-07-13-48h-codex-goal-loop.md`): world-space under-siege emergency feedback — the existing `threatAlert` hit-position snapshot now drives two red/orange ground pulses and a camera-facing shield/exclamation badge, with building-aware scale/height for the headquarters, barracks, and tower. Codex produced the coherent renderer diff and natural base-hit browser probe before exiting `124`; evaluator independently reran `npm run verify`, `git diff --check`, gather/build/train/attack smoke, a natural first-wave headquarters hit (`500→491` HP), console checks, and rendered visual QA in `docs/harness/feedback/round-36-qa.md`.
-- Round 37 is ready for the next generator slice under the same Codex goal-mode authorization; `max_rounds` remains 40.
-- 2026-07-13 operator reassignment: the user moved all active Claude/Fable generator appointments to Codex. Future scheduled generator slices should use `docs/goals/2026-07-13-48h-codex-goal-loop.md` with Codex `gpt-5.6-sol` + ultra reasoning, not the exhausted Claude/Fable loop.
+- Round 37 on branch `planet-forge-prototype` (Planet Forge Round 7) closed the meteor-damage loop with deterministic water/forest crater restoration, a bounded reward, stable smoke markers, compact recovery chip, and screenshot-visible emerald surface ring. Claude Sonnet/Opus exited `143` after a useful diff; the evaluator corrected the duration-aware expiry test, strengthened the ring after visual inspection, independently verified 96 tests/build/browser/visual gates, and recorded evidence in `docs/harness/feedback/round-37-qa.md`.
+- Round 38 is ready for the next small Planet Forge generator slice on `planet-forge-prototype`; the main-branch Puppy Frontier RTS remains preserved and out of scope unless the user explicitly switches back.
+- 2026-07-13 historical operator reassignment: the Puppy Frontier RTS loop moved from exhausted Claude/Fable to Codex `gpt-5.6-sol` + ultra via `docs/goals/2026-07-13-48h-codex-goal-loop.md`.
+- 2026-07-16 branch-specific override: on `planet-forge-prototype`, the active primary worker is Claude `sonnet` with fallback `opus`; Fable remains forbidden/exhausted, and Codex `gpt-5.6-sol` + ultra is fallback only when Sonnet/Opus cannot run and no useful diff exists.
 - 2026-07-14 scope note: Nestory/MOM-voice is out of scope for this go-mode continuation because the user said they are working on Nestory directly; avoid touching the Nestory repo/cron unless explicitly reauthorized.
 - Do not include `.hermes/` in git.
