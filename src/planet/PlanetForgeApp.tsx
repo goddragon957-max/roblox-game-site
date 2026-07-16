@@ -10,6 +10,7 @@ import {
   createInitialPlanetState,
   getLogs,
   nearestCellId,
+  planetGuardianSignal,
   planetLifeSignal,
   planetTotals,
   planetWeather,
@@ -19,6 +20,7 @@ import {
   type BrushComboTier,
   type PlanetBiome,
   type PlanetCell,
+  type PlanetGuardian,
   type PlanetLifeSignal,
   type PlanetScar,
   type PlanetState,
@@ -66,6 +68,7 @@ interface PlanetSmokeApi {
   getState: () => PlanetState;
   getWeather: () => PlanetWeather;
   getLifeSignal: () => PlanetLifeSignal;
+  getGuardian: () => PlanetGuardian;
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
@@ -263,6 +266,8 @@ interface SceneContext {
   stormHalo: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   lifeMotes: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>;
   comboFlare: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
+  guardianRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
+  impactFlash: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   meteor: THREE.Group;
   impactRing: THREE.Mesh;
   selectionRing: THREE.Mesh;
@@ -445,6 +450,26 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
     comboFlare.visible = false;
     planetGroup.add(comboFlare);
 
+    const guardianRing = new THREE.Mesh(
+      new THREE.TorusGeometry(PLANET_RADIUS * 1.5, 0.026, 8, 140),
+      new THREE.MeshBasicMaterial({
+        color: '#ffe27a',
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    guardianRing.rotation.x = Math.PI / 2.15;
+    planetGroup.add(guardianRing);
+
+    const impactFlash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 20, 14),
+      new THREE.MeshBasicMaterial({ color: '#8ff8ff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+    );
+    impactFlash.visible = false;
+    planetGroup.add(impactFlash);
+
     const orbitalRing = new THREE.Mesh(
       new THREE.TorusGeometry(PLANET_RADIUS * 1.34, 0.014, 8, 160),
       new THREE.MeshStandardMaterial({ color: '#6fe8ff', emissive: '#1788b8', transparent: true, opacity: 0.5, roughness: 0.35 })
@@ -606,6 +631,8 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       stormHalo,
       lifeMotes,
       comboFlare,
+      guardianRing,
+      impactFlash,
       meteor,
       impactRing,
       selectionRing,
@@ -626,6 +653,30 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       orbitalRing.rotation.z += delta * 0.04;
       moon.position.set(Math.cos(current.time * 0.22) * 2.75, 0.36 + Math.sin(current.time * 0.15) * 0.18, Math.sin(current.time * 0.22) * 2.75);
       updateLifeMotes(lifeMotes, planetLifeSignal(current), current.time);
+
+      const guardian = planetGuardianSignal(current);
+      guardianRing.rotation.z += delta * 0.06;
+      guardianRing.material.opacity = guardian.active
+        ? 0.42 + Math.sin(current.time * 2.4) * 0.12
+        : guardian.strength * 0.12;
+      guardianRing.scale.setScalar(guardian.active ? 1 + Math.sin(current.time * 1.6) * 0.02 : 1);
+
+      const impactAge = current.time - current.lastImpactAt;
+      if (current.lastImpactKind !== 'none' && current.lastImpactCellId && impactAge >= 0 && impactAge < 1.1) {
+        const flashCell = current.cells.find((cell) => cell.id === current.lastImpactCellId);
+        if (flashCell) {
+          const normal = vec3(flashCell.normal);
+          const fade = 1 - impactAge / 1.1;
+          setSurfaceTransform(impactFlash, normal, PLANET_RADIUS + 0.1, 'y');
+          impactFlash.visible = true;
+          impactFlash.material.color.set(current.lastImpactKind === 'shield' ? '#8ff8ff' : '#ff5a4a');
+          impactFlash.material.opacity = fade * 0.85;
+          impactFlash.scale.setScalar(0.6 + (1 - fade) * 2.4);
+        }
+      } else {
+        impactFlash.visible = false;
+      }
+
       if (current.activeEvent) {
         const impact = current.cells.find((cell) => cell.id === current.activeEvent?.impactCellId);
         if (impact) {
@@ -634,10 +685,15 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
           const distance = PLANET_RADIUS + 2.15 - progress * 1.72;
           setSurfaceTransform(meteor, normal, distance, 'y');
           meteor.visible = true;
-          meteor.scale.setScalar(1 + Math.sin(current.time * 12) * 0.08);
+          meteor.scale.setScalar(1 + Math.sin(current.time * 12) * 0.08 + progress * 0.35);
+          meteorTail.scale.set(1, 1 + progress * 1.6, 1);
+          meteorTail.material.opacity = 0.35 + progress * 0.5;
           setSurfaceTransform(impactRing, normal, PLANET_RADIUS + 0.04, 'z');
           impactRing.visible = true;
-          impactRing.scale.setScalar(0.85 + Math.sin(current.time * 7) * 0.09);
+          const pulseSpeed = 7 + progress * 10;
+          impactRing.scale.setScalar(0.85 + Math.sin(current.time * pulseSpeed) * (0.09 + progress * 0.12));
+          impactRing.material.color.set('#ffd06b').lerp(new THREE.Color('#ff2c1b'), progress);
+          impactRing.material.opacity = 0.7 + progress * 0.3;
         }
       } else {
         meteor.visible = false;
@@ -748,6 +804,7 @@ export function PlanetForgeApp() {
       getState: () => planetRef.current,
       getWeather: () => planetWeather(planetRef.current),
       getLifeSignal: () => planetLifeSignal(planetRef.current),
+      getGuardian: () => planetGuardianSignal(planetRef.current),
       command: {
         selectTool: (tool: PlanetTool) => handleSelectTool(tool),
         paintCell: (cellId?: string, tool?: PlanetTool) => {
@@ -773,12 +830,14 @@ export function PlanetForgeApp() {
   const totals = useMemo(() => planetTotals(planet), [planet]);
   const weather = useMemo(() => planetWeather(planet), [planet]);
   const lifeSignal = useMemo(() => planetLifeSignal(planet), [planet]);
+  const guardian = useMemo(() => planetGuardianSignal(planet), [planet]);
   const logs = getLogs(planet);
   const visibleLogs = logs.slice(0, 3);
   const activeCell = planet.selectedCellId ? planet.cells.find((cell) => cell.id === planet.selectedCellId) : null;
   const eventProgress = planet.activeEvent ? Math.max(0, 1 - planet.activeEvent.timer / planet.activeEvent.duration) : 0;
   const phaseRecent = planet.time - planet.phaseSince < 4;
   const comboRecent = planet.brushComboTier !== 'none' && planet.time - planet.brushComboSince < 1.3;
+  const guardianRecent = planet.time - planet.guardianSince < 4;
 
   return (
     <main id="app" className="planet-app" data-ui-pass="planet-forge-prototype" data-demo="planet-forge-sandbox">
@@ -800,6 +859,15 @@ export function PlanetForgeApp() {
         >
           <span className="planet-phase-dot" />
           {PHASE_LABELS[planet.phase]}
+        </div>
+        <div
+          className={`planet-guardian-chip${guardian.active ? ' active' : ''}${guardianRecent ? ' flash' : ''}`}
+          data-guardian-active={guardian.active ? 'true' : 'false'}
+          data-guardian-strength={guardian.strength}
+          data-guardian-recent={guardianRecent ? 'true' : 'false'}
+        >
+          <span className="planet-guardian-dot" />
+          {guardian.active ? '수호자 위성망 가동' : `수호자 진행 ${Math.round(guardian.strength * 100)}%`}
         </div>
       </section>
 
@@ -853,7 +921,12 @@ export function PlanetForgeApp() {
         </button>
       </section>
 
-      <section className={`planet-alert ${planet.activeEvent ? 'active' : ''}`} aria-label="meteor alert" data-meteor-active={planet.activeEvent ? 'true' : 'false'}>
+      <section
+        className={`planet-alert ${planet.activeEvent ? 'active' : ''}`}
+        aria-label="meteor alert"
+        data-meteor-active={planet.activeEvent ? 'true' : 'false'}
+        data-last-impact-kind={planet.lastImpactKind}
+      >
         {planet.activeEvent ? (
           <>
             <span>운석 접근 중</span>

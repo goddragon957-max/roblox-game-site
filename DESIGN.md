@@ -36,8 +36,8 @@ A slice is not done unless it answers at least one of these:
 
 1. **Surface richness:** better patch shapes, terrain elevation, oceans wrapping together, clouds/weather bands. Shipped a first pass: `planetWeather(state)` (cloud cover/aurora/storm) drives a modulated cloud shell, an aurora ring colored per milestone phase, and a storm halo tint; the HUD title panel shows a compact phase chip (`dormant`/`breathing`/`blooming`/`shielded`) that flashes on transition.
 2. **Creation feedback:** brush particles, birth flashes, growing trees/cities, biome spreading. Shipped a first tactile pass: living/protected cells feed orbiting life motes, and drag strokes escalate into compact combo chips plus a surface flare.
-3. **Threat feedback:** meteor trails, impact craters, shield ripples, debris rewards.
-4. **Progression:** unlock moons/rings/species when habitability crosses thresholds.
+3. **Threat feedback:** meteor trails, impact craters, shield ripples, debris rewards. Shipped a stronger spectacle pass: the meteor tail heats up as impact nears, the impact beacon pulses faster, and shield/crater resolution emits a short surface flash.
+4. **Progression:** unlock moons/rings/species when habitability crosses thresholds. Shipped a first unlock: 8+ protected cells activate a glowing 수호자 위성망 ring/chip and a one-time energy/mineral bonus.
 5. **Controls:** drag-to-paint, rotate/orbit camera, tool cooldowns, tactile sound-ready feedback.
 6. **Mobile shell option:** if the product becomes app-like, frame it as a premium space garden/focus companion without losing the real interactive planet.
 

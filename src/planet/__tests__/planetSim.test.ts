@@ -4,6 +4,7 @@ import {
   brushComboTier,
   createInitialPlanetState,
   getLogs,
+  planetGuardianSignal,
   planetLifeSignal,
   planetTotals,
   planetWeather,
@@ -83,6 +84,8 @@ describe('planet forge simulation', () => {
     expect(state.cells.find((cell) => cell.id === impactCellId)?.scar).toBe('debris');
     expect(planetTotals(state).debrisFields).toBe(1);
     expect(getLogs(state)[0].text).toContain('튕겨냈고');
+    expect(state.lastImpactKind).toBe('shield');
+    expect(state.lastImpactCellId).toBe(impactCellId);
   });
 
   it('derives a milestone phase and living weather signal from planet totals', () => {
@@ -184,5 +187,45 @@ describe('planet forge simulation', () => {
     expect(planetTotals(state).craters).toBe(1);
     expect(state.stability).toBeLessThan(72);
     expect(getLogs(state)[0].text).toContain('운석이 표면');
+    expect(state.lastImpactKind).toBe('crater');
+    expect(state.lastImpactCellId).toBe(impactCellId);
+  });
+
+  it('unlocks the guardian satellite network once enough surface is shielded, granting a one-time resource bonus', () => {
+    let state = createInitialPlanetState();
+    const before = planetGuardianSignal(state);
+    expect(before.active).toBe(false);
+    expect(before.strength).toBe(0);
+
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 8);
+    for (const target of targets) {
+      state = tickPlanet(state, 5);
+      state = applyTool({ ...state, selectedTool: 'shield', selectedCellId: target.id }, 'shield', target.id);
+    }
+    const energyBeforeTick = state.energy;
+    const mineralsBeforeTick = state.minerals;
+    state = tickPlanet(state, 0);
+
+    const after = planetGuardianSignal(state);
+    expect(after.active).toBe(true);
+    expect(after.strength).toBe(1);
+    expect(state.guardianActive).toBe(true);
+    expect(state.energy).toBeGreaterThan(energyBeforeTick);
+    expect(state.minerals).toBeGreaterThan(mineralsBeforeTick);
+    expect(getLogs(state)[0].text).toContain('수호자 위성망이 완성');
+  });
+
+  it('keeps the guardian signal building but inactive below the protected-cell threshold', () => {
+    let state = createInitialPlanetState();
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 3);
+    for (const target of targets) {
+      state = applyTool({ ...state, selectedTool: 'shield', selectedCellId: target.id }, 'shield', target.id);
+    }
+    state = tickPlanet(state, 0);
+
+    const signal = planetGuardianSignal(state);
+    expect(signal.active).toBe(false);
+    expect(signal.strength).toBeGreaterThan(0);
+    expect(signal.strength).toBeLessThan(1);
   });
 });

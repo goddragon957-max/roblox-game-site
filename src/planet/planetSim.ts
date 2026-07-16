@@ -6,6 +6,8 @@ export type PlanetScar = 'none' | 'crater' | 'debris';
 
 export type PlanetPhase = 'dormant' | 'breathing' | 'blooming' | 'shielded';
 
+export type PlanetImpactKind = 'none' | 'shield' | 'crater';
+
 export type BrushComboTier = 'none' | 'streak' | 'combo' | 'mega';
 
 export interface Vec3 {
@@ -67,6 +69,11 @@ export interface PlanetState {
   logs: PlanetLogEntry[];
   phase: PlanetPhase;
   phaseSince: number;
+  lastImpactAt: number;
+  lastImpactKind: PlanetImpactKind;
+  lastImpactCellId: string | null;
+  guardianActive: boolean;
+  guardianSince: number;
 }
 
 export interface PlanetWeather {
@@ -79,6 +86,11 @@ export interface PlanetWeather {
 export interface PlanetLifeSignal {
   moteCount: number;
   moteIntensity: number;
+}
+
+export interface PlanetGuardian {
+  active: boolean;
+  strength: number;
 }
 
 export interface PlanetTotals {
@@ -226,7 +238,12 @@ export function createInitialPlanetState(): PlanetState {
     brushComboSince: 0,
     logs: [],
     phase: 'dormant',
-    phaseSince: 0
+    phaseSince: 0,
+    lastImpactAt: -999,
+    lastImpactKind: 'none',
+    lastImpactCellId: null,
+    guardianActive: false,
+    guardianSince: 0
   };
   state = { ...state, phase: deriveMilestonePhase(planetTotals(state)) };
   return withLog(state, '작은 원시 행성이 깨어났어요. 바다·숲·수정으로 표면을 빚어보세요.', 'good');
@@ -284,6 +301,35 @@ function syncPhase(state: PlanetState): PlanetState {
   if (phase === state.phase) return state;
   const tone: PlanetLogEntry['tone'] = phase === 'dormant' ? 'warn' : 'good';
   return withLog({ ...state, phase, phaseSince: state.time }, PHASE_MESSAGES[phase], tone);
+}
+
+const GUARDIAN_PROTECTED_THRESHOLD = 8;
+const GUARDIAN_ENERGY_BONUS = 24;
+const GUARDIAN_MINERAL_BONUS = 16;
+
+export function planetGuardianSignal(state: PlanetState): PlanetGuardian {
+  const totals = planetTotals(state);
+  const strength = clamp(totals.protectedCells / GUARDIAN_PROTECTED_THRESHOLD, 0, 1);
+  return { active: state.guardianActive, strength: round(strength, 3) };
+}
+
+function syncGuardian(state: PlanetState): PlanetState {
+  const totals = planetTotals(state);
+  const active = totals.protectedCells >= GUARDIAN_PROTECTED_THRESHOLD;
+  if (active === state.guardianActive) return state;
+
+  if (active) {
+    const rewarded: PlanetState = {
+      ...state,
+      guardianActive: true,
+      guardianSince: state.time,
+      energy: clamp(round(state.energy + GUARDIAN_ENERGY_BONUS, 1), 0, 180),
+      minerals: clamp(round(state.minerals + GUARDIAN_MINERAL_BONUS, 1), 0, 160)
+    };
+    return withLog(rewarded, '수호자 위성망이 완성됐어요! 별빛 결정 보너스를 받았습니다.', 'good');
+  }
+
+  return withLog({ ...state, guardianActive: false, guardianSince: state.time }, '수호자 위성망이 흐려졌어요. 방어막을 더 늘려보세요.', 'warn');
 }
 
 export function planetWeather(state: PlanetState): PlanetWeather {
@@ -442,7 +488,10 @@ function resolveMeteor(state: PlanetState): PlanetState {
       minerals: clamp(round(state.minerals + 6, 1), 0, 160),
       shield: clamp(state.shield - 26, 0, 100),
       stability: clamp(state.stability + 3, 0, 100),
-      activeEvent: null
+      activeEvent: null,
+      lastImpactAt: state.time,
+      lastImpactKind: 'shield',
+      lastImpactCellId: event.impactCellId
     };
     return withLog(next, '방어막이 운석을 튕겨냈고, 파편이 별빛 에너지로 변했어요.', 'good');
   }
@@ -457,7 +506,10 @@ function resolveMeteor(state: PlanetState): PlanetState {
     cells,
     stability: clamp(state.stability - 18, 0, 100),
     population: clamp(round(state.population - 4, 1), 0, 999),
-    activeEvent: null
+    activeEvent: null,
+    lastImpactAt: state.time,
+    lastImpactKind: 'crater',
+    lastImpactCellId: event.impactCellId
   };
   return withLog(next, '운석이 표면을 태웠어요. 다시 물과 숲으로 복구해야 합니다.', 'danger');
 }
@@ -500,7 +552,7 @@ export function tickPlanet(state: PlanetState, seconds: number): PlanetState {
     if (activeEvent.timer <= 0) next = resolveMeteor(next);
   }
 
-  return syncPhase(next);
+  return syncGuardian(syncPhase(next));
 }
 
 export function nearestCellId(state: PlanetState, normal: Vec3): string {
