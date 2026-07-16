@@ -9,10 +9,12 @@ import {
   planetLifeSignal,
   planetObjective,
   planetRestorationSignal,
+  planetTerraformSurgeSignal,
   planetTotals,
   planetWeather,
   RESTORATION_SIGNAL_DURATION,
   selectTool,
+  TERRAFORM_SURGE_SIGNAL_DURATION,
   tickPlanet,
   triggerMeteor
 } from '../planetSim';
@@ -381,5 +383,161 @@ describe('planet forge simulation', () => {
     const signal = planetRestorationSignal(state);
     expect(signal.active).toBe(false);
     expect(signal.count).toBe(1);
+  });
+
+  it('starts with an inactive terraform surge signal and zero count', () => {
+    const state = createInitialPlanetState();
+    const signal = planetTerraformSurgeSignal(state);
+
+    expect(signal.active).toBe(false);
+    expect(signal.count).toBe(0);
+    expect(signal.lastCellId).toBeNull();
+    expect(signal.lastTool).toBeNull();
+  });
+
+  it('activates the terraform surge on the eighth distinct quick paint of a mega streak, rewarding exactly once', () => {
+    let state = createInitialPlanetState();
+    state = { ...state, energy: 100 };
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 8);
+
+    for (const target of targets.slice(0, 7)) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+    expect(planetTerraformSurgeSignal(state).active).toBe(false);
+    expect(planetTerraformSurgeSignal(state).count).toBe(0);
+
+    const energyBefore = state.energy;
+    const stabilityBefore = state.stability;
+    state = applyTool({ ...state, selectedTool: 'water', selectedCellId: targets[7].id }, 'water', targets[7].id);
+
+    expect(state.brushComboTier).toBe('mega');
+    const signal = planetTerraformSurgeSignal(state);
+    expect(signal.active).toBe(true);
+    expect(signal.count).toBe(1);
+    expect(signal.lastCellId).toBe(targets[7].id);
+    expect(signal.lastTool).toBe('water');
+    expect(state.energy).toBeGreaterThan(energyBefore);
+    expect(state.stability).toBeGreaterThan(stabilityBefore);
+    expect(getLogs(state)[0].text).toContain('테라포밍 서지');
+  });
+
+  it('does not retrigger the terraform surge on the ninth or tenth paint of the same stroke', () => {
+    let state = createInitialPlanetState();
+    state = { ...state, energy: 100 };
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 10);
+
+    for (const target of targets) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+
+    expect(state.brushStreak).toBe(10);
+    expect(planetTerraformSurgeSignal(state).count).toBe(1);
+  });
+
+  it('does not trigger the terraform surge when the eighth paint is unaffordable or repeats the previous cell', () => {
+    const seed = () => {
+      let state = { ...createInitialPlanetState(), energy: 100 };
+      const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 8);
+      for (const target of targets.slice(0, 7)) {
+        state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+      }
+      return { state, targets };
+    };
+
+    const insufficient = seed();
+    const afterFailedPaint = applyTool(
+      { ...insufficient.state, energy: 0, selectedCellId: insufficient.targets[7].id },
+      'water',
+      insufficient.targets[7].id
+    );
+    expect(afterFailedPaint.brushStreak).toBe(7);
+    expect(planetTerraformSurgeSignal(afterFailedPaint).count).toBe(0);
+    expect(getLogs(afterFailedPaint)[0].text).toContain('자원이 부족');
+
+    const repeated = seed();
+    const afterRepeatedCell = applyTool(
+      { ...repeated.state, selectedCellId: repeated.targets[6].id },
+      'water',
+      repeated.targets[6].id
+    );
+    expect(afterRepeatedCell.brushStreak).toBe(1);
+    expect(planetTerraformSurgeSignal(afterRepeatedCell).count).toBe(0);
+  });
+
+  it('caps the terraform surge reward at the energy and stability limits', () => {
+    let state = { ...createInitialPlanetState(), energy: 100 };
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 8);
+    for (const target of targets.slice(0, 7)) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+
+    state = applyTool(
+      { ...state, energy: 179, stability: 99, selectedTool: 'water', selectedCellId: targets[7].id },
+      'water',
+      targets[7].id
+    );
+
+    expect(state.energy).toBe(180);
+    expect(state.stability).toBe(100);
+    expect(planetTerraformSurgeSignal(state).count).toBe(1);
+  });
+
+  it('triggers a second terraform surge after the stroke window breaks and a fresh mega streak forms', () => {
+    let state = createInitialPlanetState();
+    state = { ...state, energy: 300 };
+    const firstTargets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 8);
+
+    for (const target of firstTargets) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+    expect(planetTerraformSurgeSignal(state).count).toBe(1);
+
+    state = tickPlanet(state, 5);
+    const secondTargets = state.cells.filter((cell) => cell.biome === 'barren').slice(8, 16);
+    for (const target of secondTargets) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+
+    expect(state.brushStreak).toBe(8);
+    const signal = planetTerraformSurgeSignal(state);
+    expect(signal.count).toBe(2);
+    expect(signal.lastCellId).toBe(secondTargets[7].id);
+  });
+
+  it('expires the terraform surge active signal at the exact deterministic duration while keeping the count', () => {
+    let state = createInitialPlanetState();
+    state = { ...state, energy: 100 };
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 8);
+
+    for (const target of targets) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+    expect(planetTerraformSurgeSignal(state).active).toBe(true);
+
+    let remaining = TERRAFORM_SURGE_SIGNAL_DURATION - 0.1;
+    while (remaining > 0) {
+      const step = Math.min(5, remaining);
+      state = tickPlanet(state, step);
+      remaining -= step;
+    }
+
+    expect(planetTerraformSurgeSignal(state).active).toBe(true);
+    state = tickPlanet(state, 0.1);
+
+    const signal = planetTerraformSurgeSignal(state);
+    expect(signal.active).toBe(false);
+    expect(signal.count).toBe(1);
+  });
+
+  it('keeps a terraform surge inactive when its recorded timestamp is in the future', () => {
+    const state = {
+      ...createInitialPlanetState(),
+      terraformSurgeCount: 1,
+      lastTerraformSurgeAt: 2,
+      lastTerraformSurgeCellId: 'cell-0',
+      lastTerraformSurgeTool: 'water' as const
+    };
+
+    expect(planetTerraformSurgeSignal(state).active).toBe(false);
   });
 });

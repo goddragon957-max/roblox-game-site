@@ -83,6 +83,10 @@ export interface PlanetState {
   lastRestorationAt: number;
   lastRestorationCellId: string | null;
   lastRestorationTool: PlanetTool | null;
+  terraformSurgeCount: number;
+  lastTerraformSurgeAt: number;
+  lastTerraformSurgeCellId: string | null;
+  lastTerraformSurgeTool: PlanetTool | null;
 }
 
 export interface PlanetWeather {
@@ -103,6 +107,14 @@ export interface PlanetGuardian {
 }
 
 export interface PlanetRestoration {
+  active: boolean;
+  count: number;
+  lastCellId: string | null;
+  lastTool: PlanetTool | null;
+  since: number;
+}
+
+export interface PlanetTerraformSurge {
   active: boolean;
   count: number;
   lastCellId: string | null;
@@ -279,7 +291,11 @@ export function createInitialPlanetState(): PlanetState {
     craterRestorations: 0,
     lastRestorationAt: -999,
     lastRestorationCellId: null,
-    lastRestorationTool: null
+    lastRestorationTool: null,
+    terraformSurgeCount: 0,
+    lastTerraformSurgeAt: -999,
+    lastTerraformSurgeCellId: null,
+    lastTerraformSurgeTool: null
   };
   state = { ...state, phase: deriveMilestonePhase(planetTotals(state)) };
   const initialDef = OBJECTIVE_SEQUENCE[0];
@@ -467,6 +483,24 @@ export function planetRestorationSignal(state: PlanetState): PlanetRestoration {
   };
 }
 
+// Long enough for the evaluator to capture the world-space burst without
+// turning the transient reward into a permanent HUD state.
+export const TERRAFORM_SURGE_SIGNAL_DURATION = 16;
+const TERRAFORM_SURGE_REWARD_ENERGY = 16;
+const TERRAFORM_SURGE_REWARD_STABILITY = 6;
+
+export function planetTerraformSurgeSignal(state: PlanetState): PlanetTerraformSurge {
+  const age = state.time - state.lastTerraformSurgeAt;
+  const active = state.terraformSurgeCount > 0 && age >= 0 && age < TERRAFORM_SURGE_SIGNAL_DURATION;
+  return {
+    active,
+    count: state.terraformSurgeCount,
+    lastCellId: state.lastTerraformSurgeCellId,
+    lastTool: state.lastTerraformSurgeTool,
+    since: state.lastTerraformSurgeAt
+  };
+}
+
 export function planetLifeSignal(state: PlanetState): PlanetLifeSignal {
   const totals = planetTotals(state);
   const cellCount = state.cells.length;
@@ -511,6 +545,7 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
   const brushStreak = continuingStroke ? clamp(state.brushStreak + 1, 1, 99) : 1;
   const comboTier = brushComboTier(brushStreak);
   const comboChanged = comboTier !== state.brushComboTier;
+  const surgeTriggered = comboChanged && comboTier === 'mega';
   let next = pay(
     {
       ...state,
@@ -567,6 +602,18 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
         lastRestorationTool: tool
       };
     }
+
+    if (surgeTriggered) {
+      next = {
+        ...next,
+        energy: clamp(round(next.energy + TERRAFORM_SURGE_REWARD_ENERGY, 1), 0, 180),
+        stability: clamp(round(next.stability + TERRAFORM_SURGE_REWARD_STABILITY, 1), 0, 100),
+        terraformSurgeCount: next.terraformSurgeCount + 1,
+        lastTerraformSurgeAt: next.time,
+        lastTerraformSurgeCellId: cellId,
+        lastTerraformSurgeTool: tool
+      };
+    }
     return updatedCell;
   });
 
@@ -581,6 +628,9 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
     shield: '황금 방어막 돔이 충격 지점을 감쌌어요.'
   };
   const streakText = brushStreak >= 3 ? ` 브러시 ${brushStreak}연속!` : '';
+  if (surgeTriggered) {
+    return withLog(next, `테라포밍 서지 발동! 8연속 손길이 폭발하며 에너지·안정도가 솟구쳤어요.${restoredCrater ? ' 크레이터도 복구됐어요.' : ''}`, 'good');
+  }
   if (restoredCrater) {
     return withLog(next, `크레이터가 복구되며 생명이 돌아왔어요! 안정도·생물량·물을 얻었습니다.${streakText}`, 'good');
   }

@@ -803,6 +803,36 @@ button { font: inherit; }
 .planet-combo-chip.tier-mega { color: #c57bff; border-color: rgba(197, 123, 255, 0.4); }
 .planet-combo-chip.flash { animation: planet-phase-flash 0.7s ease-out 2; }
 
+.planet-surge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 5px 11px 5px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(197, 123, 255, 0.62);
+  font: 850 10px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.planet-surge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 7px currentColor;
+}
+.planet-surge-chip.empty { color: rgba(157, 179, 217, 0.5); }
+.planet-surge-chip.active {
+  color: var(--surge-color, #c57bff);
+  border-color: var(--surge-color, rgba(197, 123, 255, 0.5));
+  background: rgba(197, 123, 255, 0.12);
+  animation: planet-phase-flash 0.7s ease-out 2;
+}
+
 .planet-log {
   left: 292px;
   bottom: 92px;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import * as THREE from 'three';
 import {
   BRUSH_COMBO_LABELS,
@@ -14,10 +14,12 @@ import {
   planetLifeSignal,
   planetObjective,
   planetRestorationSignal,
+  planetTerraformSurgeSignal,
   planetTotals,
   planetWeather,
   RESTORATION_SIGNAL_DURATION,
   selectTool,
+  TERRAFORM_SURGE_SIGNAL_DURATION,
   tickPlanet,
   triggerMeteor,
   type BrushComboTier,
@@ -29,6 +31,7 @@ import {
   type PlanetRestoration,
   type PlanetScar,
   type PlanetState,
+  type PlanetTerraformSurge,
   type PlanetTool,
   type PlanetWeather,
   type Vec3
@@ -60,6 +63,14 @@ const COMBO_TIER_COLOR: Record<BrushComboTier, string> = {
   mega: '#c57bff'
 };
 
+const TOOL_SURGE_COLORS: Record<PlanetTool, { core: string; accent: string }> = {
+  water: { core: '#3fd0ff', accent: '#bdf3ff' },
+  forest: { core: '#54d978', accent: '#c8ffd9' },
+  crystal: { core: '#c57bff', accent: '#efd1ff' },
+  settlement: { core: '#ffd06b', accent: '#fff0c2' },
+  shield: { core: '#79f4ff', accent: '#ffe27a' }
+};
+
 const TOOL_HINTS: Record<PlanetTool, string> = {
   water: '뜨거운 황무지를 바다로 바꿔 안정도를 올립니다.',
   forest: '바다 근처에 산소 숲을 심어 생명력을 키웁니다.',
@@ -76,6 +87,7 @@ interface PlanetSmokeApi {
   getGuardian: () => PlanetGuardian;
   getObjective: () => PlanetObjective;
   getRestoration: () => PlanetRestoration;
+  getTerraformSurge: () => PlanetTerraformSurge;
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
@@ -229,6 +241,34 @@ function makeDebris(seed: number) {
   return root;
 }
 
+function makeSurgeBurst() {
+  const group = new THREE.Group();
+  const innerRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.15, 0.024, 8, 48),
+    new THREE.MeshBasicMaterial({ color: '#8ff8ff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+  );
+  const outerRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.32, 0.014, 8, 64),
+    new THREE.MeshBasicMaterial({ color: '#8ff8ff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+  );
+  const shardCount = 8;
+  const shards: THREE.Mesh<THREE.ConeGeometry, THREE.MeshBasicMaterial>[] = [];
+  for (let i = 0; i < shardCount; i += 1) {
+    const angle = (i / shardCount) * Math.PI * 2;
+    const shard = new THREE.Mesh(
+      new THREE.ConeGeometry(0.026, 0.2, 4),
+      new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+    );
+    shard.position.set(Math.cos(angle) * 0.16, Math.sin(angle) * 0.16, 0.01);
+    shard.rotation.z = angle - Math.PI / 2;
+    shards.push(shard);
+    group.add(shard);
+  }
+  group.add(innerRing, outerRing);
+  group.visible = false;
+  return { group, innerRing, outerRing, shards };
+}
+
 function rebuildAdornment(group: THREE.Group, cell: PlanetCell) {
   if (group.userData.biome === cell.biome && group.userData.vitality === cell.vitality && group.userData.scar === cell.scar) return;
   clearGroup(group);
@@ -277,6 +317,7 @@ interface SceneContext {
   impactFlash: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   objectiveBurst: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   restorationRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
+  terraformSurge: ReturnType<typeof makeSurgeBurst>;
   meteor: THREE.Group;
   impactRing: THREE.Mesh;
   selectionRing: THREE.Mesh;
@@ -506,6 +547,9 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
     restorationRing.visible = false;
     planetGroup.add(restorationRing);
 
+    const terraformSurge = makeSurgeBurst();
+    planetGroup.add(terraformSurge.group);
+
     const orbitalRing = new THREE.Mesh(
       new THREE.TorusGeometry(PLANET_RADIUS * 1.34, 0.014, 8, 160),
       new THREE.MeshStandardMaterial({ color: '#6fe8ff', emissive: '#1788b8', transparent: true, opacity: 0.5, roughness: 0.35 })
@@ -671,6 +715,7 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       impactFlash,
       objectiveBurst,
       restorationRing,
+      terraformSurge,
       meteor,
       impactRing,
       selectionRing,
@@ -741,6 +786,33 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
         }
       } else {
         restorationRing.visible = false;
+      }
+
+      const surge = planetTerraformSurgeSignal(current);
+      const surgeAge = current.time - surge.since;
+      if (surge.count > 0 && surge.lastCellId && surgeAge >= 0 && surgeAge < TERRAFORM_SURGE_SIGNAL_DURATION) {
+        const surgeCell = current.cells.find((cell) => cell.id === surge.lastCellId);
+        if (surgeCell) {
+          const normal = vec3(surgeCell.normal);
+          const fade = Math.sqrt(1 - surgeAge / TERRAFORM_SURGE_SIGNAL_DURATION);
+          const colors = TOOL_SURGE_COLORS[surge.lastTool ?? 'water'];
+          setSurfaceTransform(terraformSurge.group, normal, PLANET_RADIUS + 0.1, 'z');
+          terraformSurge.group.visible = true;
+          terraformSurge.group.rotation.z += delta * 1.8;
+          terraformSurge.innerRing.material.color.set(colors.core);
+          terraformSurge.innerRing.material.opacity = fade * 0.95;
+          terraformSurge.innerRing.scale.setScalar(0.7 + (1 - fade) * 1.6 + Math.sin(current.time * 10) * 0.05);
+          terraformSurge.outerRing.material.color.set(colors.accent);
+          terraformSurge.outerRing.material.opacity = fade * 0.7;
+          terraformSurge.outerRing.scale.setScalar(0.9 + (1 - fade) * 2.6);
+          for (const shard of terraformSurge.shards) {
+            shard.material.color.set(colors.accent);
+            shard.material.opacity = fade * 0.85;
+            shard.scale.setScalar(0.6 + (1 - fade) * 1.4);
+          }
+        }
+      } else {
+        terraformSurge.group.visible = false;
       }
 
       if (current.activeEvent) {
@@ -873,6 +945,7 @@ export function PlanetForgeApp() {
       getGuardian: () => planetGuardianSignal(planetRef.current),
       getObjective: () => planetObjective(planetRef.current),
       getRestoration: () => planetRestorationSignal(planetRef.current),
+      getTerraformSurge: () => planetTerraformSurgeSignal(planetRef.current),
       command: {
         selectTool: (tool: PlanetTool) => handleSelectTool(tool),
         paintCell: (cellId?: string, tool?: PlanetTool) => {
@@ -901,6 +974,7 @@ export function PlanetForgeApp() {
   const guardian = useMemo(() => planetGuardianSignal(planet), [planet]);
   const objective = useMemo(() => planetObjective(planet), [planet]);
   const restoration = useMemo(() => planetRestorationSignal(planet), [planet]);
+  const terraformSurge = useMemo(() => planetTerraformSurgeSignal(planet), [planet]);
   const logs = getLogs(planet);
   const visibleLogs = logs.slice(0, 3);
   const activeCell = planet.selectedCellId ? planet.cells.find((cell) => cell.id === planet.selectedCellId) : null;
@@ -1073,6 +1147,21 @@ export function PlanetForgeApp() {
             {BRUSH_COMBO_LABELS[planet.brushComboTier]} ×{planet.brushStreak}
           </div>
         )}
+        <div
+          className={`planet-surge-chip${terraformSurge.active ? ' active' : ''}${terraformSurge.count === 0 ? ' empty' : ''}`}
+          style={terraformSurge.lastTool ? ({ '--surge-color': TOOL_SURGE_COLORS[terraformSurge.lastTool].core } as CSSProperties) : undefined}
+          data-terraform-surge-active={terraformSurge.active ? 'true' : 'false'}
+          data-terraform-surge-count={terraformSurge.count}
+          data-terraform-surge-cell={terraformSurge.lastCellId ?? ''}
+          data-terraform-surge-tool={terraformSurge.lastTool ?? ''}
+        >
+          <span className="planet-surge-dot" />
+          {terraformSurge.active
+            ? '테라포밍 서지 발동!'
+            : terraformSurge.count > 0
+              ? `서지 ${terraformSurge.count}회 발동`
+              : '8연속 손길로 서지를 발동하세요'}
+        </div>
       </section>
 
       <section className="planet-log" aria-label="planet log">
