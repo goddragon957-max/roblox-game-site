@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import {
+  BRUSH_COMBO_LABELS,
+  MAX_LIFE_MOTES,
   PHASE_LABELS,
   TOOL_COSTS,
   TOOL_LABELS,
@@ -8,13 +10,16 @@ import {
   createInitialPlanetState,
   getLogs,
   nearestCellId,
+  planetLifeSignal,
   planetTotals,
   planetWeather,
   selectTool,
   tickPlanet,
   triggerMeteor,
+  type BrushComboTier,
   type PlanetBiome,
   type PlanetCell,
+  type PlanetLifeSignal,
   type PlanetScar,
   type PlanetState,
   type PlanetTool,
@@ -41,6 +46,13 @@ const PHASE_AURORA_COLOR: Record<PlanetState['phase'], string> = {
   shielded: '#79f4ff'
 };
 
+const COMBO_TIER_COLOR: Record<BrushComboTier, string> = {
+  none: '#8ff8ff',
+  streak: '#8ff8ff',
+  combo: '#ffd06b',
+  mega: '#c57bff'
+};
+
 const TOOL_HINTS: Record<PlanetTool, string> = {
   water: '뜨거운 황무지를 바다로 바꿔 안정도를 올립니다.',
   forest: '바다 근처에 산소 숲을 심어 생명력을 키웁니다.',
@@ -53,6 +65,7 @@ interface PlanetSmokeApi {
   ready: boolean;
   getState: () => PlanetState;
   getWeather: () => PlanetWeather;
+  getLifeSignal: () => PlanetLifeSignal;
   command: {
     selectTool: (tool: PlanetTool) => PlanetState;
     paintCell: (cellId?: string, tool?: PlanetTool) => PlanetState;
@@ -248,12 +261,59 @@ interface SceneContext {
   cloudShell: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
   auroraRing: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   stormHalo: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  lifeMotes: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>;
+  comboFlare: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   meteor: THREE.Group;
   impactRing: THREE.Mesh;
   selectionRing: THREE.Mesh;
   cellVisuals: Map<string, CellVisual>;
   raycastTargets: THREE.Object3D[];
   frame: number;
+}
+
+function makeLifeMotes(maxCount: number) {
+  const positions = new Float32Array(maxCount * 3);
+  const colors = new Float32Array(maxCount * 3);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return new THREE.Points(
+    geometry,
+    new THREE.PointsMaterial({
+      size: 0.05,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    })
+  );
+}
+
+function updateLifeMotes(points: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>, signal: PlanetLifeSignal, time: number) {
+  const positions = points.geometry.getAttribute('position') as THREE.BufferAttribute;
+  const colors = points.geometry.getAttribute('color') as THREE.BufferAttribute;
+  const tint = 0.5 + signal.moteIntensity * 0.5;
+  for (let i = 0; i < positions.count; i += 1) {
+    if (i >= signal.moteCount) {
+      positions.setXYZ(i, 0, 0, 0);
+      colors.setXYZ(i, 0, 0, 0);
+      continue;
+    }
+    const seed = i * 12.9898 + 4.11;
+    const theta = seed + time * (0.16 + (i % 5) * 0.02);
+    const phi = 0.58 + Math.sin(seed * 0.71) * 0.92;
+    const radius = PLANET_RADIUS + 0.15 + Math.sin(time * 1.3 + seed) * 0.05;
+    const x = radius * Math.sin(phi) * Math.cos(theta);
+    const y = radius * Math.cos(phi) * 0.62 + Math.sin(time * 0.85 + seed) * 0.05;
+    const z = radius * Math.sin(phi) * Math.sin(theta);
+    positions.setXYZ(i, x, y, z);
+    colors.setXYZ(i, tint * 0.92, tint, tint * 0.5 + signal.moteIntensity * 0.4);
+  }
+  positions.needsUpdate = true;
+  colors.needsUpdate = true;
+  points.material.opacity = 0.3 + signal.moteIntensity * 0.55;
+  points.material.size = 0.038 + signal.moteIntensity * 0.032;
 }
 
 function makeStars() {
@@ -374,6 +434,16 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       new THREE.MeshBasicMaterial({ color: '#ff6b33', transparent: true, opacity: 0, depthWrite: false })
     );
     planetGroup.add(stormHalo);
+
+    const lifeMotes = makeLifeMotes(MAX_LIFE_MOTES);
+    planetGroup.add(lifeMotes);
+
+    const comboFlare = new THREE.Mesh(
+      new THREE.TorusGeometry(0.24, 0.02, 8, 56),
+      new THREE.MeshBasicMaterial({ color: '#8ff8ff', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
+    );
+    comboFlare.visible = false;
+    planetGroup.add(comboFlare);
 
     const orbitalRing = new THREE.Mesh(
       new THREE.TorusGeometry(PLANET_RADIUS * 1.34, 0.014, 8, 160),
@@ -534,6 +604,8 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       cloudShell,
       auroraRing,
       stormHalo,
+      lifeMotes,
+      comboFlare,
       meteor,
       impactRing,
       selectionRing,
@@ -553,6 +625,7 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
       stormHalo.rotation.y -= delta * 0.05;
       orbitalRing.rotation.z += delta * 0.04;
       moon.position.set(Math.cos(current.time * 0.22) * 2.75, 0.36 + Math.sin(current.time * 0.15) * 0.18, Math.sin(current.time * 0.22) * 2.75);
+      updateLifeMotes(lifeMotes, planetLifeSignal(current), current.time);
       if (current.activeEvent) {
         const impact = current.cells.find((cell) => cell.id === current.activeEvent?.impactCellId);
         if (impact) {
@@ -616,6 +689,19 @@ function PlanetScene({ planet, onPaint }: { planet: PlanetState; onPaint: (cellI
     context.auroraRing.material.opacity = weather.auroraStrength * 0.85;
 
     context.stormHalo.material.opacity = weather.stormIntensity * 0.32;
+
+    const comboRecent = planet.brushComboTier !== 'none' && planet.time - planet.brushComboSince < 1.3;
+    const comboCell = comboRecent ? planet.cells.find((cell) => cell.id === planet.lastPaintedCellId) : null;
+    if (comboCell) {
+      const normal = vec3(comboCell.normal);
+      setSurfaceTransform(context.comboFlare, normal, PLANET_RADIUS + 0.06, 'z');
+      context.comboFlare.visible = true;
+      context.comboFlare.material.color.set(COMBO_TIER_COLOR[planet.brushComboTier]);
+      context.comboFlare.material.opacity = planet.brushComboTier === 'mega' ? 0.95 : planet.brushComboTier === 'combo' ? 0.78 : 0.58;
+      context.comboFlare.scale.setScalar(planet.brushComboTier === 'mega' ? 1.35 : planet.brushComboTier === 'combo' ? 1.15 : 1);
+    } else {
+      context.comboFlare.visible = false;
+    }
   }, [planet]);
 
   return <div ref={containerRef} className="planet-scene" aria-label="interactive planet forge scene" />;
@@ -661,6 +747,7 @@ export function PlanetForgeApp() {
       ready: true,
       getState: () => planetRef.current,
       getWeather: () => planetWeather(planetRef.current),
+      getLifeSignal: () => planetLifeSignal(planetRef.current),
       command: {
         selectTool: (tool: PlanetTool) => handleSelectTool(tool),
         paintCell: (cellId?: string, tool?: PlanetTool) => {
@@ -685,10 +772,13 @@ export function PlanetForgeApp() {
 
   const totals = useMemo(() => planetTotals(planet), [planet]);
   const weather = useMemo(() => planetWeather(planet), [planet]);
+  const lifeSignal = useMemo(() => planetLifeSignal(planet), [planet]);
   const logs = getLogs(planet);
+  const visibleLogs = logs.slice(0, 3);
   const activeCell = planet.selectedCellId ? planet.cells.find((cell) => cell.id === planet.selectedCellId) : null;
   const eventProgress = planet.activeEvent ? Math.max(0, 1 - planet.activeEvent.timer / planet.activeEvent.duration) : 0;
   const phaseRecent = planet.time - planet.phaseSince < 4;
+  const comboRecent = planet.brushComboTier !== 'none' && planet.time - planet.brushComboSince < 1.3;
 
   return (
     <main id="app" className="planet-app" data-ui-pass="planet-forge-prototype" data-demo="planet-forge-sandbox">
@@ -705,6 +795,8 @@ export function PlanetForgeApp() {
           data-weather-cloud={weather.cloudCover}
           data-weather-aurora={weather.auroraStrength}
           data-weather-storm={weather.stormIntensity}
+          data-life-motes={lifeSignal.moteCount}
+          data-life-intensity={lifeSignal.moteIntensity}
         >
           <span className="planet-phase-dot" />
           {PHASE_LABELS[planet.phase]}
@@ -791,10 +883,20 @@ export function PlanetForgeApp() {
             <small>표면 패치를 드래그하면 현재 도구가 연속 적용됩니다.</small>
           </>
         )}
+        {planet.brushComboTier !== 'none' && (
+          <div
+            className={`planet-combo-chip tier-${planet.brushComboTier}${comboRecent ? ' flash' : ''}`}
+            data-brush-combo-tier={planet.brushComboTier}
+            data-combo-recent={comboRecent ? 'true' : 'false'}
+          >
+            <span className="planet-combo-dot" />
+            {BRUSH_COMBO_LABELS[planet.brushComboTier]} ×{planet.brushStreak}
+          </div>
+        )}
       </section>
 
       <section className="planet-log" aria-label="planet log">
-        {logs.map((entry) => (
+        {visibleLogs.map((entry) => (
           <p key={entry.id} className={entry.tone}>
             <span>{entry.time.toFixed(0)}s</span>
             {entry.text}

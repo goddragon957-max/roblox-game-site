@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { applyTool, createInitialPlanetState, getLogs, planetTotals, planetWeather, selectTool, tickPlanet, triggerMeteor } from '../planetSim';
+import {
+  applyTool,
+  brushComboTier,
+  createInitialPlanetState,
+  getLogs,
+  planetLifeSignal,
+  planetTotals,
+  planetWeather,
+  selectTool,
+  tickPlanet,
+  triggerMeteor
+} from '../planetSim';
 
 describe('planet forge simulation', () => {
   it('starts as a living primitive planet with deterministic cells', () => {
@@ -101,6 +112,62 @@ describe('planet forge simulation', () => {
     expect(state.phase).toBe('shielded');
     expect(planetWeather(state).phase).toBe('shielded');
     expect(getLogs(state)[0].text).toContain('방어막 네트워크');
+  });
+
+  it('derives brush combo tiers from streak length', () => {
+    expect(brushComboTier(0)).toBe('none');
+    expect(brushComboTier(2)).toBe('none');
+    expect(brushComboTier(3)).toBe('streak');
+    expect(brushComboTier(4)).toBe('streak');
+    expect(brushComboTier(5)).toBe('combo');
+    expect(brushComboTier(7)).toBe('combo');
+    expect(brushComboTier(8)).toBe('mega');
+    expect(brushComboTier(20)).toBe('mega');
+  });
+
+  it('tracks brush combo tier and its since-timestamp as a stroke escalates', () => {
+    let state = createInitialPlanetState();
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 8);
+
+    for (const target of targets.slice(0, 2)) {
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+    expect(state.brushComboTier).toBe('none');
+
+    state = applyTool({ ...state, selectedTool: 'water', selectedCellId: targets[2].id }, 'water', targets[2].id);
+    expect(state.brushStreak).toBe(3);
+    expect(state.brushComboTier).toBe('streak');
+    const streakSince = state.brushComboSince;
+
+    state = tickPlanet(state, 0.5);
+    state = applyTool({ ...state, selectedTool: 'water', selectedCellId: targets[3].id }, 'water', targets[3].id);
+    expect(state.brushComboTier).toBe('streak');
+    expect(state.brushComboSince).toBe(streakSince);
+
+    for (const target of targets.slice(4, 7)) {
+      state = tickPlanet(state, 0.5);
+      state = applyTool({ ...state, selectedTool: 'water', selectedCellId: target.id }, 'water', target.id);
+    }
+    expect(state.brushStreak).toBe(7);
+    expect(state.brushComboTier).toBe('combo');
+    expect(state.brushComboSince).toBeGreaterThan(streakSince);
+  });
+
+  it('grows the living-surface life signal as biomes and shields fill in', () => {
+    let state = createInitialPlanetState();
+    const before = planetLifeSignal(state);
+    expect(before.moteCount).toBeGreaterThanOrEqual(0);
+    expect(before.moteIntensity).toBeGreaterThanOrEqual(0);
+    expect(before.moteIntensity).toBeLessThanOrEqual(1);
+
+    const targets = state.cells.filter((cell) => cell.biome === 'barren').slice(0, 6);
+    for (const target of targets) {
+      state = applyTool({ ...state, selectedTool: 'forest', selectedCellId: target.id }, 'forest', target.id);
+    }
+    const after = planetLifeSignal(state);
+
+    expect(after.moteCount).toBeGreaterThan(before.moteCount);
+    expect(after.moteIntensity).toBeGreaterThan(before.moteIntensity);
   });
 
   it('damages the impact cell when a meteor is ignored', () => {

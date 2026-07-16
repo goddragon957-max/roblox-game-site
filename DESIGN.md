@@ -35,7 +35,7 @@ A slice is not done unless it answers at least one of these:
 ## Preferred Future Design Slices
 
 1. **Surface richness:** better patch shapes, terrain elevation, oceans wrapping together, clouds/weather bands. Shipped a first pass: `planetWeather(state)` (cloud cover/aurora/storm) drives a modulated cloud shell, an aurora ring colored per milestone phase, and a storm halo tint; the HUD title panel shows a compact phase chip (`dormant`/`breathing`/`blooming`/`shielded`) that flashes on transition.
-2. **Creation feedback:** brush particles, birth flashes, growing trees/cities, biome spreading.
+2. **Creation feedback:** brush particles, birth flashes, growing trees/cities, biome spreading. Shipped a first tactile pass: living/protected cells feed orbiting life motes, and drag strokes escalate into compact combo chips plus a surface flare.
 3. **Threat feedback:** meteor trails, impact craters, shield ripples, debris rewards.
 4. **Progression:** unlock moons/rings/species when habitability crosses thresholds.
 5. **Controls:** drag-to-paint, rotate/orbit camera, tool cooldowns, tactile sound-ready feedback.

@@ -48,9 +48,11 @@ If continuing this branch as a harness round, write `docs/harness/feedback/round
    - `window.__planetForgeSmoke.command.selectTool('forest')` changes the selected tool.
    - `window.__planetForgeSmoke.command.paintCell()` changes at least one cell biome and resource totals.
    - `window.__planetForgeSmoke.command.paintCells()` paints multiple cells and increases `brushStreak`.
+   - Dragging/painting enough cells exposes a brush combo chip with `data-brush-combo-tier` (`streak`/`combo`/`mega`) and `data-combo-recent="true"` during the short feedback window.
    - `window.__planetForgeSmoke.command.triggerMeteor()` creates an active meteor event.
    - Shielding the impact cell leaves `scar: "debris"`; ignoring the timer leaves `scar: "crater"`.
    - `window.__planetForgeSmoke.getWeather()` returns `{ phase, cloudCover, auroraStrength, stormIntensity }`; `getState().phase` is one of `dormant`/`breathing`/`blooming`/`shielded`.
+   - `window.__planetForgeSmoke.getLifeSignal()` returns `{ moteCount, moteIntensity }`; improving living/protected cells increases or sustains visible life-mote feedback.
    - `document.querySelector('.planet-phase-chip')` exists with `data-planet-phase` matching the current phase; painting 4+ cells with the shield tool then ticking flips it to `shielded` and briefly adds a `flash` class (`data-phase-recent="true"`).
    - Browser console has zero fatal JavaScript errors.
 
@@ -62,7 +64,7 @@ Within the first three seconds the screen should read as:
 
 - a fullscreen 3D planet sandbox;
 - central rotating planet with colored biome patches and visible trees/crystals/domes/shields;
-- click/drag painting has visible pulse rings and brush feedback;
+- click/drag painting has visible pulse rings, brush combo feedback, and life motes as the surface becomes more alive;
 - dark galaxy/starfield and space atmosphere;
 - compact glass HUD and tool palette, not page-like panels covering the world;
 - meteor warning/impact feedback when the event is active, plus crater/debris aftermath.

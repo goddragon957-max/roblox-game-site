@@ -6,6 +6,8 @@ export type PlanetScar = 'none' | 'crater' | 'debris';
 
 export type PlanetPhase = 'dormant' | 'breathing' | 'blooming' | 'shielded';
 
+export type BrushComboTier = 'none' | 'streak' | 'combo' | 'mega';
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -60,6 +62,8 @@ export interface PlanetState {
   lastPaintAt: number;
   lastPaintedCellId: string | null;
   brushStreak: number;
+  brushComboTier: BrushComboTier;
+  brushComboSince: number;
   logs: PlanetLogEntry[];
   phase: PlanetPhase;
   phaseSince: number;
@@ -70,6 +74,11 @@ export interface PlanetWeather {
   cloudCover: number;
   auroraStrength: number;
   stormIntensity: number;
+}
+
+export interface PlanetLifeSignal {
+  moteCount: number;
+  moteIntensity: number;
 }
 
 export interface PlanetTotals {
@@ -101,6 +110,13 @@ export const PHASE_LABELS: Record<PlanetPhase, string> = {
   shielded: '방어 태세'
 };
 
+export const BRUSH_COMBO_LABELS: Record<BrushComboTier, string> = {
+  none: '',
+  streak: '연속 손길',
+  combo: '리듬 콤보',
+  mega: '메가 콤보'
+};
+
 export const TOOL_COSTS: Record<PlanetTool, { energy: number; minerals?: number; water?: number; biomass?: number }> = {
   water: { energy: 8 },
   forest: { energy: 10, water: 4 },
@@ -111,6 +127,7 @@ export const TOOL_COSTS: Record<PlanetTool, { energy: number; minerals?: number;
 
 const CELL_COUNT = 132;
 const METEOR_DURATION = 8;
+export const MAX_LIFE_MOTES = 42;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -205,6 +222,8 @@ export function createInitialPlanetState(): PlanetState {
     lastPaintAt: -999,
     lastPaintedCellId: null,
     brushStreak: 0,
+    brushComboTier: 'none',
+    brushComboSince: 0,
     logs: [],
     phase: 'dormant',
     phaseSince: 0
@@ -285,6 +304,22 @@ export function planetWeather(state: PlanetState): PlanetWeather {
   };
 }
 
+export function brushComboTier(streak: number): BrushComboTier {
+  if (streak >= 8) return 'mega';
+  if (streak >= 5) return 'combo';
+  if (streak >= 3) return 'streak';
+  return 'none';
+}
+
+export function planetLifeSignal(state: PlanetState): PlanetLifeSignal {
+  const totals = planetTotals(state);
+  const cellCount = state.cells.length;
+  const lifeDensity = (totals.livingCells * 1.4 + totals.protectedCells * 0.8) / cellCount;
+  const moteCount = clamp(Math.round(lifeDensity * MAX_LIFE_MOTES + totals.habitability * 0.06), 0, MAX_LIFE_MOTES);
+  const moteIntensity = clamp(totals.habitability / 100, 0.08, 1);
+  return { moteCount, moteIntensity: round(moteIntensity, 3) };
+}
+
 export function selectTool(state: PlanetState, tool: PlanetTool): PlanetState {
   return { ...state, selectedTool: tool };
 }
@@ -317,6 +352,8 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
   let touched = false;
   const continuingStroke = state.lastPaintedCellId !== null && state.lastPaintedCellId !== cellId && state.time - state.lastPaintAt <= 4;
   const brushStreak = continuingStroke ? clamp(state.brushStreak + 1, 1, 99) : 1;
+  const comboTier = brushComboTier(brushStreak);
+  const comboChanged = comboTier !== state.brushComboTier;
   let next = pay(
     {
       ...state,
@@ -324,7 +361,9 @@ export function applyTool(state: PlanetState, tool: PlanetTool = state.selectedT
       selectedCellId: cellId,
       lastPaintAt: state.time,
       lastPaintedCellId: cellId,
-      brushStreak
+      brushStreak,
+      brushComboTier: comboTier,
+      brushComboSince: comboChanged ? state.time : state.brushComboSince
     },
     tool
   );
